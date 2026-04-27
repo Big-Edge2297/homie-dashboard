@@ -6,7 +6,7 @@ A custom Home Assistant dashboard built for wall-mounted tablets.
 
 I created this dashboard with the design philosophy of a single page overview for accessing the most important functions and controls of my house easily. 
 
-Homie connects directly to Home Assistant over a Long-Lived Access Token and a local WebSocket connection which results in automatic caching of state_changed event.
+Homie connects directly to Home Assistant over a Long-Lived Access Token and a local WebSocket connection which results in automatic caching.
 
 ## Dashboard Screenshots
 

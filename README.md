@@ -2,13 +2,12 @@
 
 A custom Home Assistant dashboard built for wall-mounted tablets. 
 
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5?logo=home-assistant&logoColor=white)
+
 I created this dashboard with the design philosophy of a single page overview for accessing the most important functions and controls of my house. I also wanted to make the look and feel of a luxury hotel, making everything 
 easily configurable in one HTML file.
 
 Homie connects directly to Home Assistant over a Long-Lived Access Token and a local WebSocket connection which results in automatic caching of state_changed event.
-
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5?logo=home-assistant&logoColor=white)
-
 
 | Main Screen | Notifications and Music | Hero Stats and Chips ON |
 |--------|--------|--------|

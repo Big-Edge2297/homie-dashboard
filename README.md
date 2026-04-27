@@ -24,6 +24,10 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/fecff8b3-b4e9-4be6-8362-6edc2fc1a61d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" width="320" height="200"/> |
 
+| ... and Shumi 🐱 |
+|--------|
+| <img src="https://github.com/user-attachments/assets/2b4c66f6-2b31-4a11-b967-55e7fc3f4b0a" width="246" height="428"/> |
+
 ## Theme Screenshots
 
 | Classic Gold | Deep Copper | Terracotta |
@@ -37,7 +41,6 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 | Amethyst Purple | Solar Yellow | Crimson Red |
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/dcf892cc-a8be-4a03-b33e-0a436d0d4dda" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/eeaa2101-6998-4c67-a82b-07ee96b54b7b" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/e0f87a9c-68ff-466b-9aaa-37a40e14cc68" width="320" height="200"/> |
-
 
 
 ---
@@ -79,6 +82,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 ## Other Features
 
+- 9 Themes
 - Fullscreen on first tap
 - No pinch-zoom, no text selection
 - Haptic Feedback
@@ -100,7 +104,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
   |---|---|
   | `light.*` | Brightness slider + colour presets + colour-temperature (Warm / Neutral / Cool) |
   | `climate.*` | AC card — power toggle, mode (cool/heat/fan/dry), fan speed, temperature nudge |
-  | `cover.*` | Blind/curtain card — open, stop, close + position slider. Add `isCurtain: true` for side-pull curtains |
+  | `cover.*` | Blind/curtain card — open, stop, close + position slider. Support for side-pull curtains |
   | `fan.*` | Air purifier card — power toggle + fan-speed percentage slider |
   | `switch.*` / `input_boolean.*` | Simple on/off toggle |
   | `group.*` | Simple toggle (no card controls) |
@@ -109,7 +113,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 - State cache
   
-  `stateCache` is a JavaScript `Map` keyed by `entity_id` — the single source of truth for all rendering. All UI functions read from this cache synchronously; they never make network requests during a render cycle.
+  `stateCache` is a JavaScript `Map` keyed by `entity_id`. All UI functions read from this cache synchronously; they never make network requests during a render cycle.
 
 - Fallback polling
   
@@ -117,7 +121,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 - Rendering flow
   
-  Every `state_changed` event triggers `refreshAllUI()`, which synchronously updates the hero stats, sensor row, weather widget, chip states, notification banner, and Now Playing bar. The entire cycle typically completes in under 1 ms.
+  Every `state_changed` event triggers `refreshAllUI()`, which synchronously updates the hero stats, sensor row, weather widget, chip states, notification banner, and Now Playing bar. The entire cycle typically completes in under 1ms.
 
 ## Architecture
 
@@ -204,9 +208,9 @@ weather: { entity: "weather.forecast_home", tempUnit: "°C" }
 Change `tempUnit` to `"°F"` if needed.
 
 #### Sensor row
-`floorSensors` takes `ground` and `upper` floors, each with `temp`, `humidity`, and `pm25` entity IDs. Set `decimal: true` to show one decimal place.
+`floorSensors` takes `first` and `second` floors, each with `temp`, `humidity`, and `pm25` entity IDs. Set `decimal: true` to show one decimal place.
 
-`powerSensor` is a single energy entity. `solarSensors` takes four entities: `production`, `export`, `battery`, and `temp`. Remove the `solarSensors` block entirely if you don't have solar panels.
+`solarSensors` takes four entities: `production`, `powerSensor`, `export`, `battery`, and `temp`. Remove the `solarSensors` block entirely if you don't have solar panels.
 
 #### Background image
 ```js

@@ -22,7 +22,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 | Lights | Scenes | Blinds |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/fecff8b3-b4e9-4be6-8362-6edc2fc1a61d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/4af1d0a4-90c9-4193-a222-5b606b25f190" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" width="320" height="200"/> |
 
 | ... and Shumi 🐱 |
 |--------|

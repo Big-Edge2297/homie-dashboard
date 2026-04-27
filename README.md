@@ -4,10 +4,11 @@ A custom Home Assistant dashboard built for wall-mounted tablets.
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5?logo=home-assistant&logoColor=white)
 
-I created this dashboard with the design philosophy of a single page overview for accessing the most important functions and controls of my house. I also wanted to make the look and feel of a luxury hotel, making everything 
-easily configurable in one HTML file.
+I created this dashboard with the design philosophy of a single page overview for accessing the most important functions and controls of my house easily. 
 
 Homie connects directly to Home Assistant over a Long-Lived Access Token and a local WebSocket connection which results in automatic caching of state_changed event.
+
+## Dashboard Screenshots
 
 | Main Screen | Notifications and Music | Hero Stats and Chips ON |
 |--------|--------|--------|
@@ -22,6 +23,21 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 | Lights | Scenes | Blinds |
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/fecff8b3-b4e9-4be6-8362-6edc2fc1a61d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" width="320" height="200"/> |
+
+## Theme Screenshots
+
+| Classic Gold | Deep Copper | Terracotta |
+|--------|--------|--------|
+| <img src="https://github.com/user-attachments/assets/c4540dd0-5587-4311-a86d-c6fa46e4bd13" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/1b520f68-749a-4581-b947-a426100b0d56" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/505a33c0-e390-462b-b5c8-724e7f24b1e3" width="320" height="200"/> |
+
+| Steel Blue | Arctic Cyan | Emerald Green |
+|--------|--------|--------|
+| <img src="https://github.com/user-attachments/assets/436021d8-ca68-4d8a-8bfe-96fe0fff24de" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/1e8a56ad-5843-4a8d-b85e-4b834ec077b6" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/f8957b61-d8f0-45e8-a76b-62658345831d" width="320" height="200"/> |
+
+| Amethyst Purple | Solar Yellow | Crimson Red |
+|--------|--------|--------|
+| <img src="https://github.com/user-attachments/assets/dcf892cc-a8be-4a03-b33e-0a436d0d4dda" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/eeaa2101-6998-4c67-a82b-07ee96b54b7b" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/e0f87a9c-68ff-466b-9aaa-37a40e14cc68" width="320" height="200"/> |
+
 
 
 ---

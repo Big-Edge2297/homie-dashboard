@@ -10,13 +10,6 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5?logo=home-assistant&logoColor=white)
 
 
-<img width="2560" height="1600" alt="Homie Dashboard-7 png" src="https://github.com/user-attachments/assets/fecff8b3-b4e9-4be6-8362-6edc2fc1a61d" />
-
-<img width="2560" height="1600" alt="Homie Dashboard-8 png" src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" />
-
-<img width="2560" height="1600" alt="Homie Dashboard-9 png" src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" />
-
-
 | Main Screen | Notifications and Music | Hero Stats and Chips ON |
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/9f0ec5ae-6562-4acc-8654-293e06bf4f51" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/f2ef40ab-823f-4208-8442-093ab6a1a8e6" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/80db17b8-478c-40e4-9a8f-1fc0accca713" width="320" height="200"/> |

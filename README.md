@@ -58,24 +58,24 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 - SHUMI button — pet stats popup (litter box, feeder, water fountain, litter box usage)
 - CALENDAR button — upcoming events from multiple HA calendar entities
 
-**Notification - Middle 1/3**
+**Notification - Center Top 1/3**
 - Hidden notifications from multiple HA `binary_sensor` or `input_boolean`. Useful for reminders like cat maintenance, vitamins not taken, or coffee to prepare for tomorrow.
 
-**Hero area - Middle Center**
+**Hero area - Center 2/3**
 - Full-bleed background image
 - Time-aware greeting — Good Morning / Good Afternoon / Good Evening / Good Night
 - Home stats grid — up to 10 entity-driven tiles in a 5-column layout
 
-**Now Playing Bar - Middle 2/3**
+**Now Playing Bar - Center Bottom 3/3**
 - When a HA media player is playing, a slim bar slides up from the bottom showing artist, track name, previous/play-pause/next controls, and a live progress bar updated every 2 seconds.
 - When nothing is playing the player is hidden
 - When music is paused or stops, the players dissappears after a few seconds
 
-**Sensor row - Bottom Pills**
+**Sensor row pills - Bottom 1/2**
 - Floor sensor pill — temperature, humidity, and PM2.5 for up to two floors
 - Solar pill — production (kW), today's energy consumption, export (kW), battery state of charge (%), and inverter temperature
 
-**Controls row**
+**Controls row - Bottom 2/2**
 - Chip buttons for each control group (Lights, Scenes, Air Con, Purifiers, Blinds, Bath, Irrigation)
 - Active-count badge on each chip (e.g. "3 on")
 

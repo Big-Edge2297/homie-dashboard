@@ -15,8 +15,9 @@ Before you start, make sure you have:
 - A Long-Lived Access Token — generate one at HA → Profile → Security → Long-Lived Access Tokens
 - A websocket url ws://YOUR_HA_IP:8123/api/websocket
 
-
 ---
+
+TIP: Search for "YOUR_" to find every value you need to personalise
 
 ## Step 1 — Find your Home Assistant IP address
 

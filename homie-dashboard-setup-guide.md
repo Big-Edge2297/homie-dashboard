@@ -381,19 +381,25 @@ Work through this checklist once the dashboard is open:
 ## Troubleshooting
 
 **Red "Connection Lost" banner**
+
 The dashboard cannot reach HA. Check that the `wsUrl` in the file exactly matches your HA address and port, and that you are on the same network. If HA uses HTTPS, make sure you used `wss://` not `ws://`.
 
 **Stats and sensors all show `—`**
+
 The connection is working but entity IDs are wrong. Open HA Developer Tools → States and verify the entity ID matches exactly what is in the file — IDs are case-sensitive.
 
 **A chip popup shows no devices**
+
 The entities in that chip's `subEntities` list either have wrong IDs or are unavailable in HA. Check each one in Developer Tools → States.
 
 **AC/Purifier popup shows a plain toggle instead of the full card**
+
 The entity ID does not start with the correct domain. AC entities must start with `climate.`, purifiers with `fan.`, lights with `light.`, blinds with `cover.`.
 
 **The Now Playing bar never appears**
+
 Check that your `musicEntity` is a `media_player.*` entity and that it reports state as `playing` in HA when music is active.
 
 **CORS or network errors in the browser console**
+
 The file must be accessed from the same origin as HA (served via `/local/`) or from a local browser on the same network. Hosting it on an external server will fail due to browser security restrictions.

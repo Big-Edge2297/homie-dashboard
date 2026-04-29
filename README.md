@@ -250,6 +250,8 @@ Copy the file to `/config/www/homie-dashboard.html` on your HA server and open:
 http://YOUR-HA-IP:8123/local/homie-dashboard.html
 ```
 
+For any changes, exit the HA app, clear the cache and start the app again.
+
 ### 5. Create a new dashboard in HA for easy access on the side panel
 
 Settings -> Add Dashboard -> Webpage and add http://YOUR-HA-IP:8123/local/homie-dashboard.html

@@ -145,8 +145,4 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 ---
 
 ## Setup
-Follow the homie-dashboard-setup-guide for a step by step guide on how to setup the dashboard.
-
-https://pages.github.com/Big-Edge2297/homie-dashboard/blob/main/homie-dashboard-setup-guide.md
-
-This site was built using [GitHub Pages](https://github.com/Big-Edge2297/homie-dashboard/blob/main/homie-dashboard-setup-guide.md)
+Follow the [homie-dashboard-setup-guide](https://github.com/Big-Edge2297/homie-dashboard/blob/main/homie-dashboard-setup-guide.md) for a step by step guide on how to setup the dashboard.

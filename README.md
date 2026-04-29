@@ -149,4 +149,4 @@ Follow the homie-dashboard-setup-guide for a step by step guide on how to setup 
 
 https://pages.github.com/Big-Edge2297/homie-dashboard/blob/main/homie-dashboard-setup-guide.md
 
-This site was built using [GitHub Pages](https://pages.github.com/Big-Edge2297/homie-dashboard/blob/main/homie-dashboard-setup-guide.md)
+This site was built using [GitHub Pages](https://github.com/Big-Edge2297/homie-dashboard/blob/main/homie-dashboard-setup-guide.md)

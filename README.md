@@ -2,11 +2,11 @@
 
 A custom Home Assistant dashboard built for wall-mounted tablets. 
 
-![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5?logo=home-assistant&logoColor=white)
-
 I created this dashboard with the design philosophy of a single page overview for accessing the most important functions and controls of my house easily. 
 
 Homie connects directly to Home Assistant over a Long-Lived Access Token and a local WebSocket connection which results in automatic caching.
+
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-compatible-41BDF5?logo=home-assistant&logoColor=white)
 
 ## Security
 
@@ -91,11 +91,14 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 - Active-count badge on each chip (e.g. "3 on")
 
 
-## Other Features
+## Features
 
 - 9 Themes
+- Works both vertically and horizontally 
 - Fullscreen on first tap
 - No pinch-zoom, no text selection
+- Very responsive and fast to update entity status
+- Popups with many entities use a room accordion — tap a room to expand it, tap outside to dismiss.
 - Haptic Feedback on suported Android devices
 
   On Android devices that support the Vibration API, every interaction produces a vibration matched to the action:
@@ -120,31 +123,6 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
   | `switch.*` / `input_boolean.*` | Simple on/off toggle |
   | `group.*` | Simple toggle (no card controls) |
 
-- Popups with many entities use a room accordion — tap a room to expand it, tap outside to dismiss.
-
-- State cache
-  
-  `stateCache` is a JavaScript `Map` keyed by `entity_id`. All UI functions read from this cache synchronously; they never make network requests during a render cycle.
-
-- Fallback polling
-  
-  A `setInterval` fires every 15 seconds. When the WebSocket is healthy, `refreshStateCache()` returns immediately with zero network traffic. It only becomes a real HTTP poll when the WebSocket is disconnected.
-
-- Rendering flow
-  
-  Every `state_changed` event triggers `refreshAllUI()`, which synchronously updates the hero stats, sensor row, weather widget, chip states, notification banner, and Now Playing bar. The entire cycle typically completes in under 1ms.
-
-## Architecture
-
-### WebSocket flow
-
-1. Dashboard opens WebSocket  
-2. HA sends auth_required
-3. Dashboard sends token
-4. HA sends auth_ok
-5. Dashboard sends get_states + subscribe_events(state_changed)
-6. get_states seeds stateCache (Map of entity_id → state)
-7. Each state_changed event patches one cache entry + re-renders UI
 
 ---
 

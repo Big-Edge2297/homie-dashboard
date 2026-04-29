@@ -99,7 +99,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 - No pinch-zoom, no text selection
 - Very responsive and fast to update entity status
 - Popups with many entities use a room accordion — tap a room to expand it, tap outside to dismiss
-- Notifications 
+- Notifications/Reminders
 - Music playback and controls
 - Haptic Feedback on suported Android devices
 

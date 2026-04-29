@@ -8,21 +8,27 @@ I created this dashboard with the design philosophy of a single page overview fo
 
 Homie connects directly to Home Assistant over a Long-Lived Access Token and a local WebSocket connection which results in automatic caching.
 
+⚠️ The HA Long-Lived Access Token is stored in plain text inside the HTML file. Anyone who can read the file has full access to your Home Assistant instance.
+
+**Recommendations:**
+- Serve the file only on your local network — never expose it to the internet without authentication
+- Create a dedicated HA user account for the dashboard token rather than using your personal admin account so you can limit access and exposure
+- Revoke and regenerate the token periodically (HA → Profile → Long-Lived Access Tokens)
+- For remote access, use a VPN (e.g. WireGuard)
+
 ## Dashboard Screenshots
 
 | Main Screen | Notifications and Music | Hero Stats and Chips ON |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/9f0ec5ae-6562-4acc-8654-293e06bf4f51" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/f2ef40ab-823f-4208-8442-093ab6a1a8e6" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/80db17b8-478c-40e4-9a8f-1fc0accca713" width="320" height="200"/> |
-
+| <img src="https://github.com/user-attachments/assets/8a71b8aa-357a-483f-8859-de8fd860cd7d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/ef6800e8-6a9a-4a67-b3db-3a818be73bde" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/20425167-f397-4ad8-8ae0-7a3ab3728fc7" width="320" height="200"/> |
 
 | Pet Stats | Calendar | AirCon |
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/00381443-7d68-43f9-8296-f20299ad74eb" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/7a1326ec-3ab9-45fe-9d88-49359db6c760" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/2cf69c21-d577-4fd3-8124-47b28d65d1bb" width="320" height="200"/> |
 
-
 | Lights | Scenes | Blinds |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/4af1d0a4-90c9-4193-a222-5b606b25f190" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/79b52001-6b85-4a4f-96f4-0332dfe05f2d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" width="320" height="200"/> |
 
 | ... and Shumi 🐱 |
 |--------|
@@ -57,6 +63,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 **Top bar - Right**
 - SHUMI button — pet stats popup (litter box, feeder, water fountain, litter box usage)
 - CALENDAR button — upcoming events from multiple HA calendar entities
+- Theme selector — select from multiple themes
 
 **Notification - Center Top 1/3**
 - Hidden notifications from multiple HA `binary_sensor` or `input_boolean`. Useful for reminders like cat maintenance, vitamins not taken, or coffee to prepare for tomorrow.
@@ -85,7 +92,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 - 9 Themes
 - Fullscreen on first tap
 - No pinch-zoom, no text selection
-- Haptic Feedback
+- Haptic Feedback on suported Android devices
 
   On Android devices that support the Vibration API, every interaction produces a vibration matched to the action:
 
@@ -145,15 +152,6 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 - Any modern browser — Chrome, Edge, Firefox, Safari
 - Haptic feedback requires A DEVICE supporting the Vibration API
 
-## Security
-
-⚠️ The HA Long-Lived Access Token is stored in plain text inside the HTML file. Anyone who can read the file has full access to your Home Assistant instance.
-
-**Recommendations:**
-- Serve the file only on your local network — never expose it to the internet without authentication
-- Create a dedicated HA user account for the dashboard token rather than using your personal admin account so you can limit access and exposure
-- Revoke and regenerate the token periodically (HA → Profile → Long-Lived Access Tokens)
-- For remote access, use a VPN (e.g. WireGuard)
 
 ---
 

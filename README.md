@@ -8,7 +8,11 @@ I created this dashboard with the design philosophy of a single page overview fo
 
 Homie connects directly to Home Assistant over a Long-Lived Access Token and a local WebSocket connection which results in automatic caching.
 
+## Security
+
 ⚠️ The HA Long-Lived Access Token is stored in plain text inside the HTML file. Anyone who can read the file has full access to your Home Assistant instance.
+
+> DON'T BE like the guy in Massachusetts that has a room named Jason's room - if you have been on Reddit long enough, you will get the joke :)
 
 **Recommendations:**
 - Serve the file only on your local network — never expose it to the internet without authentication

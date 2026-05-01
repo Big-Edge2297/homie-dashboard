@@ -34,6 +34,11 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/79b52001-6b85-4a4f-96f4-0332dfe05f2d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/404c87ef-6105-49bd-b12b-1d7c6eadfb5f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/8107d615-41be-457a-9f91-c3e674a654d0" width="320" height="200"/> |
 
+
+| Alarmo | Media Browse |
+|--------|--------|
+| <img src="https://github.com/user-attachments/assets/767a5909-e6da-4877-b9c8-569286f33bc4" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/6a60a1d8-3ba5-40fa-82c6-813b217212fa" width="320" height="200"/> | 
+
 | ... and Shumi 🐱 |
 |--------|
 | <img src="https://github.com/user-attachments/assets/2b4c66f6-2b31-4a11-b967-55e7fc3f4b0a" width="246" height="428"/> |

@@ -24,7 +24,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 | Main Screen | Notifications and Music | Hero Stats and Chips ON |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/8a71b8aa-357a-483f-8859-de8fd860cd7d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/ef6800e8-6a9a-4a67-b3db-3a818be73bde" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/20425167-f397-4ad8-8ae0-7a3ab3728fc7" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/ea02bf92-5c94-4de5-a226-708e6651217f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/49147619-f734-4b36-bf5d-37583b95d5d8" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/9a76656d-3410-4469-a4df-7a0624930104" width="320" height="200"/> |
 
 | Pet Stats | Calendar | AirCon |
 |--------|--------|--------|
@@ -42,15 +42,15 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 | Classic Gold | Deep Copper | Terracotta |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/c4540dd0-5587-4311-a86d-c6fa46e4bd13" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/1b520f68-749a-4581-b947-a426100b0d56" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/505a33c0-e390-462b-b5c8-724e7f24b1e3" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/d92e2c0d-3ddc-4c5a-80ce-7200aacc2dfc" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/2cf7cd06-7009-4824-8a11-12b655a0e93d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/eb8983a9-b24c-44db-8599-7fe7ad1ac3fe" width="320" height="200"/> |
 
 | Steel Blue | Arctic Cyan | Emerald Green |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/436021d8-ca68-4d8a-8bfe-96fe0fff24de" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/1e8a56ad-5843-4a8d-b85e-4b834ec077b6" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/f8957b61-d8f0-45e8-a76b-62658345831d" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/580b6471-731d-489e-91f2-87b9a26e64eb" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/bc928c36-5ecf-4846-ae72-a287074828ac" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/84b79c9a-aa71-46b2-b939-a4237acfca0e" width="320" height="200"/> |
 
 | Amethyst Purple | Solar Yellow | Crimson Red |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/dcf892cc-a8be-4a03-b33e-0a436d0d4dda" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/eeaa2101-6998-4c67-a82b-07ee96b54b7b" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/e0f87a9c-68ff-466b-9aaa-37a40e14cc68" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/e892a526-7be1-4ae8-bd7a-9627393a776f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/a7fd6d82-0bce-4535-bc16-d959c1ed63a9" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/00ae02cd-627a-4db5-a154-6d7b32c99ec3" width="320" height="200"/> |
 
 
 ---

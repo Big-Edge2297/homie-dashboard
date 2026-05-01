@@ -93,6 +93,9 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 ## Features
 
+- Support for Spotify and Music Assistant - new in v1.1.0
+- Support for Media Browsing - new in v1.1.0
+- Alarmo controls - new in v1.1.0
 - 9 Themes
 - Works both vertically and horizontally 
 - Fullscreen on first tap

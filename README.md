@@ -65,9 +65,10 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 - Weather widget — icon, temperature, and condition from your HA weather entity
 
 **Top bar - Right**
-- SHUMI button — pet stats popup (litter box, feeder, water fountain, litter box usage)
-- CALENDAR button — upcoming events from multiple HA calendar entities
-- Theme selector — select from multiple themes
+- Pet icon — pet stats popup (litter box, feeder, water fountain, litter box usage)
+- Calendar icon — upcoming events from multiple HA calendar entities
+- Security icon — Alarmo controls
+- Theme icon — select from multiple themes
 
 **Notification - Center Top 1/3**
 - Hidden notifications from multiple HA `binary_sensor` or `input_boolean`. Useful for reminders like cat maintenance, vitamins not taken, or coffee to prepare for tomorrow.

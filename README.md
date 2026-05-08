@@ -66,7 +66,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 
 ## Features
 New in v2.0.0
-- Separate configuration file for much easier user adoption
+- Separate configuration file for much easier user adoption and setup
 - Now Playing Dashboards - 2 beautiful full screen music dashboards
 - My Day Dashboard - Calendar, Todo, Meals, Habits
 - Memories Dashboard - Digital Photo Frame

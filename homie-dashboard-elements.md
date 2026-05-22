@@ -1,4 +1,4 @@
-## Main Screen Elements
+## Main Overview Screen Elements
 
 **Top bar - Left**
 - Dashboard name
@@ -6,22 +6,23 @@
 
 **Top bar - Middle**
 - Weather widget — icon, temperature, and condition from your HA weather entity
+- Tapping the weather will open a popup with more info
 
 **Top bar - Right**
 - Pet icon — pet stats popup (litter box, feeder, water fountain, litter box usage)
-- Calendar icon — upcoming events from multiple HA calendar entities
 - Security icon — Alarmo controls
-- Theme icon — select from multiple themes
+- Dashboard Mode icon — select from multiple dashboards
+- Setting Cog - Modify Dashboard settings
 
 **Notification - Center Top 1/3**
-- Hidden notifications from multiple HA `binary_sensor` or `input_boolean`. Useful for reminders like cat maintenance, vitamins not taken, or coffee to prepare for tomorrow.
+- Hidden notifications from multiple HA `binary_sensor` or `input_boolean`. Useful for reminders like cat maintenance, vitamins not taken.
 
 **Hero area - Center 2/3**
 - Full-bleed background image
 - Time-aware greeting — Good Morning / Good Afternoon / Good Evening / Good Night
 - Home stats grid — up to 10 entity-driven tiles in a 5-column layout
 
-**Now Playing Bar - Center Bottom 3/3**
+**Music Playing Bar - Center Bottom 3/3**
 - When a HA media player is playing, a slim bar slides up from the bottom showing artist, track name, previous/play-pause/next controls, and a live progress bar updated every 2 seconds.
 - When nothing is playing the player is hidden
 - When music is paused or stops, the players dissappears after a few seconds

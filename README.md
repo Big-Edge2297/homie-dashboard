@@ -156,6 +156,10 @@ Remember to clear the cache/hard refresh so the new file changes apply in the br
 ---
 
 ## New Features Summary per version
+
+New in v3.3.0
+- HA check functionality for smart light bulbs and switches and pass the appropriate entities in Lights
+  
 New in v3.2.0
 - HACS Integration!
 

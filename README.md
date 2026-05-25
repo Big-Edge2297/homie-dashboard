@@ -190,8 +190,3 @@ First Release v1.0.0
 - Haptic Feedback on supported Android devices
 
 More information for the Homie Dashboard Elements can be found [homie-dashboard-elements](https://github.com/Big-Edge2297/homie-dashboard/blob/main/docs/homie-dashboard-elements.md)
-
----
-
-## Setup
-Follow the [homie-dashboard-setup-guide](https://github.com/Big-Edge2297/homie-dashboard/blob/main/docs/homie-dashboard-setup-guide.md) for a step by step guide on how to setup the dashboard.

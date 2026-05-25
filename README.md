@@ -92,6 +92,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
    - Type: Select Dashboard.
 4. Click Add.
 5. Once added, find Homie Dashboard in your HACS list, click it, and click Download.
+
 Result: This creates the folder structure on your system: config/www/community/homie-dashboard/. You can browse to this location later so you can edit the config.js file.
 
 ### Step 2: Register the Lovelace Resource

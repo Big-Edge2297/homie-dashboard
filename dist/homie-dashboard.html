@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════════════════╗
-  ║                        HOMIE  DASHBOARD v3.2.0                           ║
+  ║                        HOMIE  DASHBOARD v3.3.0                           ║
   ╠══════════════════════════════════════════════════════════════════════════╣
   ║  A custom Home Assistant dashboard designed for wall-mounted tablets.    ║
   ║                                                                          ║
@@ -401,7 +401,6 @@
   .hero-title {
     font-family: inherit;
     font-size: var(--greeting-fs, 3.5rem);
-    font-weight: 300;
     letter-spacing: 0.2em;
     margin-bottom: 2rem;
     line-height: 1;
@@ -442,7 +441,6 @@
   .stat-value {
     font-size: 15px;
     color: #fff;
-    font-weight: 400;
     letter-spacing: 0.05em;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
   }
@@ -5993,8 +5991,8 @@ function _wsConnect() {
             // Live-refresh the pet popup when it is open and a pet entity changes,
             // so external toggles (phone, other devices) appear instantly.
             const petOpen = document.getElementById("pet-overlay")?.classList.contains("open");
-            if (catOpen && CONFIG.petStats && Object.values(CONFIG.petStats).includes(newState.entity_id)) {
-              _refreshCatStatsLive();
+            if (petOpen && CONFIG.petStats && Object.values(CONFIG.petStats).includes(newState.entity_id)) {
+              _refreshPetStatsLive();
             }
             refreshAllUI();
           }
@@ -7659,8 +7657,32 @@ async function openPopup(i) {
   }
 
   // ── Flat list or noRoomGrouping subGroups ───────────────────────────────
+  // For light controls, collect all regular (non-expandable) sub-entities first
+  // so we can fetch their states — and therefore their capabilities — before
+  // building the card HTML. This lets buildMushroomCard render only the
+  // controls each light actually supports (brightness, colour, temp).
   let html = '';
   let flatSubs = [];
+
+  // First pass: collect flatSubs without building HTML yet (needed for light caps fetch)
+  if (c.subGroups) {
+    c.subGroups.forEach(group => {
+      (group.subEntities || []).forEach(s => {
+        if (!s.expandable) flatSubs.push(s);
+      });
+    });
+  } else {
+    flatSubs = c.subEntities || [];
+  }
+
+  // Fetch states upfront for light controls so caps are known at build time.
+  // For all other domains the existing post-build fetch below handles hydration.
+  const preFetchedStates = isLightControl
+    ? await Promise.all(flatSubs.map(s => haGet(s.entity)))
+    : null;
+
+  // Reset flatSubs — re-populated during the HTML-building pass below
+  flatSubs = [];
 
   if (c.subGroups) {
     c.subGroups.forEach(group => {
@@ -7698,7 +7720,8 @@ async function openPopup(i) {
           flatSubs.push(s);
           const domain = s.entity.split(".")[0];
           if (isLightControl) {
-            html += buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS);
+            const caps = getLightCaps(preFetchedStates?.[j]);
+            html += buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS, caps);
           } else if (isClimateControl) {
             html += buildMushroomAcCard(i, j, s);
           } else if (isCoverControl) {
@@ -7718,7 +7741,8 @@ async function openPopup(i) {
     flatSubs = c.subEntities || [];
     flatSubs.forEach((s, j) => {
       if (isLightControl) {
-        html += buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS);
+        const caps = getLightCaps(preFetchedStates?.[j]);
+        html += buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS, caps);
       } else if (isClimateControl) {
         html += buildMushroomAcCard(i, j, s);
       } else if (isCoverControl) {
@@ -7738,7 +7762,8 @@ async function openPopup(i) {
   // Narrow width for flat entity lists (bath, irrigation, AC single-room, etc.)
 
   // For climate: use _acCardState (in-memory) if available; fetch HA only on first open.
-  // For all other domains: always fetch from HA via haGet (which uses the cache when fresh).
+  // For lights: states were already fetched above (preFetchedStates) — reuse them.
+  // For all other domains: fetch from HA via haGet (which uses the cache when fresh).
   if (isClimateControl) {
     const allInMemory = flatSubs.every(s => _acCardState.has(s.entity));
     if (allInMemory) {
@@ -7758,6 +7783,13 @@ async function openPopup(i) {
         updateMushroomAcCard(i, j, isOn, d);
       });
     }
+  } else if (isLightControl) {
+    // States already fetched — just hydrate cards
+    preFetchedStates.forEach((d, j) => {
+      const state = d ? d.state : "unknown";
+      const isOn  = d && !["off","closed","unavailable","unknown"].includes(state);
+      updateMushroomCard(i, j, isOn, d);
+    });
   } else {
     const states = await Promise.all(flatSubs.map(s => haGet(s.entity)));
     states.forEach((d, j) => {
@@ -7769,9 +7801,7 @@ async function openPopup(i) {
       } else {
         isOn = d && !["off","closed","unavailable","unknown"].includes(state);
       }
-      if (isLightControl) {
-        updateMushroomCard(i, j, isOn, d);
-      } else if (isCoverControl) {
+      if (isCoverControl) {
         updateMushroomCoverCard(i, j, isOn, d);
       } else if (isPurifierControl) {
         updateMushroomPurifierCard(i, j, isOn, d);
@@ -8512,37 +8542,46 @@ async function coverCommand(i, j, service) {
 }
 
 /**
- * buildMushroomCard — renders the HTML for a single light control card
- * inside the popup, with a brightness slider and colour/temp panels.
- * @param {number} i            — control index (parent chip)
- * @param {number} j            — sub-entity index within the control
- * @param {Object} s            — sub-entity object {label, entity}
+ * getLightCaps — derives what a light entity supports from its HA state object.
+ * Reads supported_color_modes (available even when the light is off).
+ * Falls back to permissive defaults when the attribute is absent so that
+ * lights which have not yet reported their state show the full smart-bulb UI.
+ *
+ * @param  {Object} d — HA state object (may be null/undefined)
+ * @returns {{ hasBrightness: boolean, hasColorTemp: boolean, hasColor: boolean }}
+ */
+function getLightCaps(d) {
+  const modes = d?.attributes?.supported_color_modes ?? [];
+  if (modes.length === 0) {
+    // No capability data yet — show full UI so nothing is hidden by mistake
+    return { hasBrightness: true, hasColorTemp: true, hasColor: true };
+  }
+  const onlyOnOff = modes.length === 1 && modes[0] === "onoff";
+  return {
+    hasBrightness: !onlyOnOff,
+    hasColorTemp:  modes.some(m => ["color_temp", "white"].includes(m)),
+    hasColor:      modes.some(m => ["hs", "rgb", "rgbw", "rgbww", "xy"].includes(m)),
+  };
+}
+
+/**
+ * buildMushroomCard — renders the HTML for a single light control card.
+ * Adapts to the light's actual capabilities:
+ *   - Smart bulb (RGB/CCT): brightness slider + colour swatches + temp buttons
+ *   - Brightness-only bulb: slider only, no colour/temp panels
+ *   - Wall switch / dumb bulb (onoff): clean on/off card, no dead controls
+ *
+ * @param {number} i             — control index (parent chip)
+ * @param {number} j             — sub-entity index within the control
+ * @param {Object} s             — sub-entity object {label, entity}
  * @param {Array}  COLOR_PRESETS — colour swatch definitions
  * @param {Array}  TEMP_PRESETS  — white temperature button definitions
+ * @param {Object} [caps]        — result of getLightCaps(); defaults to full smart-bulb
  */
-function buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS) {
-  const swatches = COLOR_PRESETS.map((p, k) =>
-    `<div class="mush-swatch" id="sw-${i}-${j}-${k}" title="${p.label}"
-      style="background:rgb(${p.rgb.join(',')})"
-      onclick="event.stopPropagation();applyLightColor(${i},${j},${JSON.stringify(p.rgb)},${k})"></div>`
-  ).join('');
-  const tempBtns = TEMP_PRESETS.map((p, k) =>
-    `<button class="mush-temp-btn" id="tb-${i}-${j}-${k}"
-      onclick="event.stopPropagation();applyLightTemp(${i},${j},${p.mireds},${k})">${p.label}</button>`
-  ).join('');
-  return `
-    <div class="mush-light-card" id="sub-${i}-${j}">
-      <div class="mush-light-top">
-        <div class="mush-bulb-icon" onclick="toggleSubEntity(event,${i},${j})">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21h6M12 3a6 6 0 0 1 6 6c0 2.2-1.2 4.1-3 5.2V17H9v-2.8A6 6 0 0 1 6 9a6 6 0 0 1 6-6z"/>
-          </svg>
-        </div>
-        <div class="mush-light-meta">
-          <div class="mush-light-name">${escapeHtml(s.label)}</div>
-          <div class="mush-light-pct" id="pct-${i}-${j}">—</div>
-        </div>
-      </div>
+function buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS, caps) {
+  const { hasBrightness, hasColorTemp, hasColor } = caps ?? { hasBrightness: true, hasColorTemp: true, hasColor: true };
+
+  const sliderHtml = hasBrightness ? `
       <div class="mush-slider-row">
         <div class="mush-brightness-track" id="track-${i}-${j}">
           <div class="mush-brightness-fill" id="fill-${i}-${j}" style="width:0%"></div>
@@ -8551,12 +8590,14 @@ function buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS) {
             oninput="onMushroomSlider(${i},${j},this.value)"
             onchange="applyLightBrightness(${i},${j},this.value)">
         </div>
+        ${hasColorTemp ? `
         <div class="mush-icon-btn" id="temp-btn-icon-${i}-${j}" title="White temperature"
           onclick="event.stopPropagation();toggleMushroomPanel(${i},${j},'temp')">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.8" stroke-linecap="round">
             <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
           </svg>
-        </div>
+        </div>` : ''}
+        ${hasColor ? `
         <div class="mush-icon-btn" id="color-btn-icon-${i}-${j}" title="Colour"
           onclick="event.stopPropagation();toggleMushroomPanel(${i},${j},'color')">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -8564,22 +8605,62 @@ function buildMushroomCard(i, j, s, COLOR_PRESETS, TEMP_PRESETS) {
             <circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/>
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.17-.6-1.6-.36-.42-.58-.97-.58-1.4 0-1.38 1.12-2.5 2.5-2.5H18c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/>
           </svg>
-        </div>
-      </div>
+        </div>` : ''}
+      </div>` : '';
+
+  const tempPanelHtml = (hasBrightness && hasColorTemp) ? (() => {
+    const tempBtns = TEMP_PRESETS.map((p, k) =>
+      `<button class="mush-temp-btn" id="tb-${i}-${j}-${k}"
+        onclick="event.stopPropagation();applyLightTemp(${i},${j},${p.mireds},${k})">${p.label}</button>`
+    ).join('');
+    return `
       <div class="mush-color-panel" id="temp-panel-${i}-${j}">
         <div class="mush-panel-section-label">White Temperature</div>
         <div class="mush-temp-btns">${tempBtns}</div>
-      </div>
+      </div>`;
+  })() : '';
+
+  const colorPanelHtml = (hasBrightness && hasColor) ? (() => {
+    const swatches = COLOR_PRESETS.map((p, k) =>
+      `<div class="mush-swatch" id="sw-${i}-${j}-${k}" title="${p.label}"
+        style="background:rgb(${p.rgb.join(',')})"
+        onclick="event.stopPropagation();applyLightColor(${i},${j},${JSON.stringify(p.rgb)},${k})"></div>`
+    ).join('');
+    return `
       <div class="mush-color-panel" id="color-panel-${i}-${j}">
         <div class="mush-panel-section-label">Colour</div>
         <div class="mush-swatches">${swatches}</div>
+      </div>`;
+  })() : '';
+
+  // Wall-switch icon (power symbol) shown instead of bulb for on/off-only lights
+  const iconSvg = hasBrightness
+    ? `<path d="M9 21h6M12 3a6 6 0 0 1 6 6c0 2.2-1.2 4.1-3 5.2V17H9v-2.8A6 6 0 0 1 6 9a6 6 0 0 1 6-6z"/>`
+    : `<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>`;
+
+  return `
+    <div class="mush-light-card" id="sub-${i}-${j}">
+      <div class="mush-light-top">
+        <div class="mush-bulb-icon" onclick="toggleSubEntity(event,${i},${j})">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            ${iconSvg}
+          </svg>
+        </div>
+        <div class="mush-light-meta">
+          <div class="mush-light-name">${escapeHtml(s.label)}</div>
+          <div class="mush-light-pct" id="pct-${i}-${j}">—</div>
+        </div>
       </div>
+      ${sliderHtml}
+      ${tempPanelHtml}
+      ${colorPanelHtml}
     </div>`;
 }
 
 /**
  * updateMushroomCard — syncs a rendered mushroom card to a HA state object.
  * Updates on/off class, brightness percentage label, and slider position.
+ * For on/off-only lights the pct label shows the on/off text instead of a percentage.
  * @param {number}  i    — control index
  * @param {number}  j    — sub-entity index
  * @param {boolean} isOn — whether the light is currently on
@@ -8589,14 +8670,20 @@ function updateMushroomCard(i, j, isOn, d) {
   const card = document.getElementById(`sub-${i}-${j}`);
   if (!card) return;
   card.classList.toggle("on", isOn);
-  const pct = (isOn && d.attributes && d.attributes.brightness != null)
-    ? Math.round(d.attributes.brightness / 255 * 100) : 0;
+  const caps  = getLightCaps(d);
   const pctEl = document.getElementById(`pct-${i}-${j}`);
-  if (pctEl) pctEl.textContent = isOn ? pct + "%" : fmtOff();
-  const sl = document.getElementById(`bslider-${i}-${j}`);
-  const fill = document.getElementById(`fill-${i}-${j}`);
-  if (sl) sl.value = isOn ? pct : 0;
-  if (fill) fill.style.width = (isOn ? pct : 0) + "%";
+  if (caps.hasBrightness) {
+    const pct = (isOn && d?.attributes?.brightness != null)
+      ? Math.round(d.attributes.brightness / 255 * 100) : 0;
+    if (pctEl) pctEl.textContent = isOn ? pct + "%" : fmtOff();
+    const sl   = document.getElementById(`bslider-${i}-${j}`);
+    const fill = document.getElementById(`fill-${i}-${j}`);
+    if (sl)   sl.value         = isOn ? pct : 0;
+    if (fill) fill.style.width = (isOn ? pct : 0) + "%";
+  } else {
+    // On/off-only light — just show on/off text, no slider to update
+    if (pctEl) pctEl.textContent = isOn ? fmtOn() : fmtOff();
+  }
 }
 
 /**
@@ -8821,12 +8908,22 @@ async function toggleRoomAccordion(roomId, ctrlIdx, startIdx, count) {
   // ── Build card HTML once, reuse on subsequent opens ──────────────────────
   if (!panel.dataset.built) {
     panel.dataset.built = "1";
+
+    // For light controls, fetch states now so getLightCaps has data at build time.
+    // For all other domains, the hydration pass below handles state fetching.
+    const subs = c._flatSubs.slice(startIdx, startIdx + count);
+    const buildStates = isLightControl
+      ? await Promise.all(subs.map(s => haGet(s.entity)))
+      : null;
+
     const parts = [];
     for (let k = 0; k < count; k++) {
       const j = startIdx + k;
       const s = c._flatSubs[j];
-      if (isLightControl)        parts.push(buildMushroomCard(ctrlIdx, j, s, COLOR_PRESETS, TEMP_PRESETS));
-      else if (isClimateControl) parts.push(buildMushroomAcCard(ctrlIdx, j, s));
+      if (isLightControl) {
+        const caps = getLightCaps(buildStates?.[k]);
+        parts.push(buildMushroomCard(ctrlIdx, j, s, COLOR_PRESETS, TEMP_PRESETS, caps));
+      } else if (isClimateControl) parts.push(buildMushroomAcCard(ctrlIdx, j, s));
       else if (isCoverControl)   parts.push(buildMushroomCoverCard(ctrlIdx, j, s));
       else if (isPurifierControl) parts.push(buildMushroomPurifierCard(ctrlIdx, j, s));
       else {
@@ -8841,6 +8938,21 @@ async function toggleRoomAccordion(roomId, ctrlIdx, startIdx, count) {
     if (isLightControl) {
       panel.classList.add("light-grid");
       panel.innerHTML = parts.join("");
+
+      // Hydrate immediately with the states we already fetched
+      buildStates.forEach((d, k) => {
+        const j     = startIdx + k;
+        const state = d ? d.state : "unknown";
+        const isOn  = !!d && !["off","closed","unavailable","unknown"].includes(state);
+        updateMushroomCard(ctrlIdx, j, isOn, d);
+      });
+      const activeCount = buildStates.filter(d => d && !["off","closed","unavailable","unknown"].includes(d.state)).length;
+      const badge = document.getElementById(`room-badge-${roomId}`);
+      if (badge) {
+        badge.textContent = activeCount > 0 ? activeCount + " " + fmtOn() : "";
+        badge.classList.toggle("visible", activeCount > 0);
+      }
+      return; // hydration done — skip the generic hydration block below
     } else {
       panel.innerHTML = parts.join("");
     }
@@ -9313,7 +9425,7 @@ function getRelativeTime(timestamp) {
 }
 
 /**
- * openCatStats — fetches pet sensor values from CONFIG.petStats and populates
+ * openPetStats — fetches pet sensor values from CONFIG.petStats and populates
  * the pet stats popup. To change which entities are shown, edit CONFIG.petStats
  * at the top of the script — no need to touch this function.
  */
@@ -9371,12 +9483,12 @@ async function openPetStats() {
 }
 
 /**
- * _refreshCatStatsLive — lightweight live-refresh for the pet popup, called
+ * _refreshPetStatsLive — lightweight live-refresh for the pet popup, called
  * whenever the WebSocket fires a state_changed event for a pet entity while
  * the popup is open. Skips the history chart (expensive, TTL-cached separately)
  * and only re-fetches the sensor values, toggle state, and gauge.
  */
-async function _refreshCatStatsLive() {
+async function _refreshPetStatsLive() {
   const sensors = CONFIG.petStats;
   const keys = Object.keys(sensors);
   const results = await Promise.all(keys.map(k => haGet(sensors[k])));

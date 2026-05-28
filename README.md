@@ -72,7 +72,7 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 | <img src="https://github.com/user-attachments/assets/9decdabc-1f36-4a4d-ac34-80860b4b6020" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/2b8ba98d-a56d-4516-9cd6-a1a2af7cc68c" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/7b7f9b44-41a2-4544-bab2-6903d8dbd505" width="320" height="200"/> |
 
 ---
-## Get Started with HACS Integation
+## Get Started with HACS Integation (Option A)
 
 ⚠️ Save/Backup your config.js file in Step 6 after you make your changes! Every time you download a new release, the config file will be overwritten and you will lose your changes. ⚠️
 
@@ -142,6 +142,13 @@ Remember to clear the cache/hard refresh so the new file changes apply in the br
 
 ---
 
+Standalone Setup without HACS (Option B)
+1. Copy homie-dashboard.html and config.js into your HA config/www/ folder
+2. Access it in a browser at http://YOUR_HA_IP:8123/local/homie-dashboard.html or create a dashboard in HA like in Step 4 above with but use /local/homie-dashboard.html
+3. Follow step 5 to configure your config.js file
+
+---
+
 ## Security
 
 ⚠️ The HA Long-Lived Access Token is stored in plain text inside the config.js file. Anyone who can read the file has full access to your Home Assistant instance.
@@ -157,6 +164,9 @@ Remember to clear the cache/hard refresh so the new file changes apply in the br
 ---
 
 ## New Features Summary per version
+
+New in v3.4.0
+- Added trends in AQI and weather stats
 
 New in v3.3.0
 - HA check functionality for smart light bulbs and switches and pass the appropriate entities in Lights

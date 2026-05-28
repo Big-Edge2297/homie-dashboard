@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   ╔══════════════════════════════════════════════════════════════════════════╗
-  ║                        HOMIE  DASHBOARD v3.3.0                           ║
+  ║                        HOMIE  DASHBOARD v3.4.0                           ║
   ╠══════════════════════════════════════════════════════════════════════════╣
   ║  A custom Home Assistant dashboard designed for wall-mounted tablets.    ║
   ║                                                                          ║
@@ -2539,7 +2539,7 @@
     font-family: inherit;
     font-size: 1.4rem;
     font-weight: 300;
-    color: var(--accent);
+    color: #ffffff;
     letter-spacing: 0.08em;
     line-height: 1;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -2555,7 +2555,7 @@
   .daily-header-date {
     font-size: 9px;
     letter-spacing: 0.25em;
-    color: var(--accent);
+    color: #ffffff;
     text-transform: uppercase;
     font-weight: 400;
     margin-top: 6px;
@@ -2665,7 +2665,7 @@
   .daily-date-group {
     font-size: 8px;
     letter-spacing: 0.28em;
-    color: var(--accent);
+    color: #ffffff;
     text-transform: uppercase;
     padding: 10px 2px 4px;
     margin-top: 4px;
@@ -3155,7 +3155,7 @@
     margin: 0 14px;
   }
   .daily-event-location {
-    font-size: 9px; color: rgba(255,255,255,0.6);
+    font-size: 9px; color: #ffffff;
     letter-spacing: 0.15em; line-height: 1.4;
     text-transform: uppercase;
     display: flex; align-items: center; gap: 5px;
@@ -3163,6 +3163,11 @@
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .daily-event-location svg { flex-shrink: 0; opacity: 0.6; }
+  .daily-event-dot-subtle {
+    width: 3px; height: 3px; border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    flex-shrink: 0; margin: 0 6px;
+  }
   .daily-empty {
     font-size: 9px; letter-spacing: 0.25em;
     color: #fff; text-transform: uppercase;
@@ -5065,9 +5070,9 @@
     margin-bottom: 4px;
   }
   .settings-title {
-    font-size: 8px;
+    font-size: 9px;
     letter-spacing: 0.3em;
-    color: var(--accent);
+    color: #ffffff;
     font-weight: 600;
   }
   .settings-section-title {
@@ -5742,7 +5747,7 @@ function _localeWord(key) {
   const lang = getLocale().split('-')[0].toLowerCase();
   const defaults = {
     today: 'Today', tomorrow: 'Tomorrow', day: 'Day', allEvents: 'All Events',
-    on: 'On', off: 'Off', loading: 'Loading…', noEvents: 'No events',
+    on: 'On', off: 'Off', loading: 'Loading…', noEvents: 'No events today',
     noTasks: 'No tasks', couldNotLoadMeals: 'Could not load meals',
     allDay: 'All Day',
     habitHistory: 'Habit History', moodHistory: 'Mood History',
@@ -6185,6 +6190,8 @@ function refreshWeather() {
     if (tempEl) tempEl.textContent = temp;
     if (descEl) descEl.textContent = desc;
   });
+
+  if (_wfsOpen) _refreshWeatherFS();
 }
 
 /**
@@ -6304,13 +6311,44 @@ function closeWeatherPopup(e) {
  * ─────────────────────────────────────────────────────────────────────────── */
 
 let _wfsOpen = false;
+// Stores previous weather attribute snapshot for trend comparison
+let _wfsPrevAttrs = null;
+// Stores the latest snapshot (becomes prev on the next interval tick)
+let _wfsCurrentSnapshot = null;
+// Stores previous AQI for trend comparison
+let _wfsPrevAqi = null;
 
-function openWeatherFS() {
-  haptic("light");
-  _closeLauncher && _closeLauncher();
-  _wfsOpen = true;
+// Snapshot weather attrs periodically so trends always reflect real change
+function _wfsSnapshotAttrs() {
+  const entity = CONFIG.weather && CONFIG.weather.entity;
+  const d = entity ? haGetCached(entity) : null;
+  if (!d) return;
+  const attrs = d.attributes || {};
+  if (_wfsCurrentSnapshot === null) {
+    // Very first call — seed both so we have a baseline; trends will show
+    // once values actually change on the next interval tick
+    _wfsCurrentSnapshot = { ...attrs };
+    _wfsPrevAttrs = { ...attrs };
+  } else {
+    // Move the last snapshot to prev, take a fresh current snapshot
+    _wfsPrevAttrs = { ..._wfsCurrentSnapshot };
+    _wfsCurrentSnapshot = { ...attrs };
+  }
+  const aqiCfg = CONFIG.aqi || {};
+  const aqiD = aqiCfg.entity ? haGetCached(aqiCfg.entity) : null;
+  if (aqiD) {
+    const aqi = parseFloat(aqiD.state);
+    if (!isNaN(aqi)) _wfsPrevAqi = aqi;
+  }
+}
+// Take an initial snapshot once the cache is ready (called after refreshAllUI seeds)
+// and then every 10 minutes so trends show meaningful change
+setTimeout(function _wfsInitSnapshot() {
+  _wfsSnapshotAttrs();
+  setInterval(_wfsSnapshotAttrs, 10 * 60 * 1000);
+}, 30 * 1000); // wait 30s for WS cache to populate
 
-  // Populate from current weather entity in state cache
+function _refreshWeatherFS() {
   const entity = CONFIG.weather && CONFIG.weather.entity;
   const d = entity ? haGetCached(entity) : null;
   const attrs = d ? (d.attributes || {}) : {};
@@ -6319,11 +6357,8 @@ function openWeatherFS() {
 
   // Big temperature
   const tempEl = document.getElementById("wfs-temp-big");
-  const unitEl = document.getElementById("wfs-temp-unit");
   if (tempEl) {
     const temp = attrs.temperature != null ? Math.round(attrs.temperature) : "—";
-    tempEl.firstChild ? (tempEl.firstChild.textContent = temp) : (tempEl.textContent = temp);
-    // Rebuild with unit span preserved
     tempEl.innerHTML = `${temp}<span class="wfs-temp-unit" id="wfs-temp-unit">${unit}</span>`;
   }
   // Mirror to card
@@ -6338,7 +6373,6 @@ function openWeatherFS() {
   if (iconWrap) {
     const cond = d ? d.state : "cloudy";
     const rawIcon = icons[cond] || icons["cloudy"] || "";
-    // Scale icon up to 80px
     iconWrap.innerHTML = rawIcon.replace(/width="32" height="32"/g, 'width="80" height="80"');
   }
   // Mirror icon to card
@@ -6382,13 +6416,33 @@ function openWeatherFS() {
   setWfsStat("wfs-stat-pressure", pressure);
   setWfsStat("wfs-stat-cloud", cloud);
 
+  // ── Trend arrows ──────────────────────────────────────────────────────────
+  const _setTrend = (trendId, curr, prev, threshold = 0) => {
+    const trendEl = document.getElementById(trendId);
+    if (!trendEl) return;
+    if (prev == null || curr == null) { trendEl.innerHTML = ""; return; }
+    const diff = curr - prev;
+    if (Math.abs(diff) <= threshold) {
+      trendEl.innerHTML = "";
+    } else if (diff > 0) {
+      trendEl.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
+    } else {
+      trendEl.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(180,140,80,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+    }
+  };
+  const p = _wfsPrevAttrs || _wfsCurrentSnapshot || attrs;
+  _setTrend("wfs-trend-humidity",  attrs.humidity,       p.humidity,       1);
+  _setTrend("wfs-trend-wind",      attrs.wind_speed,     p.wind_speed,     1);
+  _setTrend("wfs-trend-uv",        attrs.uv_index,       p.uv_index,       0);
+  _setTrend("wfs-trend-pressure",  attrs.pressure,       p.pressure,       0.5);
+  _setTrend("wfs-trend-cloud",     attrs.cloud_coverage, p.cloud_coverage, 2);
+
   // ── Sun Rise / Sun Set arc ─────────────────────────────────────────────
   (function populateSunArc() {
     const sunCfg = CONFIG.sun || {};
     const riseD  = sunCfg.sunrise ? haGetCached(sunCfg.sunrise) : null;
     const setD   = sunCfg.sunset  ? haGetCached(sunCfg.sunset)  : null;
 
-    // Format "HH:MM AM/PM" from ISO string — always in the home's local timezone
     const fmt = iso => {
       if (!iso) return "—";
       const d = new Date(iso);
@@ -6403,18 +6457,12 @@ function openWeatherFS() {
     if (el("wfs-sunrise-val")) el("wfs-sunrise-val").textContent = fmt(riseISO);
     if (el("wfs-sunset-val"))  el("wfs-sunset-val").textContent  = fmt(setISO);
 
-    // Position sun dot on arc based on current time between rise and set
     if (riseISO && setISO) {
       const now    = Date.now();
       let riseMs   = new Date(riseISO).getTime();
       let setMs    = new Date(setISO).getTime();
 
-      // HA's next_dawn/next_dusk always point to the next future occurrence.
-      // Subtract 24h to get today's value — but only if it makes sense:
-      // sunrise: subtract if it's in the future (today's already passed)
-      // sunset:  subtract only if riseMs was also adjusted AND setMs-24h > riseMs
       if (riseMs > now) riseMs -= 24 * 60 * 60 * 1000;
-      // Only pull sunset back if it's pointing to tomorrow (i.e. after today's adjusted sunrise + 24h gap)
       const DAY = 24 * 60 * 60 * 1000;
       if (setMs > now && (setMs - riseMs) > DAY) setMs -= DAY;
 
@@ -6440,7 +6488,6 @@ function openWeatherFS() {
     const el = id => document.getElementById(id);
     if (el("wfs-aqi-number")) el("wfs-aqi-number").textContent = isNaN(aqi) ? "—" : Math.round(aqi);
 
-    // PM2.5 & PM10
     const pm25D = haGetCached(aqiCfg.pm25);
     const pm10D = haGetCached(aqiCfg.pm10);
     if (el("wfs-pm25")) el("wfs-pm25").textContent = (pm25D && pm25D.state != null && pm25D.state !== "unavailable") ? parseFloat(pm25D.state).toFixed(1) + " µg/m³" : "—";
@@ -6451,7 +6498,6 @@ function openWeatherFS() {
     if (el("wfs-co"))  el("wfs-co").textContent  = (coD  && coD.state  != null && coD.state  !== "unavailable") ? parseFloat(coD.state).toFixed(1)  + " ppm" : "—";
     if (el("wfs-no2")) el("wfs-no2").textContent = (no2D && no2D.state != null && no2D.state !== "unavailable") ? parseFloat(no2D.state).toFixed(1) + " µg/m³" : "—";
 
-    // AQI bands — defined in config.js under CONFIG.aqi.bands
     const bands = (CONFIG.aqi && CONFIG.aqi.bands) || [
       { max:  50, label: "Good",                           color: "#4caf8a", text: "The air is in standard level and is healthy for everyone." },
       { max: 100, label: "Moderate",                       color: "#f0c040", text: "Air quality is acceptable; some pollutants may affect sensitive groups." },
@@ -6467,15 +6513,25 @@ function openWeatherFS() {
       el("wfs-aqi-quality").style.color = band.color;
     }
 
-    // Build dot ring — 60 dots around a circle
+    const aqiTrendEl = el("wfs-aqi-trend");
+    if (aqiTrendEl && !isNaN(aqi)) {
+      const prevAqi = _wfsPrevAqi != null ? _wfsPrevAqi : aqi;
+      const diff = aqi - prevAqi;
+      if (Math.abs(diff) <= 2) {
+        aqiTrendEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+      } else if (diff > 0) {
+        aqiTrendEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(220,100,80,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
+      } else {
+        aqiTrendEl.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(76,175,138,0.9)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;
+      }
+    }
+
     const dotsEl = el("wfs-aqi-dots");
     if (dotsEl) {
       const total = 60, cx = 70, cy = 70, radius = 58, dotR = 2.8;
-      // fraction of dots to colour = aqi/500 clamped
       const filled = isNaN(aqi) ? 0 : Math.round(Math.min(aqi / 500, 1) * total);
       let html = "";
       for (let i = 0; i < total; i++) {
-        // Start from top (−90°), go clockwise
         const angle = ((i / total) * 2 * Math.PI) - Math.PI / 2;
         const x = cx + radius * Math.cos(angle);
         const y = cy + radius * Math.sin(angle);
@@ -6510,11 +6566,19 @@ function openWeatherFS() {
 
   // Animate background based on condition
   _wfsApplyBg(d ? d.state : "cloudy");
+}
 
-  // Open overlay
+function openWeatherFS() {
+  haptic("light");
+  _closeLauncher && _closeLauncher();
+  _wfsOpen = true;
+  _refreshWeatherFS();
   document.getElementById("weather-fs-overlay").classList.add("open");
-
-  // Fetch forecast
+  const entity = CONFIG.weather && CONFIG.weather.entity;
+  const d = entity ? haGetCached(entity) : null;
+  const attrs = d ? (d.attributes || {}) : {};
+  const unit = (attrs.temperature_unit === "°F" || (CONFIG.weather && CONFIG.weather.unit === "°F")) ? "°F" : "°C";
+  const icons = _getWxIcons ? _getWxIcons() : {};
   _wfsFetchForecast(unit, icons);
   window._showSwipeDownHint?.();
 }
@@ -10606,28 +10670,42 @@ function _dailyMarkWeekDots() {
  * and _dailyRenderAllEvents (all-events view) to avoid duplicating the card
  * template. Pass animDelay (a CSS seconds string) only in day view.
  */
-function _buildEventCardHtml(ev, { isToday = false, animDelay = null } = {}) {
+function _buildEventCardHtml(ev, { isToday = false, animDelay = null, inAllEvents = false } = {}) {
   const evDate   = _parseEventDate(ev);
   const isAllDay = !ev.start.dateTime;
+  // Use 24hr format for both views
+  const timeOpts = { hour: "2-digit", minute: "2-digit", hour12: false };
   let timeStr = _localeWord('allDay');
   if (!isAllDay) {
-    const startStr = evDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const startStr = evDate.toLocaleTimeString([], timeOpts);
     if (ev.end && ev.end.dateTime) {
-      const endStr = new Date(ev.end.dateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const endStr = new Date(ev.end.dateTime).toLocaleTimeString([], timeOpts);
       timeStr = startStr + " – " + endStr;
     } else {
       timeStr = startStr;
     }
   }
+  const delay = animDelay != null ? ` style="animation-delay:${animDelay}s"` : "";
+
   const locationHtml = ev.location
     ? `<div class="daily-event-divider"></div><div class="daily-event-location"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>${escapeHtml(ev.location)}</div>`
     : "";
-  const delay = animDelay != null ? ` style="animation-delay:${animDelay}s"` : "";
-  return `<div class="daily-event-card${isAllDay ? " daily-event-allday" : ""}"${delay}>
-    <div class="daily-event-card-header">
-      <div class="daily-event-time">${escapeHtml(timeStr)}</div>
-    </div>
+
+  if (inAllEvents) {
+    return `<div class="daily-event-card${isAllDay ? " daily-event-allday" : ""}"${delay}>
     <div class="daily-event-body">
+      <div class="daily-event-time" style="flex-shrink:0">${escapeHtml(timeStr)}</div>
+      <div class="daily-event-dot-subtle"></div>
+      <div class="daily-event-title">${escapeHtml(ev.summary || "Untitled")}</div>
+      ${locationHtml}
+    </div>
+  </div>`;
+  }
+
+  return `<div class="daily-event-card${isAllDay ? " daily-event-allday" : ""}"${delay}>
+    <div class="daily-event-body">
+      <div class="daily-event-time" style="flex-shrink:0">${escapeHtml(timeStr)}</div>
+      <div class="daily-event-dot-subtle"></div>
       <div class="daily-event-title">${escapeHtml(ev.summary || "Untitled")}</div>
       ${locationHtml}
     </div>
@@ -10646,7 +10724,21 @@ function _dailyRenderEvents() {
 
   if (!dayEvents.length) {
     list.dataset.fingerprint = "";
-    list.innerHTML = `<div class="daily-empty">${fmtNoEvents()}</div>`;
+    // Find the next day that has events
+    const selMidnight = new Date(sel); selMidnight.setHours(0,0,0,0);
+    let nextEventHtml = "";
+    if (_dailyAllEvents.length) {
+      const futureDates = _dailyAllEvents
+        .map(ev => { const d = _parseEventDate(ev); d.setHours(0,0,0,0); return d; })
+        .filter(d => d > selMidnight)
+        .sort((a, b) => a - b);
+      if (futureDates.length) {
+        const nextD = futureDates[0];
+        const nextLabel = nextD.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+        nextEventHtml = `<div class="daily-empty" style="font-size:8px;margin-top:4px;letter-spacing:0.2em;color:#ffffff">NEXT EVENT ON ${nextLabel.toUpperCase()}</div>`;
+      }
+    }
+    list.innerHTML = `<div class="daily-empty">${fmtNoEvents()}</div>${nextEventHtml}`;
     return;
   }
 
@@ -10730,7 +10822,7 @@ function _dailyRenderAllEvents() {
     else                 label = fmtDate(d);
 
     return `<div class="daily-date-group">${escapeHtml(label)}</div>`
-      + groups[key].map(ev => _buildEventCardHtml(ev, { isToday })).join("");
+      + groups[key].map(ev => _buildEventCardHtml(ev, { isToday, inAllEvents: true })).join("");
   }).join("");
 }
 
@@ -10870,6 +10962,7 @@ async function _dailyLoadTodos(silent = false) {
   }));
 
   _dailyTodos = results.filter(r => r.items.length > 0);
+  _dailyTodos.sort((a, b) => a.name.localeCompare(b.name));
 
   if (!_dailyTodos.length) {
     if (!silent) list.innerHTML = `<div class="daily-empty">${fmtNoTasks()}</div>`;
@@ -13274,6 +13367,7 @@ _applyDailyI18n();
             <div class="wfs-aqi-number" id="wfs-aqi-number">—</div>
             <div class="wfs-aqi-unit">AQI</div>
             <div class="wfs-aqi-quality" id="wfs-aqi-quality" style="font-size:10px; border-left:none; padding-left:0; letter-spacing:0.08em;">—</div>
+            <div id="wfs-aqi-trend" style="display:flex;align-items:center;justify-content:center;margin-top:4px;"></div>
           </div>
         </div>
         <div class="wfs-aqi-pm-stats">
@@ -13403,40 +13497,60 @@ _applyDailyI18n();
     <div class="wfs-forecast">
       <div class="wfs-extra-cards" style="padding-top:0; padding-bottom:0; margin-bottom:1.2rem;">
         <div class="wfs-extra-card wfs-stats-card" style="flex-direction:row; align-items:stretch; gap:0; padding: 10px 14px; background:transparent; border:none;">
-          <div class="wfs-stat-row" style="flex:1; flex-direction:column; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px 0 0; gap:4px;">
+          <div class="wfs-stat-row" style="flex:1; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px; gap:4px;">
             <div style="display:flex;align-items:center;gap:6px;">
               <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
               <div class="wfs-stat-row-label">Humidity</div>
             </div>
-            <div class="wfs-stat-row-value" id="wfs-stat-humidity">—</div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+              <div class="wfs-stat-row-value" id="wfs-stat-humidity">—</div>
+              <span id="wfs-trend-humidity" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
+
+            </div>
           </div>
-          <div class="wfs-stat-row" style="flex:1; flex-direction:column; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px; gap:4px;">
+          <div class="wfs-stat-row" style="flex:1; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px; gap:4px;">
             <div style="display:flex;align-items:center;gap:6px;">
               <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg></div>
               <div class="wfs-stat-row-label">Wind</div>
             </div>
-            <div class="wfs-stat-row-value" id="wfs-stat-wind">—</div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+              <div class="wfs-stat-row-value" id="wfs-stat-wind">—</div>
+              <span id="wfs-trend-wind" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
+
+            </div>
           </div>
-          <div class="wfs-stat-row" style="flex:1; flex-direction:column; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px; gap:4px;">
+          <div class="wfs-stat-row" style="flex:1; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px; gap:4px;">
             <div style="display:flex;align-items:center;gap:6px;">
               <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
               <div class="wfs-stat-row-label">UV Index</div>
             </div>
-            <div class="wfs-stat-row-value" id="wfs-stat-uv">—</div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+              <div class="wfs-stat-row-value" id="wfs-stat-uv">—</div>
+              <span id="wfs-trend-uv" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
+
+            </div>
           </div>
-          <div class="wfs-stat-row" style="flex:1; flex-direction:column; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px; gap:4px;">
+          <div class="wfs-stat-row" style="flex:1; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1px solid var(--ac-25); padding: 0 10px; gap:4px;">
             <div style="display:flex;align-items:center;gap:6px;">
               <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
               <div class="wfs-stat-row-label">Pressure</div>
             </div>
-            <div class="wfs-stat-row-value" id="wfs-stat-pressure">—</div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+              <div class="wfs-stat-row-value" id="wfs-stat-pressure">—</div>
+              <span id="wfs-trend-pressure" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
+
+            </div>
           </div>
-          <div class="wfs-stat-row" style="flex:1; flex-direction:column; justify-content:center; border-bottom:none; padding: 0 0 0 10px; gap:4px;">
+          <div class="wfs-stat-row" style="flex:1; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; padding: 0 10px; gap:4px;">
             <div style="display:flex;align-items:center;gap:6px;">
               <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h4l4-12 4 17 4-12 2 7h4"/></svg></div>
               <div class="wfs-stat-row-label">Cloud</div>
             </div>
-            <div class="wfs-stat-row-value" id="wfs-stat-cloud">—</div>
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+              <div class="wfs-stat-row-value" id="wfs-stat-cloud">—</div>
+              <span id="wfs-trend-cloud" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
+
+            </div>
           </div>
         </div>
       </div>

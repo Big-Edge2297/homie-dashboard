@@ -32,6 +32,11 @@ Homie connects directly to Home Assistant over a Long-Lived Access Token and a l
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/d0c54a8d-a417-45c2-b05b-fe930aa8d558" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/d96813db-dacb-401a-ad30-5c1d34249480" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/82c82e38-6267-42cb-b516-65deb13a299e" width="320" height="200"/> |
 
+| Solar Dashboard | Camera Dashboard |
+|--------|--------|
+| <img src="https://github.com/user-attachments/assets/4e24b1e0-3364-460c-af53-bfcff242d699" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/fc70c54a-a8d6-4953-b335-4c58d4939c06" width="320" height="200"/> |
+
+
 ### Settings
 
 | Settings | Themes | Bloom Intensity |
@@ -164,6 +169,11 @@ Standalone Setup without HACS (Option B)
 ---
 
 ## New Features Summary per version
+
+New in v3.5.0
+- Countdown Timers from Amazon Alexa integration or other HA integrations
+- Camera Dashboard
+- Solar Dashboard
 
 New in v3.4.0
 - Added trends in AQI and weather stats

@@ -179,7 +179,7 @@ Remember to clear the cache/hard refresh so the new file changes apply in the br
 <summary>Standalone Installation (without HACS)</summary>
    
 1. Copy homie-dashboard.html and config.js into your HA config/www/ folder
-2. Access it in a browser at http://YOUR_HA_IP:8123/local/homie-dashboard.html or create a dashboard in HA like in Step 4 above with but use /local/homie-dashboard.html
+2. Access it in a browser at http://YOUR_HA_IP:8123/local/homie-dashboard.html or create a dashboard in HA like in Step 4 above and use /local/homie-dashboard.html
 3. Follow step 5 to configure your config.js file
 
 </details>
@@ -205,6 +205,11 @@ Remember to clear the cache/hard refresh so the new file changes apply in the br
 
 <details>
 <summary>View version history</summary>
+
+New in v3.6.0
+- Time of Day Theme - Apply different themes based on time of day
+- Waze travel notification customizable for selected days/times
+- More stats in the Solar dashboard
    
 New in v3.5.0
 - Countdown Timers from Amazon Alexa integration or other HA integrations
@@ -212,7 +217,7 @@ New in v3.5.0
 - Solar Dashboard
 
 New in v3.4.0
-- Added trends in AQI and weather stats
+- Trends in AQI and weather stats
 
 New in v3.3.0
 - HA check functionality for smart light bulbs and switches and pass the appropriate entities in Lights
@@ -221,8 +226,8 @@ New in v3.2.0
 - HACS Integration!
 
 New in v3.1.0
-- Implemented 10 Fonts in settings
-- Implemented swipe down from dashboards to return to the main screen
+- 10 Fonts in settings
+- Swipe down from dashboards to return to the main screen
 
 New in v3.0.0
 - Settings Cog to customize settings directly from the dashboard

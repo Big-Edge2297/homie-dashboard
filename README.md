@@ -8,7 +8,7 @@ Homie Dashboard is a touch-first Home Assistant dashboard designed for wall-moun
 
 It provides a customizable overview of your home while supporting dedicated dashboard modes for music, calendars, weather, photos, thermostats, cameras, clocks, and solar monitoring.
 
-Homie Dashboard is designed for:
+Designed for:
 ✅ Wall-mounted tablets
 ✅ Dedicated Home Assistant displays
 ✅ Touch-first interfaces

@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * HOMIE DASHBOARD CONFIGURATION v3.6.0
+ * HOMIE DASHBOARD CONFIGURATION v3.7.0
  * ═══════════════════════════════════════════════════════════════════════════
  * This is the main configuration file. Edit the sections below to customise the dashboard for your home.
  * Both homie-dashboard.html and config.js must be in the same folder.
@@ -322,6 +322,17 @@ const CONFIG = {
     { entity: "YOUR_CAMERA_5_ENTITY", label: "Camera 5", motionEntity: "YOUR_CAMERA_5_MOTION_ENTITY" },
     { entity: "YOUR_CAMERA_6_ENTITY", label: "Camera 6", motionEntity: "YOUR_CAMERA_6_MOTION_ENTITY" },
   ],
+
+  /* ── DOORBELL ────────────────────────────────────────────────────────────
+   * buttonEntity — the HA button entity that triggers the doorbell overlay.
+   * cameraEntity — the HA camera entity to stream when the bell is pressed.
+   * label        — text shown in the overlay header.
+   * ─────────────────────────────────────────────────────────────────────── */
+  doorbell: {
+    buttonEntity: "YOUR_DOORBELL_BUTTON_ENTITY",
+    cameraEntity: "YOUR_DOORBELL_CAMERA_ENTITY",
+    label:        "Doorbell · Front Door",
+  },
 
   /* ── PET STATS ───────────────────────────────────────────────────────────
    * Entities for the pet stats popup (top-right button).

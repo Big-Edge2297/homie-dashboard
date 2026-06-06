@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- DASHBOARD VERSION — update this when releasing a new version -->
-<script>const DASHBOARD_VERSION = "3.6.0";</script>
+<script>const DASHBOARD_VERSION = "3.7.0";</script>
 <!--
   ╔══════════════════════════════════════════════════════════════════════════╗
   ║                             HOMIE  DASHBOARD                             ║
@@ -100,6 +100,12 @@
     line-height: 1;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     margin-top: 6px;
+  }
+  .top-clock-ampm {
+    font-size: 0.55em;
+    letter-spacing: 0.15em;
+    vertical-align: middle;
+    opacity: 0.7;
   }
   .top-date {
     font-size: 9px;
@@ -1626,6 +1632,9 @@
     color: rgba(255,255,255,0.45);
     letter-spacing: 0.25em;
     margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .mush-cover-card.on .mush-cover-pos { color: var(--hi-7); }
 
@@ -1831,6 +1840,69 @@
     transition: background 0.2s;
   }
   .np-source-pill:hover { background: var(--ac-3); }
+
+  /* Left-side source pill container — mirrors .np-vol-side on the right */
+  .np-src-side {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    /* Allow the dropdown child to anchor relative to this element */
+    /* (We rely on the inline wrapper div with position:relative in HTML) */
+  }
+  /* Source dropdown — floats above the pill button */
+  .np-src-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: rgba(15,15,18,0.96);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 12px;
+    padding: 6px 0;
+    min-width: 160px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    backdrop-filter: blur(14px);
+    z-index: 60;
+    white-space: nowrap;
+  }
+  .np-src-dropdown.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+  /* Variant that appears above (used in FS overlays) */
+  .np-src-dropdown--above {
+    bottom: calc(100% + 8px);
+    top: auto;
+  }
+  .np-src-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.75);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .np-src-dropdown-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+  .np-src-dropdown-item.active { color: var(--accent-hi); }
+  .np-src-dropdown-item.active .np-src-dot { background: var(--accent); }
+  .np-src-dropdown-item.playing .np-src-dot { box-shadow: 0 0 5px var(--accent-glow); }
+  .np-src-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
   .music-player-bar {
     position: fixed;
     bottom: calc(var(--bottom-area-h, 130px) - 30px);
@@ -3988,14 +4060,89 @@
     padding: 0;
     overflow: hidden;
   }
+  /* ── Bottom scroll area: 5-day | hourly panels side by side ── */
+  .wfs-bottom-scroll {
+    flex: 0 0 auto;
+    height: 380px;
+    display: flex;
+    overflow-x: scroll;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .wfs-bottom-scroll::-webkit-scrollbar { display: none; }
+
+  .wfs-scroll-panel {
+    min-width: 100%;
+    width: 100%;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 0 1rem 2.8rem;
+    min-height: 0;
+    gap: 1.5rem;
+    box-sizing: border-box;
+  }
+
+  /* Scroll indicator dots — match media player np-dots style */
+  .wfs-scroll-dots {
+    position: absolute;
+    bottom: 1.4rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .wfs-scroll-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .wfs-scroll-dot.active {
+    background: var(--accent);
+    transform: scale(1.3);
+  }
+
   .wfs-forecast {
     flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
-    padding: 0 1rem 1rem;
+    justify-content: flex-start;
     min-height: 0;
     gap: 1.5rem;
+  }
+
+  /* ── Hourly chart card ── */
+  .wfs-hourly-chart-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 20px;
+    padding: 16px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 0 0 auto;
+    height: 250px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .wfs-hourly-svg-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+  .wfs-hourly-svg-wrap svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    font-family: inherit;
   }
   .wfs-temp-big {
     font-size: clamp(5rem, 18vw, 9rem);
@@ -4046,38 +4193,48 @@
     gap: 0;
     padding: 0 2rem;
     flex-shrink: 0;
-    margin: 0.4rem 0 0.5rem;
+    margin: 0.4rem 0 3rem;
   }
   .wfs-stat {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     flex: 1;
-    padding: 12px 6px;
+    padding: 6px 6px 4px;
     border-left: 1px solid rgba(255,255,255,0.08);
   }
   .wfs-stat:first-child { border-left: none; }
+  .wfs-stat-header {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
   .wfs-stat-icon {
-    opacity: 1;
+    opacity: 0.85;
     display: flex;
     align-items: center;
     justify-content: center;
-    transform: scale(1.4);
-    margin-bottom: 4px;
-  }
-  .wfs-stat-value {
-    font-size: 16px;
-    color: #fff;
-    letter-spacing: 0.04em;
-    font-weight: 500;
-    white-space: nowrap;
+    flex-shrink: 0;
   }
   .wfs-stat-label {
     font-size: 10px;
     letter-spacing: 0.25em;
     text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    white-space: nowrap;
+  }
+  .wfs-stat-bottom {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .wfs-stat-value {
+    font-size: 15px;
     color: #fff;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+    white-space: nowrap;
   }
   /* ── 3-card row: AQI | Weather | Sunrise/Sunset ─────────────────── */
   .wfs-extra-cards {
@@ -4253,10 +4410,7 @@
     margin-top: auto;
     width: 100%;
   }
-  .wfs-moon-icon {
-    font-size: 18px;
-    line-height: 1;
-  }
+
   .wfs-moon-info {
     display: flex;
     flex-direction: column;
@@ -4284,57 +4438,7 @@
     color: #fff;
     letter-spacing: 0.04em;
   }
-  /* Weather stats card (middle) — compact vertical list */
-  .wfs-stats-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 0;
-    flex: 1;
-    min-width: 0;
-  }
-  .wfs-stat-row {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 5px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  .wfs-stat-row:last-child { border-bottom: none; }
-  .wfs-stat-row-icon {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    opacity: 0.75;
-  }
-  .wfs-stat-row-label {
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,0.85);
-    flex: 1;
-  }
-  .wfs-stat-row-value {
-    font-size: 15px;
-    color: #fff;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    text-align: right;
-    white-space: nowrap;
-  }
-  /* Column layout used by the 5-stat bottom row in weather fullscreen */
-  .wfs-stat-col {
-    flex: 1;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-bottom: none;
-    padding: 0 10px;
-    gap: 4px;
-  }
-  .wfs-stat-col:not(:last-child) {
-    border-right: 1px solid var(--ac-25);
-  }
+
   /* 7-day forecast bar */
   .wfs-forecast-title {
     font-size: 11px;
@@ -4350,7 +4454,7 @@
     gap: 8px;
     flex: 0 0 auto;
     align-items: flex-end;
-    height: 300px;
+    height: 250px;
   }
   .wfs-forecast-card {
     flex: 1;
@@ -4366,7 +4470,7 @@
     cursor: default;
     overflow: hidden;
     position: relative;
-    height: 300px;
+    height: 250px;
   }
   .wfs-forecast-card.today {
     background: rgba(20,45,100,0.65);
@@ -5474,8 +5578,30 @@
     transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
   }
   .settings-section-body.open {
-    max-height: 600px;
+    max-height: 900px;
   }
+  /* Number input variant — narrower width, centred text */
+  .settings-input--num {
+    width: 44px;
+    text-align: center;
+    padding: 3px 4px;
+    font-size: 11px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--ac-25);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 0.05em;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    -moz-appearance: textfield;
+  }
+  .settings-input--num:focus { border-color: var(--accent); }
+  .settings-input--num::-webkit-outer-spin-button,
+  .settings-input--num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  /* Screensaver mode checkboxes — reuse startup-mode-option but with checkbox semantics */
+  /* Screensaver mode list — radio inputs used visually but JS manages multi-select */
+  #st-ss-modes input[type="radio"] { display: none; }
   .settings-item {
     display: flex;
     align-items: center;
@@ -6020,6 +6146,13 @@
       <span class="np-track" id="np-track">Track</span>
     </div>
     <div class="np-controls-row">
+      <!-- Source selector pill — positioned left, mirrors vol on the right -->
+      <div class="np-src-side">
+        <div style="position:relative;">
+          <button class="np-source-pill" id="np-source-pill" onclick="openSourceDropdown('np-src-dropdown')" title="Select source" style="display:none"></button>
+          <div class="np-src-dropdown np-src-dropdown--above" id="np-src-dropdown"></div>
+        </div>
+      </div>
       <div class="np-controls">
       <!-- Skip Previous: vertical bar + filled triangle pointing left -->
       <button class="np-btn" id="np-prev" onclick="mediaCommand('media_previous_track')" title="Previous">
@@ -6064,6 +6197,14 @@
             <span class="np-vol-val" id="np-vol-label">50</span>
           </div>
         </div>
+        <button class="np-btn np-vol-btn" onclick="openNowPlayingFS()" title="Open Music Dashboard" style="margin-left:4px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 3 21 3 21 9"/>
+            <polyline points="9 21 3 21 3 15"/>
+            <line x1="21" y1="3" x2="14" y2="10"/>
+            <line x1="3" y1="21" x2="10" y2="14"/>
+          </svg>
+        </button>
       </div>
     </div>
     <div class="np-progress-bg">
@@ -6669,6 +6810,15 @@ function _wsConnect() {
             if (petOpen && CONFIG.petStats && Object.values(CONFIG.petStats).includes(newState.entity_id)) {
               _refreshPetStatsLive();
             }
+            // Doorbell: watch automation entity — any state_changed means it was triggered
+            if (CONFIG.doorbell?.buttonEntity && newState.entity_id === CONFIG.doorbell.buttonEntity) {
+              const oldState = msg.event.data?.old_state;
+              const newTs  = newState.attributes?.last_triggered;
+              const oldTs  = oldState?.attributes?.last_triggered;
+              if (newTs && newTs !== oldTs) {
+                openDoorbellCamera();
+              }
+            }
             refreshAllUI();
           }
         }
@@ -7214,18 +7364,74 @@ function _refreshWeatherFS() {
     if (!moonD || !moonEl) return;
     const phase = moonD.state || "";
     const phaseMap = {
-      "new_moon":        { label: "New Moon",        icon: "🌑" },
-      "waxing_crescent": { label: "Waxing Crescent", icon: "🌒" },
-      "first_quarter":   { label: "First Quarter",   icon: "🌓" },
-      "waxing_gibbous":  { label: "Waxing Gibbous",  icon: "🌔" },
-      "full_moon":       { label: "Full Moon",        icon: "🌕" },
-      "waning_gibbous":  { label: "Waning Gibbous",  icon: "🌖" },
-      "last_quarter":    { label: "Last Quarter",     icon: "🌗" },
-      "waning_crescent": { label: "Waning Crescent",  icon: "🌘" },
+      "new_moon":        { label: "New Moon"        },
+      "waxing_crescent": { label: "Waxing Crescent" },
+      "first_quarter":   { label: "First Quarter"   },
+      "waxing_gibbous":  { label: "Waxing Gibbous"  },
+      "full_moon":       { label: "Full Moon"        },
+      "waning_gibbous":  { label: "Waning Gibbous"  },
+      "last_quarter":    { label: "Last Quarter"     },
+      "waning_crescent": { label: "Waning Crescent"  },
     };
-    const p = phaseMap[phase] || { label: phase.replace(/_/g, " "), icon: "🌙" };
-    moonEl.textContent  = p.label;
-    if (moonIcon) moonIcon.textContent = p.icon;
+    const p = phaseMap[phase] || { label: phase.replace(/_/g, " ") };
+    moonEl.textContent = p.label;
+
+    // Draw SVG moon shape for each phase
+    // All phases drawn as circle r=13, with a clip/overlay to create the illuminated portion
+    if (moonIcon) {
+      const r = 13;
+      const moonColor   = "rgba(255,210,60,0.95)";
+      const shadowColor = "rgba(10,20,60,0.88)";
+      const glowColor   = "rgba(255,200,50,0.20)";
+
+      // Helper: for crescent/gibbous, we draw full circle then overlay an ellipse
+      // illuminated side is always right for waxing, left for waning
+      function moonSVG(ph) {
+        const uid = "mp" + Math.random().toString(36).slice(2,7);
+        switch(ph) {
+          case "new_moon":
+            // Dark circle, faint rim
+            return `<circle r="${r}" fill="${shadowColor}" stroke="rgba(255,210,60,0.25)" stroke-width="0.8"/>`;
+          case "full_moon":
+            // Full bright circle with soft glow
+            return `<circle r="${r+4}" fill="${glowColor}"/>
+                    <circle r="${r}" fill="${moonColor}"/>`;
+          case "first_quarter":
+            // Right half lit
+            return `<defs><clipPath id="${uid}"><rect x="0" y="-${r}" width="${r}" height="${r*2}"/></clipPath></defs>
+                    <circle r="${r}" fill="${shadowColor}" stroke="rgba(255,255,255,0.08)" stroke-width="0.8"/>
+                    <circle r="${r}" fill="${moonColor}" clip-path="url(#${uid})"/>`;
+          case "last_quarter":
+            // Left half lit
+            return `<defs><clipPath id="${uid}"><rect x="-${r}" y="-${r}" width="${r}" height="${r*2}"/></clipPath></defs>
+                    <circle r="${r}" fill="${shadowColor}" stroke="rgba(255,255,255,0.08)" stroke-width="0.8"/>
+                    <circle r="${r}" fill="${moonColor}" clip-path="url(#${uid})"/>`;
+          case "waxing_crescent":
+            // Thin right crescent
+            return `<defs><clipPath id="${uid}"><rect x="0" y="-${r}" width="${r}" height="${r*2}"/></clipPath></defs>
+                    <circle r="${r}" fill="${shadowColor}" stroke="rgba(255,255,255,0.08)" stroke-width="0.8"/>
+                    <ellipse rx="${r*0.45}" ry="${r}" fill="${moonColor}" clip-path="url(#${uid})"/>`;
+          case "waning_crescent":
+            // Thin left crescent
+            return `<defs><clipPath id="${uid}"><rect x="-${r}" y="-${r}" width="${r}" height="${r*2}"/></clipPath></defs>
+                    <circle r="${r}" fill="${shadowColor}" stroke="rgba(255,255,255,0.08)" stroke-width="0.8"/>
+                    <ellipse rx="${r*0.45}" ry="${r}" fill="${moonColor}" clip-path="url(#${uid})"/>`;
+          case "waxing_gibbous":
+            // Right side mostly lit — shadow is left crescent
+            return `<defs><clipPath id="${uid}L"><rect x="-${r}" y="-${r}" width="${r}" height="${r*2}"/></clipPath></defs>
+                    <circle r="${r}" fill="${moonColor}"/>
+                    <ellipse rx="${r*0.45}" ry="${r}" fill="${shadowColor}" clip-path="url(#${uid}L)"/>`;
+          case "waning_gibbous":
+            // Left side mostly lit — shadow is right crescent
+            return `<defs><clipPath id="${uid}R"><rect x="0" y="-${r}" width="${r}" height="${r*2}"/></clipPath></defs>
+                    <circle r="${r}" fill="${moonColor}"/>
+                    <ellipse rx="${r*0.45}" ry="${r}" fill="${shadowColor}" clip-path="url(#${uid}R)"/>`;
+          default:
+            return `<circle r="${r}" fill="${moonColor}" opacity="0.5"/>`;
+        }
+      }
+      moonIcon.innerHTML = moonSVG(phase);
+    }
   })();
 
   // Animate background based on condition
@@ -7245,6 +7451,12 @@ function openWeatherFS() {
   const unit = unitEl ? unitEl.textContent : (CONFIG.weather.unit === "°F" ? "°F" : "°C");
   const icons = _getWxIcons ? _getWxIcons() : {};
   _wfsFetchForecast(unit, icons);
+  _wfsFetchHourly(unit, icons);
+  _wfsInitScrollDots();
+  // Reset scroll position to first panel each time overlay opens
+  const scroller = document.getElementById("wfs-bottom-scroll");
+  if (scroller) scroller.scrollLeft = 0;
+  document.querySelectorAll(".wfs-scroll-dot").forEach((d, i) => d.classList.toggle("active", i === 0));
   window._showSwipeDownHint?.();
 }
 
@@ -7930,14 +8142,217 @@ function _wfsFetchForecast(unit, icons) {
 }
 
 /**
+ * _wfsFetchHourly — fetches hourly forecast from HA and populates wfs-hourly-row.
+ */
+function _wfsFetchHourly(unit, icons) {
+  const container = document.getElementById("wfs-hourly-row");
+  if (!container) return;
+  container.innerHTML = `<div style="font-size:9px;letter-spacing:0.15em;color:rgba(255,255,255,0.3);padding:8px 0;width:100%;text-align:center;">${fmtLoading()}</div>`;
+
+  if (!_ws || !_wsReady) return;
+  const msgId = _wsNextId();
+  const handler = (evt) => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+    if (msg.id !== msgId) return;
+    clearTimeout(handlerTimeout);
+    _ws.removeEventListener("message", handler);
+
+    const response = msg.result?.response || msg.result || {};
+    const forecast = response[CONFIG.weather.entity]?.forecast || [];
+
+    if (!forecast.length) {
+      container.innerHTML = `<div style="font-size:9px;letter-spacing:0.15em;color:rgba(255,255,255,0.3);padding:8px 0;width:100%;text-align:center;">No hourly forecast available</div>`;
+      return;
+    }
+
+    const use12h = _settings && _settings.clockFormat === '12h';
+    const pts = forecast.slice(0, 12); // show 12 hours
+
+    // Build SVG temperature curve
+    const W = 600, H = 110;
+    const padL = 20, padR = 20, padTop = 28, padBot = 28;
+    const chartW = W - padL - padR;
+    const chartH = H - padTop - padBot;
+
+    const temps = pts.map(f => f.temperature ?? 0);
+    const minT  = Math.min(...temps);
+    const maxT  = Math.max(...temps);
+    const rangeT = (maxT - minT) || 1;
+
+    const n = pts.length;
+    // x/y coordinate for each point
+    const xs = pts.map((_, i) => padL + (i / (n - 1)) * chartW);
+    const ys = temps.map(t  => padTop + chartH - ((t - minT) / rangeT) * chartH);
+
+    // Smooth cubic bezier path through points
+    function smoothPath(xArr, yArr) {
+      if (xArr.length < 2) return "";
+      let d = `M ${xArr[0].toFixed(1)},${yArr[0].toFixed(1)}`;
+      for (let i = 0; i < xArr.length - 1; i++) {
+        const cpx = (xArr[i] + xArr[i + 1]) / 2;
+        d += ` C ${cpx.toFixed(1)},${yArr[i].toFixed(1)} ${cpx.toFixed(1)},${yArr[i + 1].toFixed(1)} ${xArr[i + 1].toFixed(1)},${yArr[i + 1].toFixed(1)}`;
+      }
+      return d;
+    }
+
+    const linePath  = smoothPath(xs, ys);
+    // Area path: close below the chart
+    const areaPath  = linePath + ` L ${xs[n-1].toFixed(1)},${(H - padBot + 4).toFixed(1)} L ${xs[0].toFixed(1)},${(H - padBot + 4).toFixed(1)} Z`;
+
+    // Time labels — every 2 hours
+    const timeLabels = pts.map((f, i) => {
+      const date = f.datetime ? new Date(f.datetime) : null;
+      let label;
+      if (i === 0) {
+        label = "Now";
+      } else if (date) {
+        if (use12h) {
+          let h = date.getHours();
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          h = h % 12 || 12;
+          label = h + ' ' + ampm;
+        } else {
+          label = String(date.getHours()).padStart(2, '0') + ':00';
+        }
+      } else {
+        label = "—";
+      }
+      // Only show every other label to avoid crowding
+      return (i % 2 === 0) ? `<text x="${xs[i].toFixed(1)}" y="${H}" text-anchor="middle" font-size="7" letter-spacing="0.05em" font-family="inherit" fill="rgba(255,255,255,0.45)">${escapeHtml(label)}</text>` : '';
+    }).join("");
+
+    // Temp labels above each point (every 2)
+    const tempLabels = pts.map((f, i) => {
+      if (i % 2 !== 0) return '';
+      const t = f.temperature != null ? Math.round(f.temperature) + unit : "";
+      return `<text x="${xs[i].toFixed(1)}" y="${(ys[i] - 8).toFixed(1)}" text-anchor="middle" font-size="7" font-weight="500" font-family="inherit" fill="rgba(255,255,255,0.85)">${escapeHtml(t)}</text>`;
+    }).join("");
+
+    // Temperature → colour scale
+    // ≤−10°C blue · 5°C green · 15°C yellow · 25°C orange · ≥35°C red
+    function tempColor(t) {
+      const stops = [
+        { t: -10, r: 59,  g: 130, b: 246 }, // blue-400
+        { t:   5, r: 74,  g: 222, b: 128 }, // green-400
+        { t:  15, r: 250, g: 204, b:  21 }, // yellow-400
+        { t:  25, r: 251, g: 146, b:  60 }, // orange-400
+        { t:  35, r: 239, g:  68, b:  68 }, // red-400
+      ];
+      if (t <= stops[0].t) return `rgb(${stops[0].r},${stops[0].g},${stops[0].b})`;
+      if (t >= stops[stops.length-1].t) { const s = stops[stops.length-1]; return `rgb(${s.r},${s.g},${s.b})`; }
+      for (let i = 0; i < stops.length - 1; i++) {
+        if (t >= stops[i].t && t <= stops[i+1].t) {
+          const pct = (t - stops[i].t) / (stops[i+1].t - stops[i].t);
+          const r = Math.round(stops[i].r + pct * (stops[i+1].r - stops[i].r));
+          const g = Math.round(stops[i].g + pct * (stops[i+1].g - stops[i].g));
+          const b = Math.round(stops[i].b + pct * (stops[i+1].b - stops[i].b));
+          return `rgb(${r},${g},${b})`;
+        }
+      }
+      return `rgb(255,255,255)`;
+    }
+
+    // Build per-segment coloured line using polyline segments
+    const lineSegments = xs.slice(0, -1).map((x1, i) => {
+      const x2 = xs[i+1], y1 = ys[i], y2 = ys[i+1];
+      const midT = (temps[i] + temps[i+1]) / 2;
+      const col = tempColor(midT);
+      // Use the same smooth cubic bezier logic per segment
+      const cpx = (x1 + x2) / 2;
+      return `<path d="M ${x1.toFixed(1)},${y1.toFixed(1)} C ${cpx.toFixed(1)},${y1.toFixed(1)} ${cpx.toFixed(1)},${y2.toFixed(1)} ${x2.toFixed(1)},${y2.toFixed(1)}" fill="none" stroke="${col}" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }).join("");
+
+    // Dots on curve — coloured by temperature
+    const dots = pts.map((f, i) => {
+      const col = tempColor(f.temperature ?? 0);
+      return `<circle cx="${xs[i].toFixed(1)}" cy="${ys[i].toFixed(1)}" r="3" fill="${col}" opacity="${i === 0 ? 1 : 0.7}"/>`;
+    }).join("");
+
+    // Gradient for area fill uses avg temp colour at top, transparent at bottom
+    const avgTemp = temps.reduce((a, b) => a + b, 0) / temps.length;
+    const avgColor = tempColor(avgTemp);
+
+    container.innerHTML = `
+      <div class="wfs-hourly-svg-wrap">
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="wfs-hourly-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${avgColor}" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="${avgColor}" stop-opacity="0.02"/>
+            </linearGradient>
+          </defs>
+          <!-- Area fill -->
+          <path d="${areaPath}" fill="url(#wfs-hourly-grad)"/>
+          <!-- Coloured line segments -->
+          ${lineSegments}
+          <!-- Temp labels -->
+          ${tempLabels}
+          <!-- Dots -->
+          ${dots}
+          <!-- Time labels -->
+          ${timeLabels}
+        </svg>
+      </div>`;
+  };
+  _ws.addEventListener("message", handler);
+  const handlerTimeout = setTimeout(() => _ws.removeEventListener("message", handler), 10000);
+  _ws.send(JSON.stringify({
+    id: msgId,
+    type: "call_service",
+    domain: "weather",
+    service: "get_forecasts",
+    service_data: { type: "hourly" },
+    target: { entity_id: CONFIG.weather.entity },
+    return_response: true,
+  }));
+}
+
+/**
+ * _wfsInitScrollDots — wires up the bottom scroll container so the indicator
+ * dots update as the user swipes between the 5-day and hourly panels.
+ */
+function _wfsInitScrollDots() {
+  const scroller = document.getElementById("wfs-bottom-scroll");
+  if (!scroller) return;
+  scroller.addEventListener("scroll", () => {
+    const idx = Math.round(scroller.scrollLeft / scroller.clientWidth);
+    document.querySelectorAll(".wfs-scroll-dot").forEach((d, i) => {
+      d.classList.toggle("active", i === idx);
+    });
+  }, { passive: true });
+}
+
+/**
+ * _fmtClock — returns a formatted time string honouring the clockFormat setting.
+ * In 12h mode the returned string is e.g. "9:41 PM".
+ */
+function _fmtClock(date) {
+  const use12h = _settings && _settings.clockFormat === '12h';
+  if (use12h) {
+    let h = date.getHours();
+    const m = date.getMinutes();
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    const base = h + ':' + String(m).padStart(2, '0');
+    return {
+      text: base + ' ' + ampm,
+      html: base + '<span class="top-clock-ampm">\u202f' + ampm + '</span>',
+    };
+  }
+  const text = String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
+  return { text, html: text };
+}
+
+/**
  * tickClock — updates only the clock and date display.
  * Runs every second so the displayed time is never more than 1 s stale,
  * even if the user returns to the tab just after a minute boundary.
  */
 function tickClock() {
   const n       = new Date();
-  const timeStr = String(n.getHours()).padStart(2,"0") + ":" + String(n.getMinutes()).padStart(2,"0");
-  _tickTimeStr  = timeStr;
+  const timeFmt = _fmtClock(n);
+  _tickTimeStr  = timeFmt.text;
   const dateStr = fmtDate(n);
 
   // Update every clock/date element across all overlays in one pass
@@ -7945,7 +8360,7 @@ function tickClock() {
     clock: ["top-clock", "daily-clock", "np-clock"],
     date:  ["top-date", "daily-header-date", "np-date"],
   };
-  ids.clock.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = timeStr; });
+  ids.clock.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = timeFmt.html; });
   ids.date.forEach( id => { const el = document.getElementById(id); if (el) el.textContent = dateStr; });
 
   // Update greeting whenever the hour changes (covers any slot boundary, not just top-of-hour)
@@ -8473,19 +8888,67 @@ function _isPlaying(entity) {
   return ["playing", "on"].includes(d.state);
 }
 
-function toggleMusicSource() {
+function selectMusicSource(entity) {
+  haptic("light");
+  _activeMusicEntity = entity;
+  _optimisticVolume = null;
+  clearTimeout(_optimisticVolTimer);
+  // Close all dropdowns
+  document.querySelectorAll(".np-src-dropdown").forEach(d => d.classList.remove("open"));
+  _srcDropdownOpen = null;
+  refreshMusic();
+}
+
+let _srcDropdownOpen = null;
+
+function openSourceDropdown(dropdownId) {
   haptic("light");
   const entities = _musicEntities();
   if (entities.length < 2) return;
-  const current = _activeMusicEntity || entities[0];
-  const idx = entities.indexOf(current);
-  // Cycle to the next player; wrap around
-  _activeMusicEntity = entities[(idx + 1) % entities.length];
-  // Clear optimistic volume so the new player's state is read fresh
-  _optimisticVolume = null;
-  clearTimeout(_optimisticVolTimer);
-  refreshMusic();
+
+  // Toggle: close if already open
+  if (_srcDropdownOpen === dropdownId) {
+    document.getElementById(dropdownId)?.classList.remove("open");
+    _srcDropdownOpen = null;
+    return;
+  }
+  // Close any other open dropdown
+  if (_srcDropdownOpen) {
+    document.getElementById(_srcDropdownOpen)?.classList.remove("open");
+  }
+
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+
+  // Build items
+  const playing = entities.filter(_isPlaying);
+  const active  = _activeMusicEntity || entities[0];
+  dropdown.innerHTML = entities.map(entity => {
+    const isActive  = entity === active;
+    const isPlaying = playing.includes(entity);
+    const label     = _sourceName(entity);
+    const classes   = ["np-src-dropdown-item",
+      isActive  ? "active"  : "",
+      isPlaying ? "playing" : ""
+    ].filter(Boolean).join(" ");
+    return `<div class="${classes}" onclick="selectMusicSource('${entity}')">
+      <span class="np-src-dot"></span>${label}${isPlaying ? '<span style="margin-left:auto;font-size:7px;letter-spacing:0.15em;color:var(--accent);padding-left:12px">▶</span>' : ''}
+    </div>`;
+  }).join("");
+
+  dropdown.classList.add("open");
+  _srcDropdownOpen = dropdownId;
 }
+
+// Close source dropdown when tapping outside
+document.addEventListener("pointerdown", function(e) {
+  if (!_srcDropdownOpen) return;
+  const dropdown = document.getElementById(_srcDropdownOpen);
+  if (dropdown && !dropdown.contains(e.target) && !e.target.closest(".np-source-pill")) {
+    dropdown.classList.remove("open");
+    _srcDropdownOpen = null;
+  }
+}, true);
 
 async function mediaCommand(service) {
   haptic("light");
@@ -8709,21 +9172,17 @@ function _updateSourcePill(playingEntities) {
   const entities = _musicEntities();
   const active = _activeMusicEntity || entities[0];
   const multiSource = entities.length >= 2;
-  const canSwitch = playingEntities.length > 1;
   const label = _sourceName(active);
-  // Show "Label ›" when multiple players are configured; add cycle indicator
-  // for 3+ players so the user knows there are more options to cycle through
-  const pillLabel = (canSwitch && entities.length > 2)
-    ? label + " ›"
-    : label;
+  // Show a chevron-down indicator to signal it's a dropdown
+  const pillLabel = multiSource ? label + " ⌄" : label;
 
   function _applyPill(el) {
     if (!el) return;
     if (!multiSource) { el.style.display = "none"; return; }
     el.style.display = "";
     el.textContent = pillLabel;
-    el.style.opacity = canSwitch ? "1" : "0.45";
-    el.style.cursor  = canSwitch ? "pointer" : "default";
+    el.style.opacity = "1";
+    el.style.cursor  = "pointer";
   }
 
   _applyPill(document.getElementById("np-source-pill"));
@@ -11216,8 +11675,8 @@ function _npFsRenderHeader() {
   const n = new Date();
   const clockEl = document.getElementById("np-clock");
   const dateEl  = document.getElementById("np-date");
-  if (clockEl) clockEl.textContent =
-    String(n.getHours()).padStart(2,"0") + ":" + String(n.getMinutes()).padStart(2,"0");
+  if (clockEl) clockEl.innerHTML =
+    _fmtClock(n).html;
   if (dateEl) dateEl.textContent =
     fmtDate(n);
   refreshWeather();
@@ -12064,8 +12523,8 @@ function _dailyRenderHeader() {
     fmtDate(n);
   // Sync clock immediately on open
   const dailyClockEl = document.getElementById("daily-clock");
-  if (dailyClockEl) dailyClockEl.textContent =
-    String(n.getHours()).padStart(2,"0") + ":" + String(n.getMinutes()).padStart(2,"0");
+  if (dailyClockEl) dailyClockEl.innerHTML =
+    _fmtClock(n).html;
   // Sync weather
   refreshWeather();
 }
@@ -13682,6 +14141,7 @@ function switchOverview(idx) {
  * ─────────────────────────────────────────────────────────────────────── */
 (function initExitGesture() {
   const MODE_OVERLAYS = [
+    { id: "doorbell-overlay",    close: () => closeDoorbellCamera()  },
     { id: "nowplaying-overlay",  close: () => closeNowPlayingFS() },
     { id: "daily-overlay",       close: () => closeDailyView()    },
     { id: "cameras-overlay",     close: () => closeCameras()      },
@@ -14106,6 +14566,7 @@ const SETTINGS_DEFAULTS = {
   personalisedName:    null,
   showDashboardName:   true,
   showClock:           true,
+  clockFormat:         '24h',   // '24h' | '12h'
   startupMode:         "overview1",
   bgMode:              "vivid",  // "vivid" | "subtle" | "radiant"
   locale:              "",       // "" = browser default, or e.g. "de-DE"
@@ -14125,6 +14586,10 @@ const SETTINGS_DEFAULTS = {
   dashFontWeight:      300,
   timeOfDayThemes:     { morning: null, afternoon: null, evening: null, night: null },
   exitGesture:         "swipe-down",  // "swipe-down" | "swipe-up" | "pinch"
+  screensaverEnabled:  false,
+  screensaverDelay:    5,   // minutes before screensaver starts
+  screensaverRotate:   5,   // minutes between mode rotations
+  screensaverModes:    ["overview1"],  // array of mode keys
 };
 
 // _settings declared early near _activeTheme (required before applyThemeBg fires)
@@ -14240,6 +14705,9 @@ function applyAllSettings() {
     _settings.dashFont       || 'Montserrat',
     _settings.dashFontWeight || 300
   );
+
+  // Screensaver — re-arm idle timer whenever settings change
+  _ssResetIdleTimer();
 }
 
 function applySetting(key, value) {
@@ -14249,6 +14717,7 @@ function applySetting(key, value) {
   applyAllSettings();
   // Re-tick clock and re-render week strip so all day names update immediately
   if (key === 'locale') { tickClock(); _dailyBuildWeekStrip(); _applyDailyI18n(); }
+  if (key === 'clockFormat') { tickClock(); }
 }
 
 
@@ -14269,6 +14738,125 @@ function applySensorPanelSetting(label, value) {
   _settings.sensorPanels[label] = value;
   saveSettings();
   applyAllSettings();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SCREENSAVER ENGINE
+ * Activates after N minutes of inactivity, cycles through selected modes,
+ * and dismisses on any user interaction.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+let _ssIdleTimer    = null;   // fires to start the screensaver
+let _ssRotateTimer  = null;   // fires to advance to the next mode
+let _ssModeIdx      = 0;      // current index within screensaverModes
+let _ssActive       = false;  // true while screensaver is running
+let _ssPrevMode     = null;   // mode that was active before screensaver started
+
+// Map mode key → function that opens the matching overlay/screen
+const _SS_LAUNCHERS = {
+  overview1:     () => { switchOverview && switchOverview(0); },
+  overview2:     () => { switchOverview && switchOverview(1); },
+  nowplaying:    () => { openNowPlayingFS && openNowPlayingFS(); },
+  memories:      () => { openPhotoFrame  && openPhotoFrame();  },
+  myday:         () => { openDailyView   && openDailyView();   },
+  cameras:       () => { openCameras     && openCameras();     },
+  thermostat:    () => { openThermostat  && openThermostat();  },
+  clock:         () => { openClock       && openClock();       },
+  'clock-digital': () => { openClock    && openClock('digital'); },
+  weather:       () => { openWeatherFS   && openWeatherFS();   },
+  solar:         () => { openSolarFS     && openSolarFS();     },
+};
+
+function _ssGetModes() {
+  const modes = _settings.screensaverModes;
+  return Array.isArray(modes) && modes.length > 0 ? modes : ["overview1"];
+}
+
+function _ssLaunchMode(key) {
+  const fn = _SS_LAUNCHERS[key];
+  if (fn) fn();
+}
+
+function _ssStart() {
+  if (!_settings.screensaverEnabled) return;
+  _ssActive  = true;
+  _ssModeIdx = 0;
+  const modes = _ssGetModes();
+  _ssLaunchMode(modes[0]);
+  _ssScheduleRotate();
+}
+
+function _ssScheduleRotate() {
+  clearTimeout(_ssRotateTimer);
+  if (!_ssActive) return;
+  const modes = _ssGetModes();
+  if (modes.length < 2) return; // nothing to rotate through
+  const ms = (_settings.screensaverRotate ?? 5) * 60 * 1000;
+  _ssRotateTimer = setTimeout(_ssRotate, ms);
+}
+
+function _ssRotate() {
+  if (!_ssActive) return;
+  const modes = _ssGetModes();
+  _ssModeIdx = (_ssModeIdx + 1) % modes.length;
+  _ssLaunchMode(modes[_ssModeIdx]);
+  _ssScheduleRotate();
+}
+
+function _ssDismiss() {
+  if (!_ssActive) return;
+  _ssActive = false;
+  clearTimeout(_ssRotateTimer);
+  _ssRotateTimer = null;
+  // Return to overview 1 on dismiss
+  if (typeof switchOverview === "function") switchOverview(0);
+  _ssResetIdleTimer();
+}
+
+function _ssResetIdleTimer() {
+  clearTimeout(_ssIdleTimer);
+  _ssIdleTimer = null;
+  if (!_settings.screensaverEnabled) return;
+  const ms = (_settings.screensaverDelay ?? 5) * 60 * 1000;
+  _ssIdleTimer = setTimeout(_ssStart, ms);
+}
+
+function _ssOnActivity() {
+  if (_ssActive) {
+    _ssDismiss();
+    return;
+  }
+  _ssResetIdleTimer();
+}
+
+// Listen for any user interaction to reset / dismiss
+(function _ssAttachListeners() {
+  const events = ["pointerdown", "pointermove", "keydown", "wheel"];
+  events.forEach(type => document.addEventListener(type, _ssOnActivity, { passive: true, capture: true }));
+})();
+
+function applyScreensaverSetting(key, value) {
+  _settings[key] = value;
+  saveSettings();
+  _ssResetIdleTimer(); // restart timer with new delay
+}
+
+function toggleScreensaverMode(mode) {
+  let modes = Array.isArray(_settings.screensaverModes) ? [..._settings.screensaverModes] : ["overview1"];
+  if (modes.includes(mode)) {
+    modes = modes.filter(m => m !== mode);
+    if (modes.length === 0) modes = ["overview1"]; // always keep at least one
+  } else {
+    modes.push(mode);
+  }
+  _settings.screensaverModes = modes;
+  saveSettings();
+  _syncSsModeInputs(modes);
+}
+
+function _syncSsModeInputs(modes) {
+  document.querySelectorAll("#st-ss-modes input[type='radio']").forEach(r => {
+    r.checked = modes.includes(r.value);
+  });
 }
 
 function openSettings() {
@@ -14292,6 +14880,8 @@ function openSettings() {
   const syncChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val !== false; };
   syncChk("st-show-name",  _settings.showDashboardName);
   syncChk("st-clock",      _settings.showClock);
+  const clockFmtEl = document.getElementById("st-clock-format");
+  if (clockFmtEl) clockFmtEl.checked = _settings.clockFormat === '12h';
   const startupEl = document.querySelector(`input[name="startupMode"][value="${_settings.startupMode || 'overview1'}"]`);
   if (startupEl) startupEl.checked = true;
 
@@ -14389,6 +14979,15 @@ function openSettings() {
   // Sync exit gesture radio
   const exitGestureEl = document.querySelector(`input[name="exitGesture"][value="${_settings.exitGesture || 'swipe-down'}"]`);
   if (exitGestureEl) exitGestureEl.checked = true;
+
+  // Sync screensaver settings
+  syncChk("st-ss-enabled", _settings.screensaverEnabled);
+  const ssDelayEl = document.getElementById("st-ss-delay");
+  if (ssDelayEl) ssDelayEl.value = _settings.screensaverDelay ?? 5;
+  const ssRotateEl = document.getElementById("st-ss-rotate");
+  if (ssRotateEl) ssRotateEl.value = _settings.screensaverRotate ?? 5;
+  const ssModes = Array.isArray(_settings.screensaverModes) ? _settings.screensaverModes : ["overview1"];
+  _syncSsModeInputs(ssModes);
 
   const nameEl = document.getElementById("st-dashboard-name");
   if (nameEl) nameEl.value = _settings.dashboardName || "";
@@ -14626,10 +15225,31 @@ function resetSettings() {
     }, 120);
   }
 
+  function _fcGetHStr(now) {
+    const use12h = _settings && _settings.clockFormat === '12h';
+    if (use12h) {
+      let h = now.getHours() % 12 || 12;
+      return _fcPad(h);
+    }
+    return _fcPad(now.getHours());
+  }
+
+  function _fcUpdateAmPm(now) {
+    let ampmEl = document.getElementById("fc-ampm");
+    const use12h = _settings && _settings.clockFormat === '12h';
+    if (!ampmEl) return;
+    if (use12h) {
+      ampmEl.textContent = now.getHours() >= 12 ? 'PM' : 'AM';
+      ampmEl.style.display = '';
+    } else {
+      ampmEl.style.display = 'none';
+    }
+  }
+
   function _fcTick() {
     if (!_acOpen) return;
     const now  = new Date();
-    const hStr = _fcPad(now.getHours());
+    const hStr = _fcGetHStr(now);
     const mStr = _fcPad(now.getMinutes());
 
     // Hours digits
@@ -14638,6 +15258,9 @@ function resetSettings() {
     // Minute digits
     if (mStr[0] !== _fcPrevM[0]) { _fcFlipDigit("fc-m0", mStr[0]); _fcPrevM[0] = mStr[0]; }
     if (mStr[1] !== _fcPrevM[1]) { _fcFlipDigit("fc-m1", mStr[1]); _fcPrevM[1] = mStr[1]; }
+
+    // AM/PM indicator
+    _fcUpdateAmPm(now);
 
     // Date — right side: "THU 9"
     const dateEl = document.getElementById("fc-date-str");
@@ -14680,7 +15303,7 @@ function resetSettings() {
     _fcPrevM = [-1, -1];
     // Set initial face values instantly (no animation)
     const now  = new Date();
-    const hStr = _fcPad(now.getHours());
+    const hStr = _fcGetHStr(now);
     const mStr = _fcPad(now.getMinutes());
     ["fc-h0","fc-h1","fc-m0","fc-m1"].forEach((id, i) => {
       const face = document.getElementById(id + "-face");
@@ -14689,6 +15312,7 @@ function resetSettings() {
     });
     _fcPrevH = [hStr[0], hStr[1]];
     _fcPrevM = [mStr[0], mStr[1]];
+    _fcUpdateAmPm(now);
     clearInterval(_fcInterval);
     _fcTick();
     _fcInterval = setInterval(_fcTick, 1000);
@@ -14738,6 +15362,7 @@ function resetSettings() {
 loadSettings();
 init();
 applyAllSettings();
+_ssResetIdleTimer(); // start screensaver idle countdown
 _applyDailyI18n();
 </script>
 <!-- ─── MEDIA BROWSER OVERLAY ─── -->
@@ -14826,7 +15451,10 @@ _applyDailyI18n();
         </div>
         <!-- Pills -->
         <div class="np-fs-pills">
-          <button class="np-source-pill" id="np-fs-source-pill" onclick="toggleMusicSource()" title="Switch source"></button>
+          <div style="position:relative;">
+            <button class="np-source-pill" id="np-fs-source-pill" onclick="openSourceDropdown('np-fs-src-dropdown')" title="Select source"></button>
+            <div class="np-src-dropdown np-src-dropdown--above" id="np-fs-src-dropdown"></div>
+          </div>
           <button class="np-browse-btn" onclick="openMediaBrowser()" title="Browse media">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           </button>
@@ -14896,7 +15524,10 @@ _applyDailyI18n();
           </div>
           <!-- Pills -->
           <div class="np-fs-pills" style="margin-top:1.5rem;justify-content:center;">
-            <button class="np-source-pill" id="np-ls-source-pill" onclick="toggleMusicSource()" title="Switch source"></button>
+            <div style="position:relative;">
+              <button class="np-source-pill" id="np-ls-source-pill" onclick="openSourceDropdown('np-ls-src-dropdown')" title="Select source"></button>
+              <div class="np-src-dropdown np-src-dropdown--above" id="np-ls-src-dropdown"></div>
+            </div>
             <button class="np-browse-btn" onclick="openMediaBrowser()" title="Browse media">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             </button>
@@ -15246,6 +15877,11 @@ _applyDailyI18n();
             <text x="195" y="131" text-anchor="middle" font-size="8" letter-spacing="0.22em" fill="rgba(255,255,255,0.5)">SUNSET</text>
             <text id="wfs-sunset-val" x="195" y="146" text-anchor="middle" font-size="11" font-weight="500" fill="#fff">—</text>
 
+            <!-- Moon phase icon — centered inside the arc -->
+            <g id="wfs-moon-icon" transform="translate(105,55)">
+              <!-- Populated by JS with SVG moon shape -->
+            </g>
+
             <!-- Moving sun icon — rendered LAST so it sits on top of everything -->
             <g id="wfs-sun-dot" transform="translate(15,103)">
               <circle r="5.5" fill="rgba(255,210,60,0.95)" filter="url(#wfs-sun-glow)"/>
@@ -15272,71 +15908,90 @@ _applyDailyI18n();
 
     </div>
 
-    <!-- 5-day forecast -->
-    <div class="wfs-forecast">
-      <div class="wfs-extra-cards" style="padding-top:0; padding-bottom:0; margin-bottom:1.2rem;">
-        <div class="wfs-extra-card wfs-stats-card" style="flex-direction:row; align-items:stretch; gap:0; padding: 10px 14px; background:transparent; border:none;">
-          <div class="wfs-stat-row wfs-stat-col">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
-              <div class="wfs-stat-row-label">Humidity</div>
-            </div>
-            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-              <div class="wfs-stat-row-value" id="wfs-stat-humidity">—</div>
-              <span id="wfs-trend-humidity" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
+    <!-- Stats strip: Humidity | Wind | UV | Pressure | Cloud -->
+    <div style="flex: 1;"></div>
+    <div class="wfs-stats-strip">
+      <div class="wfs-stat">
+        <div class="wfs-stat-header">
+          <div class="wfs-stat-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>
+          <div class="wfs-stat-label">HUMIDITY</div>
+        </div>
+        <div class="wfs-stat-bottom">
+          <div class="wfs-stat-value" id="wfs-stat-humidity">—</div>
+          <span id="wfs-trend-humidity" style="display:flex;align-items:center;"></span>
+        </div>
+      </div>
+      <div class="wfs-stat">
+        <div class="wfs-stat-header">
+          <div class="wfs-stat-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg></div>
+          <div class="wfs-stat-label">WIND</div>
+        </div>
+        <div class="wfs-stat-bottom">
+          <div class="wfs-stat-value" id="wfs-stat-wind">—</div>
+          <span id="wfs-trend-wind" style="display:flex;align-items:center;"></span>
+        </div>
+      </div>
+      <div class="wfs-stat">
+        <div class="wfs-stat-header">
+          <div class="wfs-stat-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+          <div class="wfs-stat-label">UV INDEX</div>
+        </div>
+        <div class="wfs-stat-bottom">
+          <div class="wfs-stat-value" id="wfs-stat-uv">—</div>
+          <span id="wfs-trend-uv" style="display:flex;align-items:center;"></span>
+        </div>
+      </div>
+      <div class="wfs-stat">
+        <div class="wfs-stat-header">
+          <div class="wfs-stat-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div class="wfs-stat-label">PRESSURE</div>
+        </div>
+        <div class="wfs-stat-bottom">
+          <div class="wfs-stat-value" id="wfs-stat-pressure">—</div>
+          <span id="wfs-trend-pressure" style="display:flex;align-items:center;"></span>
+        </div>
+      </div>
+      <div class="wfs-stat">
+        <div class="wfs-stat-header">
+          <div class="wfs-stat-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h4l4-12 4 17 4-12 2 7h4"/></svg></div>
+          <div class="wfs-stat-label">CLOUD</div>
+        </div>
+        <div class="wfs-stat-bottom">
+          <div class="wfs-stat-value" id="wfs-stat-cloud">—</div>
+          <span id="wfs-trend-cloud" style="display:flex;align-items:center;"></span>
+        </div>
+      </div>
+    </div>
 
-            </div>
-          </div>
-          <div class="wfs-stat-row wfs-stat-col">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg></div>
-              <div class="wfs-stat-row-label">Wind</div>
-            </div>
-            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-              <div class="wfs-stat-row-value" id="wfs-stat-wind">—</div>
-              <span id="wfs-trend-wind" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
+    <!-- Bottom scrollable area: swipe left for hourly -->
+    <div class="wfs-bottom-scroll" id="wfs-bottom-scroll">
 
-            </div>
-          </div>
-          <div class="wfs-stat-row wfs-stat-col">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
-              <div class="wfs-stat-row-label">UV Index</div>
-            </div>
-            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-              <div class="wfs-stat-row-value" id="wfs-stat-uv">—</div>
-              <span id="wfs-trend-uv" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
-
-            </div>
-          </div>
-          <div class="wfs-stat-row wfs-stat-col">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-              <div class="wfs-stat-row-label">Pressure</div>
-            </div>
-            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-              <div class="wfs-stat-row-value" id="wfs-stat-pressure">—</div>
-              <span id="wfs-trend-pressure" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
-
-            </div>
-          </div>
-          <div class="wfs-stat-row wfs-stat-col">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div class="wfs-stat-row-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(180,220,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h4l4-12 4 17 4-12 2 7h4"/></svg></div>
-              <div class="wfs-stat-row-label">Cloud</div>
-            </div>
-            <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-              <div class="wfs-stat-row-value" id="wfs-stat-cloud">—</div>
-              <span id="wfs-trend-cloud" style="position:absolute;left:calc(100% + 3px);display:flex;align-items:center;"></span>
-
-            </div>
+      <!-- Panel 1: 5-day forecast -->
+      <div class="wfs-scroll-panel">
+        <div class="wfs-forecast">
+          <div class="wfs-forecast-title">5-Day Forecast</div>
+          <div class="wfs-forecast-row" id="wfs-forecast-row">
+            <!-- Populated by JS -->
           </div>
         </div>
       </div>
-      <div class="wfs-forecast-title">5-Day Forecast</div>
-      <div class="wfs-forecast-row" id="wfs-forecast-row">
-        <!-- Populated by JS -->
+
+      <!-- Panel 2: Hourly forecast -->
+      <div class="wfs-scroll-panel">
+        <div class="wfs-forecast">
+          <div class="wfs-forecast-title">Hourly Forecast</div>
+          <div class="wfs-hourly-chart-card" id="wfs-hourly-row">
+            <!-- Populated by JS -->
+          </div>
+        </div>
       </div>
+
+    </div>
+
+    <!-- Dot indicators — absolutely positioned at bottom, matching media player style -->
+    <div class="wfs-scroll-dots" id="wfs-scroll-dots">
+      <div class="wfs-scroll-dot active" id="wfs-dot-0"></div>
+      <div class="wfs-scroll-dot" id="wfs-dot-1"></div>
     </div>
 
   </div>
@@ -15500,6 +16155,9 @@ _applyDailyI18n();
               <div class="flip-card-face" id="fc-m1-face">0</div>
             </div>
           </div>
+
+          <!-- AM/PM indicator (only visible in 12h mode) -->
+          <div id="fc-ampm" style="display:none;align-self:flex-end;padding-bottom:6px;font-size:1.1rem;font-weight:300;letter-spacing:0.12em;color:var(--accent);opacity:0.85;margin-left:6px;"></div>
         </div>
 
         <!-- Info bar — left: weather  |  centre: calendar + alerts  |  right: date -->
@@ -15866,6 +16524,13 @@ _applyDailyI18n();
       <span class="settings-label">Clock</span>
       <label class="settings-toggle"><input type="checkbox" id="st-clock" onchange="applySetting('showClock', this.checked)"><span class="settings-knob"></span></label>
     </div>
+    <div class="settings-item">
+      <span class="settings-label">Clock Format</span>
+      <label class="settings-toggle"><input type="checkbox" id="st-clock-format" onchange="applySetting('clockFormat', this.checked ? '12h' : '24h'); tickClock(); if(document.getElementById('clock-overlay')?.classList.contains('open')){_fcInit&&_fcInit();}"><span class="settings-knob"></span></label>
+    </div>
+    <div class="settings-item settings-sub">
+      <span class="settings-label" style="font-size:10px;opacity:0.5">Toggle on for 12-hour (AM/PM), off for 24-hour</span>
+    </div>
     </div>
 
     <hr class="settings-divider">
@@ -15939,6 +16604,89 @@ _applyDailyI18n();
     </div>
     <div class="settings-section-body">
     <div id="st-sensor-panels"></div>
+    </div>
+
+    <hr class="settings-divider">
+    <div class="settings-section-title" onclick="toggleSettingsSection(this)">
+      SCREENSAVER
+      <span class="settings-section-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+    </div>
+    <div class="settings-section-body">
+      <div class="settings-item">
+        <span class="settings-label">Enable Screensaver</span>
+        <label class="settings-toggle"><input type="checkbox" id="st-ss-enabled" onchange="applyScreensaverSetting('screensaverEnabled', this.checked)"><span class="settings-knob"></span></label>
+      </div>
+      <div class="settings-item">
+        <span class="settings-label">Start after (min)</span>
+        <input class="settings-input--num" id="st-ss-delay" type="number" min="1" max="120" value="5" oninput="applyScreensaverSetting('screensaverDelay', Math.max(1, parseInt(this.value)||5))">
+      </div>
+      <div class="settings-item">
+        <span class="settings-label">Rotate after (min)</span>
+        <input class="settings-input--num" id="st-ss-rotate" type="number" min="1" max="120" value="5" oninput="applyScreensaverSetting('screensaverRotate', Math.max(1, parseInt(this.value)||5))">
+      </div>
+      <div class="settings-item" onclick="document.getElementById('ss-modes-body').classList.toggle('open')" style="cursor:pointer">
+        <span class="settings-label">Rotate between</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="settings-section-body" id="ss-modes-body">
+      <div class="startup-mode-list" id="st-ss-modes" style="margin-bottom:10px">
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('overview1'); event.preventDefault()">
+          <input type="radio" value="overview1" id="ssm-overview1">
+          <span class="startup-mode-label">Overview 1</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('overview2'); event.preventDefault()">
+          <input type="radio" value="overview2" id="ssm-overview2">
+          <span class="startup-mode-label">Overview 2</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('nowplaying'); event.preventDefault()">
+          <input type="radio" value="nowplaying" id="ssm-nowplaying">
+          <span class="startup-mode-label">Now Playing</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('memories'); event.preventDefault()">
+          <input type="radio" value="memories" id="ssm-memories">
+          <span class="startup-mode-label">Memories</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('myday'); event.preventDefault()">
+          <input type="radio" value="myday" id="ssm-myday">
+          <span class="startup-mode-label">My Day</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('cameras'); event.preventDefault()">
+          <input type="radio" value="cameras" id="ssm-cameras">
+          <span class="startup-mode-label">Cameras</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('thermostat'); event.preventDefault()">
+          <input type="radio" value="thermostat" id="ssm-thermostat">
+          <span class="startup-mode-label">Thermostat</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('clock'); event.preventDefault()">
+          <input type="radio" value="clock" id="ssm-clock">
+          <span class="startup-mode-label">Clock (Analog)</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('clock-digital'); event.preventDefault()">
+          <input type="radio" value="clock-digital" id="ssm-clock-digital">
+          <span class="startup-mode-label">Clock (Digital)</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('weather'); event.preventDefault()">
+          <input type="radio" value="weather" id="ssm-weather">
+          <span class="startup-mode-label">Weather</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('solar'); event.preventDefault()">
+          <input type="radio" value="solar" id="ssm-solar">
+          <span class="startup-mode-label">Solar</span>
+          <span class="startup-mode-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+        </label>
+      </div>
+      </div>
     </div>
 
     <hr class="settings-divider">
@@ -16259,6 +17007,192 @@ _applyDailyI18n();
     </div>
   </div>
 </div>
+
+<!-- ─── DOORBELL CAMERA OVERLAY ─── -->
+<div id="doorbell-overlay">
+  <div id="doorbell-header">
+    <div id="doorbell-label">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 4H3v18h18V9l-8-5z"/><path d="M13 4v5h5"/><circle cx="15" cy="14" r="1"/>
+      </svg>
+      <span id="doorbell-label-text"></span>
+    </div>
+    <div id="doorbell-time"></div>
+  </div>
+  <div id="doorbell-feed-wrap">
+    <img id="doorbell-feed" src="" alt="Doorbell Camera" />
+    <div id="doorbell-offline">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+        <line x1="1" y1="1" x2="23" y2="23"/>
+      </svg>
+      <span>Camera offline</span>
+    </div>
+  </div>
+</div>
+
+<style>
+  #doorbell-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  #doorbell-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #doorbell-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2rem 1.8rem;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    color: rgba(255,255,255,0.85);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  #doorbell-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #doorbell-time {
+    font-size: 13px;
+    opacity: 0.85;
+    letter-spacing: 0.08em;
+  }
+  #doorbell-feed-wrap {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #doorbell-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  #doorbell-offline {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: rgba(255,255,255,0.35);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    position: absolute;
+  }
+  #doorbell-feed.errored ~ #doorbell-offline,
+  #doorbell-feed:not([src]) ~ #doorbell-offline {
+    display: flex;
+  }
+</style>
+
+<script>
+(function() {
+  let _doorbellTimeInterval = null;
+
+  function _updateDoorbellTime() {
+    const el = document.getElementById("doorbell-time");
+    if (!el) return;
+    el.textContent = _fmtClock(new Date()).text;
+  }
+
+  window.openDoorbellCamera = function() {
+    // Wake screen if screensaver is active
+    if (typeof _ssDismiss === "function" && _ssActive) _ssDismiss();
+
+    // Close any other open overlay gracefully
+    const others = [
+      { id: "nowplaying-overlay",  fn: "closeNowPlayingFS" },
+      { id: "daily-overlay",       fn: "closeDailyView"    },
+      { id: "cameras-overlay",     fn: "closeCameras"      },
+      { id: "weather-fs-overlay",  fn: "closeWeatherFS"    },
+      { id: "solar-fs-overlay",    fn: "closeSolarFS"      },
+    ];
+    others.forEach(({ id, fn }) => {
+      if (document.getElementById(id)?.classList.contains("open") && typeof window[fn] === "function") {
+        window[fn]();
+      }
+    });
+
+    // Set label from config
+    const labelEl = document.getElementById("doorbell-label-text");
+    if (labelEl) labelEl.textContent = CONFIG.doorbell?.label || "Doorbell";
+
+    // Use same fetch+blob logic as the camera dashboard
+    const feed = document.getElementById("doorbell-feed");
+    feed.classList.remove("errored");
+
+    function _doorbellFetch() {
+      fetch(`${BASE}/api/camera_proxy/${CONFIG.doorbell.cameraEntity}`, {
+        headers: { Authorization: `Bearer ${HA_TOKEN}` }
+      })
+      .then(r => r.ok ? r.blob() : Promise.reject(r.status))
+      .then(blob => {
+        const newUrl = URL.createObjectURL(blob);
+        const buf = new Image();
+        buf.onload = () => {
+          const oldUrl = feed.src;
+          feed.src = newUrl;
+          feed.classList.add("loaded");
+          feed.classList.remove("errored");
+          setTimeout(() => { if (oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl); }, 100);
+        };
+        buf.onerror = () => URL.revokeObjectURL(newUrl);
+        buf.src = newUrl;
+      })
+      .catch(() => { feed.classList.add("errored"); });
+    }
+
+    _doorbellFetch();
+    window._doorbellSnapshotInterval = setInterval(_doorbellFetch, 1000);
+
+    // Start clock
+    _updateDoorbellTime();
+    _doorbellTimeInterval = setInterval(_updateDoorbellTime, 1000);
+
+    // Show overlay
+    document.getElementById("doorbell-overlay").classList.add("open");
+
+    // Show gesture hint
+    if (typeof window._showSwipeDownHint === "function") window._showSwipeDownHint();
+
+    haptic("medium");
+  };
+
+  window.closeDoorbellCamera = function() {
+    const overlay = document.getElementById("doorbell-overlay");
+    if (!overlay) return;
+    overlay.classList.remove("open");
+
+    // Stop stream and snapshot polling
+    const feed = document.getElementById("doorbell-feed");
+    feed.src = "";
+    clearInterval(window._doorbellSnapshotInterval);
+    window._doorbellSnapshotInterval = null;
+
+    // Stop clock
+    clearInterval(_doorbellTimeInterval);
+    _doorbellTimeInterval = null;
+
+    haptic("light");
+  };
+})();
+</script>
 
 </body>
 </html>

@@ -41,9 +41,9 @@ http://YOUR_HA_IP:8123/local/homie-dashboard.html
 
 ### Overview
 
-| Overview Screen A | Overview Screen B | Notifications and Music |
+| Overview Screen A | Overview Screen B | Overview Screen C |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/bbd44202-789c-4ba9-ac28-ebc9a16d9496" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/b5be80f2-b630-4e8b-a422-a19ab6d267b6" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/ac5ac945-4fc5-4faa-ba01-f64c95e57689" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/bbd44202-789c-4ba9-ac28-ebc9a16d9496" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/b5be80f2-b630-4e8b-a422-a19ab6d267b6" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/78939273-870f-43ba-9028-789a71b1a4f4" width="320" height="200"/> |
 
 ### Dashboards
 

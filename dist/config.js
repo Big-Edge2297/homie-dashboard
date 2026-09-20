@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * HOMIE DASHBOARD CONFIGURATION v4.1.1
+ * HOMIE DASHBOARD CONFIGURATION v4.2.0
  * ═══════════════════════════════════════════════════════════════════════════
  * This is the main configuration file. Edit the sections below to customise the dashboard for your home.
  * Both homie-dashboard.html and config.js must be in the same folder.
@@ -168,7 +168,7 @@ const CONFIG = {
     ],
   },
 
-  /* ── MOON PHASE ──────────────────────────────────────────────────────────
+  /* ── MOON PHASE ─────────────────────────────────────────────────────────────
    * Sensor entity for the moon phase display in the weather screen.
    * You can use the moon integration from HA.
         * ──────────────────────────────────────────────────────────────────── */
@@ -184,50 +184,65 @@ const CONFIG = {
    *   alarm_control_panel.* — onValue when armed (any armed_* / arming state).
    *   cover.* / binary_sensor.* — "on" triggers on "open" or "opening" state.
    *
+   * invertColor: true — swaps which value gets the themed accent colour.
+   *   By default the raw-"on" state is themed and raw-"off" is regular/white.
+   *   Set this when the "off" state is actually the one that should stand
+   *   out (e.g. Cameras below: the switch being "on" means Privacy Mode is
+   *   engaged, which should look neutral, while "off" — cameras live — is
+   *   the state that should be themed).
+   *
    * If a stat shows "—", verify the entity ID at HA → Developer Tools → States.
         * ──────────────────────────────────────────────────────────────────── */
   homeStats: [
     { label: "Doors",       entity: "YOUR_ALL_DOORS_ENTITY",            onValue: "Open",     offValue: "Closed" },
     { label: "Windows",     entity: "YOUR_ALL_WINDOWS_ENTITY",          onValue: "Open",     offValue: "Closed" },
     { label: "Alarm",       entity: "YOUR_ALARM_ENTITY",                onValue: "Armed",    offValue: "Disarmed" },
-    { label: "Cameras",     entity: "YOUR_CAMERAS_PRIVACY_ENTITY",      onValue: "Off",      offValue: "Active" },
+    { label: "Cameras",     entity: "YOUR_CAMERAS_PRIVACY_ENTITY",       onValue: "Privacy",  offValue: "On", invertColor: true },
     { label: "Motion",      entity: "YOUR_ALL_MOTION_SENSORS_ENTITY",   onValue: "Detected", offValue: "Clear" },
     { label: "Lights",      entity: "YOUR_ALL_LIGHTS_ENTITY",           onValue: "On",       offValue: "Off" },
     { label: "Air Con",     entity: "YOUR_ALL_AC_UNITS_ENTITY",         onValue: "On",       offValue: "Off" },
     { label: "Purifiers",   entity: "YOUR_ALL_PURIFIERS_ENTITY",        onValue: "On",       offValue: "Off" },
     { label: "W. Heater",   entity: "YOUR_WATER_HEATER_ENTITY",         onValue: "On",       offValue: "Off" },
     { label: "T. Warmer",   entity: "YOUR_ALL_TOWEL_WARMERS_ENTITY",    onValue: "On",       offValue: "Off" },
-  ],
+  ],  
 
-  /* ── SENSOR ROW ──────────────────────────────────────────────────────────
+  /* ── SENSOR ROW ────────────────────────────────────────────────────────────────
    * floorSensors — side-by-side floor panels, each with any number of readings.
    * Add/remove entire { label, sensors } blocks to add/remove panels.
    * Add/remove sensor lines within a panel to add/remove readings.
    * ─────────────────────────────────────────────────────────────────────────── */
   floorSensors: [
+   {
+      label: "Patio",
+      sensors: [
+        { type: "temp",     entity: "YOUR_PATIO_TEMP_ENTITY", unit: "°C", decimal: true },
+        { type: "humidity", entity: "YOUR_PATIO_HUMIDITY_ENTITY",    unit: "%"                 },
+        { type: "aqi",      entity: "YOUR_PATIO_AQI_ENTITY", unit: ""                 },
+        { type: "pm25",     entity: "YOUR_PATIO_PM25_ENTITY",   unit: "μg/m³"             },
+      ],
+    },
     {
       label: "First Floor",
       sensors: [
-        { type: "temp",     entity: "YOUR_FIRST_FLOOR_TEMP_ENTITY",     unit: "°C",    decimal: true },
-        { type: "humidity", entity: "YOUR_FIRST_FLOOR_HUMIDITY_ENTITY", unit: "%"                    },
-        { type: "pm25",     entity: "YOUR_FIRST_FLOOR_PM25_ENTITY",     unit: "μg/m³"                },
+        { type: "temp",     entity: "YOUR_FIRST_FLOOR_TEMP_ENTITY", unit: "°C",    decimal: true },
+        { type: "humidity", entity: "YOUR_FIRST_FLOOR_HUMIDITY_ENTITY",    unit: "%"                    },
+        { type: "aqi",      entity: "YOUR_FIRST_FLOOR_AQI_ENTITY",                 unit: ""                     },
+        { type: "pm25",     entity: "YOUR_FIRST_FLOOR_PM25_ENTITY",        unit: "μg/m³"                },
       ],
     },
     {
       label: "Second Floor",
       sensors: [
-        { type: "temp",     entity: "YOUR_SECOND_FLOOR_TEMP_ENTITY",     unit: "°C", decimal: true },
-        { type: "humidity", entity: "YOUR_SECOND_FLOOR_HUMIDITY_ENTITY", unit: "%"                 },
-        { type: "pm25",     entity: "YOUR_SECOND_FLOOR_PM25_ENTITY",     unit: "μg/m³"             },
+        { type: "temp",     entity: "YOUR_SECOND_FLOOR_TEMP_ENTITY", unit: "°C", decimal: true },
+        { type: "humidity", entity: "YOUR_SECOND_FLOOR_HUMIDITY_ENTITY",    unit: "%"                 },
+        { type: "aqi",      entity: "YOUR_SECOND_FLOOR_AQI_ENTITY",                unit: ""                  },
+        { type: "pm25",     entity: "YOUR_SECOND_FLOOR_PM25_ENTITY",        unit: "μg/m³"             },
       ],
-    },
-    {
-      label: "Solar",
-      get sensors() { return CONFIG.solar.sensorRow; },
-    },
+    },    
+
   ],
 
-  /* ── SOLAR DASHBOARD ─────────────────────────────────────────────────────
+  /* ── SOLAR DASHBOARD ──────────────────────────────────────────────────────────
    * All entities used by the Solar fullscreen dashboard.
    * sensorRow   — shown in the floor sensor strip (keep this lean).
    * stats        — drives the two stat rows inside the solar dashboard.
@@ -243,29 +258,42 @@ const CONFIG = {
       { type: "solar-temp", entity: "YOUR_INVERTER_TEMPERATURE_ENTITY",    unit: "°C", decimal: true },
     ],
     stats: [
-      { type: "solar",            entity: "YOUR_SOLAR_PRODUCTION_KW_ENTITY",     unit: "kW",  decimal: true  },
-      { type: "power",            entity: "YOUR_TODAYS_ENERGY_IN_KW_ENTITY",     unit: "kW",  decimal: true  },
-      { type: "export",           entity: "YOUR_SOLAR_EXPORT_KW_ENTITY",         unit: "kW",  decimal: true  },
-      { type: "battery",          entity: "YOUR_BATTERY_STATE_OF_CHARGE_ENTITY", unit: "%",   decimal: false },
-      { type: "solar-temp",       entity: "YOUR_INVERTER_TEMPERATURE_ENTITY",    unit: "°C",  decimal: true  },
-      { type: "live-consumption", entity: "YOUR_TODAYS_ENERGY_IN_W_ENTITY",      unit: "W",   decimal: false },
+      { type: "solar",            entity: "YOUR_SOLAR_PRODUCTION_KW_ENTITY",     unit: "kW", decimal: true  },
+      { type: "power",            entity: "YOUR_TODAYS_ENERGY_IN_KW_ENTITY",     unit: "kW", decimal: true  },
+      { type: "export",           entity: "YOUR_SOLAR_EXPORT_KW_ENTITY",         unit: "kW", decimal: true  },
+      { type: "battery",          entity: "YOUR_BATTERY_STATE_OF_CHARGE_ENTITY", unit: "%",  decimal: false },
+      { type: "solar-temp",       entity: "YOUR_INVERTER_TEMPERATURE_ENTITY",    unit: "°C", decimal: true  },
+      { type: "live-consumption", entity: "YOUR_TODAYS_ENERGY_IN_W_ENTITY",      unit: "W",  decimal: false },
       { type: "monthly-kwh",      entity: "YOUR_MONTHLY_ENERGY_IN_KW_ENTITY",    unit: "kWh", decimal: true },
-      { type: "today-cost",       entity: "YOUR_TODAYS_ENERGY_COST_ENTITY",      unit: "€",   decimal: true  },
-      { type: "monthly-cost",     entity: "YOUR_MONTHLY_ENERGY_COST_ENTITY",     unit: "€",   decimal: true  },
+      { type: "today-cost",       entity: "YOUR_TODAYS_ENERGY_COST_ENTITY",      unit: "€",  decimal: true  },
+      { type: "monthly-cost",     entity: "YOUR_MONTHLY_ENERGY_COST_ENTITY",     unit: "€",  decimal: true  },
     ],
+    /* Daily energy totals for the "Daily Energy" bar chart on the solar
+     * dashboard (swipe to it from the Hourly Energy chart).
+     * Point these at your daily-reset kWh sensors (i.e. the ones that start
+     * at 0 each midnight and climb through the day, same pattern as
+     * sensor.todays_energy_in_kw above) — one for solar production, one for
+     * home consumption. The chart reads each day's last recorded value as
+     * that day's total. Replace the placeholder entity_ids below.
+     * days — how many days of history to show (default 30). */
+    dailyChart: [
+      { type: "daily-solar", entity: "YOUR_TODAYS_ENERGY_IN_KW_ENTITY" },
+      { type: "daily-power", entity: "YOUR_TODAYS_ENERGY_IN_KW_ENTITY" },
+    ],
+    dailyChartDays: 5,
   },
 
-  /* ── MUSIC PLAYERS ───────────────────────────────────────────────────────
+  /* ── MUSIC PLAYERS ──────────────────────────────────────────────────────────
    * Each entry: entity (required), label (optional; derived from entity ID if omitted).
    * The dashboard shows whichever player is currently active. Tap the source
    * pill to cycle through multiple active players.
         * ──────────────────────────────────────────────────────────────────── */
   musicPlayers: [
-    { entity: "YOUR_SPOTIFY_MEDIA_PLAYER_ENTITY",  label: "Spotify" },
-    { entity: "YOUR_ECHO_MEDIA_PLAYER_ENTITY",     label: "Echo"    },
-    { entity: "YOUR_SONOS_MEDIA_PLAYER_ENTITY",    label: "Sonos"   },
-    // { entity: "YOUR_APPLE_TV_MEDIA_PLAYER_ENTITY", label: "Apple TV" },
-    // { entity: "YOUR_MA_MEDIA_PLAYER_ENTITY",       label: "MA"       },
+    { entity: "YOUR_SPOTIFY_MEDIA_PLAYER_ENTITY",                                 label: "Spotify" },
+    { entity: "YOUR_ECHO_MEDIA_PLAYER_ENTITY",                                    label: "Echo"    },
+    { entity: "YOUR_SONOS_MEDIA_PLAYER_ENTITY",                                    label: "Sonos"    },
+    // { entity: "YOUR_APPLE_TV_MEDIA_PLAYER_ENTITY",                              label: "Apple TV" },
+    // { entity: "YOUR_MA_MEDIA_PLAYER_ENTITY",                                    label: "MA"       },
   ],
 
   /* musicHideDelay — ms the Now Playing bar stays visible after music stops.
@@ -298,7 +326,7 @@ const CONFIG = {
     { label: "Cat Maintenance",                    entity: "YOUR_CAT_MAINTENANCE_ENTITY" },
     { label: "Car Maintenance",                    entity: "YOUR_CAR_MAINTENANCE_ENTITY" },
     { label: "Home Maintenance",                   entity: "YOUR_HOME_MAINTENANCE_ENTITY" },
-    { label: "Personal Maintenance",               entity: "YOUR_PERSONAL_MAINTENANCE_ENTITY" },
+    { label: "Subscription Renewal",               entity: "YOUR_SUBSCRIPTION_MAINTENANCE_ENTITY" },
     { label: "Take Your Vitamins",                 entity: "YOUR_VITAMINS_TAKEN_ENTITY" },
     { label: "Shumi Litter Box Needs Cleaning",    entity: "YOUR_LITTER_BOX_CLEAN_ENTITY" },
     { label: "Shumi Food/Water Problem",           entity: "YOUR_FOOD_WATER_PROBLEM_ENTITY" },
@@ -329,7 +357,7 @@ const CONFIG = {
   wazeTravelTime: [
     // Add as many entries as you like. Each one becomes its own bubble.
     // days: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-    { label: "Work Travel",   entity: "YOUR_WORK_TRAVEL_TIME_ENTITY", days: [2, 4, 5], timeStart: 7, timeEnd: 21 },
+    { label: "Work Travel",   entity: "YOUR_WORK_TRAVEL_TIME_ENTITY", days: [2, 4], timeStart: 7, timeEnd: 9 },
     // { label: "Home Travel", entity: "sensor.home_travel_time", days: [1,2,3,4,5], timeStart: 16, timeEnd: 19 },
   ],
 
@@ -347,12 +375,12 @@ const CONFIG = {
   cameraRefreshSeconds: 1,
 
   cameras: [
-    { entity: "YOUR_CAMERA_1_ENTITY", label: "Camera 1", motionEntity: "YOUR_CAMERA_1_MOTION_ENTITY" },
-    { entity: "YOUR_CAMERA_2_ENTITY", label: "Camera 2", motionEntity: "YOUR_CAMERA_2_MOTION_ENTITY" },
-    { entity: "YOUR_CAMERA_3_ENTITY", label: "Camera 3", motionEntity: "YOUR_CAMERA_3_MOTION_ENTITY" },
-    { entity: "YOUR_CAMERA_4_ENTITY", label: "Camera 4", motionEntity: "YOUR_CAMERA_4_MOTION_ENTITY" },
-    { entity: "YOUR_CAMERA_5_ENTITY", label: "Camera 5", motionEntity: "YOUR_CAMERA_5_MOTION_ENTITY" },
-    { entity: "YOUR_CAMERA_6_ENTITY", label: "Camera 6", motionEntity: "YOUR_CAMERA_6_MOTION_ENTITY" },
+    { entity: "YOUR_CAMERA_1_ENTITY",  label: "Camera 1", motionEntity: "YOUR_CAMERA_1_MOTION_ENTITY" },
+    { entity: "YOUR_CAMERA_2_ENTITY",  label: "Camera 2", motionEntity: "YOUR_CAMERA_2_MOTION_ENTITY" },
+    { entity: "YOUR_CAMERA_3_ENTITY",  label: "Camera 3", motionEntity: "YOUR_CAMERA_3_MOTION_ENTITY" },
+    { entity: "YOUR_CAMERA_4_ENTITY",  label: "Camera 4", motionEntity: "YOUR_CAMERA_4_MOTION_ENTITY" },
+    { entity: "YOUR_CAMERA_5_ENTITY",  label: "Camera 5", motionEntity: "YOUR_CAMERA_5_MOTION_ENTITY" },
+    { entity: "YOUR_CAMERA_6_ENTITY",  label: "Camera 6", motionEntity: "YOUR_CAMERA_6_MOTION_ENTITY" },
   ],
 
   /* ── DOORBELL ────────────────────────────────────────────────────────────
@@ -560,13 +588,6 @@ const CONFIG = {
           label: "House",
           subEntities: [
             { label: "Water Heater",   entity: "YOUR_WATER_HEATER_ENTITY" },
-            { label: "HW Circulation", expandable: true,
-              subEntities: [
-                { label: "Kitchen",   entity: "YOUR_HW_CIRC_KITCHEN_ENTITY" },
-                { label: "Main Bath", entity: "YOUR_HW_CIRC_MAIN_BATH_ENTITY" },
-                { label: "Ensuite",   entity: "YOUR_HW_CIRC_ENSUITE_ENTITY" },
-              ],
-            },
           ],
         },
         {
@@ -585,12 +606,12 @@ const CONFIG = {
         },
       ],
     },
-    { label: "Irrigation", showCount: true,
+    { label: "Plants", showCount: true,
       noRoomGrouping: true,
       twoColumnGrid:  true,
       subEntities: [
-        { label: "Front", entity: "YOUR_IRRIGATION_FRONT_ENTITY" },
-        { label: "Back",  entity: "YOUR_IRRIGATION_BACK_ENTITY" },
+        { label: "Front", entity: "YOUR_PLANTS_FRONT_ENTITY" },
+        { label: "Back",  entity: "YOUR_PLANTS_BACK_ENTITY" },
       ],
     },
   ],
@@ -627,6 +648,103 @@ const CONFIG = {
       dryBelow: 30,   // % — below this → dry (show amber)
       wetAbove: 80,   // % — above this → overwatered (show blue)
     },
+  },
+
+  /* ── INDOOR AIR QUALITY ─────────────────────────────────────────────────
+   * Per-room readings from your UniFi air quality / vape sensors.
+   * Add, remove, or reorder rooms freely — the dashboard adapts to whatever
+   * is listed here.
+   *
+   * Each room:
+   *   label    — display name (shown on the tab and room header)
+   *   icon     — one of: "sofa", "kitchen", "briefcase", "box", "bed"
+   *   temp     — temperature sensor entity_id
+   *   humidity — humidity sensor entity_id
+   *   co2      — CO2 sensor entity_id (ppm)
+   *   tvoc     — TVOC sensor entity_id (idx)
+   *   pm25     — PM2.5 sensor entity_id (µg/m³)
+   *   nox      — NOx sensor entity_id (ppb)
+   *   aqi      — overall air quality index sensor entity_id
+   *
+   * aqiBands sets the Good / Fair / Poor cutoffs used for each room's status
+   * badge and for picking out the "worst air quality" room up top.
+   *
+   * If a reading shows "—", verify the entity ID at HA → Developer Tools →
+   * States — these are placeholders and will need to match your actual
+   * UniFi sensor entity_ids.
+   * ──────────────────────────────────────────────────────────────────────── */
+  indoorAqi: {
+    rooms: [
+      { label: "Living Room", icon: "sofa",
+        temp: "YOUR_LIVING_TEMPERATURE_ENTITY",
+        humidity: "YOUR_LIVING_HUMIDITY_ENTITY",
+        co2: "YOUR_LIVING_CO2_ENTITY",
+        tvoc: "YOUR_LIVING_TVOC_ENTITY",
+        pm25: "YOUR_LIVING_PM25_ENTITY",
+        nox: "YOUR_LIVING_NOX_ENTITY",
+        aqi: "YOUR_LIVING_AQI_ENTITY" },
+      { label: "Kitchen", icon: "kitchen",
+        temp: "YOUR_KITCHEN_TEMPERATURE_ENTITY",
+        humidity: "YOUR_KITCHEN_HUMIDITY_ENTITY",
+        co2: "YOUR_KITCHEN_CO2_ENTITY",
+        tvoc: "YOUR_KITCHEN_TVOC_ENTITY",
+        pm25: "YOUR_KITCHEN_PM25_ENTITY",
+        nox: "YOUR_KITCHEN_NOX_ENTITY",
+        aqi: "YOUR_KITCHEN_AQI_ENTITY" },
+      { label: "Office", icon: "briefcase",
+        temp: "YOUR_OFFICE_TEMPERATURE_ENTITY",
+        humidity: "YOUR_OFFICE_HUMIDITY_ENTITY",
+        co2: "YOUR_OFFICE_CO2_ENTITY",
+        tvoc: "YOUR_OFFICE_TVOC_ENTITY",
+        pm25: "YOUR_OFFICE_PM25_ENTITY",
+        nox: "YOUR_OFFICE_NOX_ENTITY",
+        aqi: "YOUR_OFFICE_AQI_ENTITY" },
+      { label: "Storage", icon: "box",
+        temp: "YOUR_STORAGE_TEMPERATURE_ENTITY",
+        humidity: "YOUR_STORAGE_HUMIDITY_ENTITY",
+        co2: "YOUR_STORAGE_CO2_ENTITY",
+        tvoc: "YOUR_STORAGE_TVOC_ENTITY",
+        pm25: "YOUR_STORAGE_PM25_ENTITY",
+        nox: "YOUR_STORAGE_NOX_ENTITY",
+        aqi: "YOUR_STORAGE_AQI_ENTITY" },
+      { label: "Bedroom", icon: "bed",
+        temp: "YOUR_BEDROOM_TEMPERATURE_ENTITY",
+        humidity: "YOUR_BEDROOM_HUMIDITY_ENTITY",
+        co2: "YOUR_BEDROOM_CO2_ENTITY",
+        tvoc: "YOUR_BEDROOM_TVOC_ENTITY",
+        pm25: "YOUR_BEDROOM_PM25_ENTITY",
+        nox: "YOUR_BEDROOM_NOX_ENTITY",
+        aqi: "YOUR_BEDROOM_AQI_ENTITY" },
+    ],
+
+    aqiBands: {
+      goodMax: 50,   // AQI at or below this → Good
+      fairMax: 100,  // AQI at or below this (and above goodMax) → Fair; above → Poor
+    },
+  },
+
+  /* ── INDOOR PRESENCE TIMELINE ──────────────────────────────────────────
+   * Combined timeline of person/animal detections, pulled from your UniFi
+   * Protect smart-detection input_booleans.
+   *
+   * Each entry:
+   *   entity — the input_boolean that flips to "on" when detected
+   *   room   — display label shown on the summary cards and timeline
+   *   type   — "person" or "animal" — controls which icon is shown
+   *
+   * hoursOfHistory — fallback window (hrs) if no in-app setting is saved yet;
+   *                  once set, Settings → Behavior → Presence overrides this.
+   * limit          — max number of events kept on the timeline
+   * ────────────────────────────────────────────────────────────────────── */
+  presence: {
+    hoursOfHistory: 6,
+    limit: 20,
+    entities: [
+      { entity: "YOUR_LIVING_PERSON_SEEN_ENTITY", room: "Living", type: "person" },
+      { entity: "YOUR_LIVING_ANIMAL_SEEN_ENTITY",  room: "Living", type: "animal" },
+      { entity: "YOUR_DINING_PERSON_SEEN_ENTITY",  room: "Dining", type: "person" },
+      { entity: "YOUR_DINING_ANIMAL_SEEN_ENTITY",  room: "Dining", type: "animal" },
+    ],
   },
 
 };

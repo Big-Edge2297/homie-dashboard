@@ -59,35 +59,25 @@ http://YOUR_HA_IP:8123/local/homie-dashboard.html
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/d0c54a8d-a417-45c2-b05b-fe930aa8d558" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/d96813db-dacb-401a-ad30-5c1d34249480" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/82c82e38-6267-42cb-b516-65deb13a299e" width="320" height="200"/> |
 
-| Solar Dashboard | Camera Dashboard |
-|--------|--------|
-| <img src="https://github.com/user-attachments/assets/4e24b1e0-3364-460c-af53-bfcff242d699" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/fc70c54a-a8d6-4953-b335-4c58d4939c06" width="320" height="200"/> |
-
-
-### Settings
-
-| Settings | Themes | Bloom Intensity |
+| Solar Dashboard | Camera Dashboard | Indoor AQI
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/7497a0ac-f620-4e40-b395-256104d32ad4" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/48618cbd-acfc-4f5c-be2d-2a420a8e3231" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/a153f728-e843-41ac-a6d8-1a063bc12d57" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/4e24b1e0-3364-460c-af53-bfcff242d699" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/fc70c54a-a8d6-4953-b335-4c58d4939c06" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/7bc8253b-ceab-46b1-8645-9ce782274f2c" width="320" height="200"/> | 
 
-| Fonts | Languages | Elements Customization |
+| Indoor Presence | Insights | Settings
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/e8afa1cd-63f2-4f9c-ada2-f875e51d7aae" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/93c7a8ee-b353-4487-b321-d85e3106fb88" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/f471f2f4-a630-434f-adda-94e00d576899" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/fecb3b91-0b36-44eb-9c0c-f253bc0f14e7" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/6a86421a-eb1a-4c02-a142-f51753c8520f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/ed7dff49-2333-4874-86bd-3be9afe26a11" width="320" height="200"/> | 
 
 
 ### Entities and other screens
 
-| Pet Stats | Alarm Status | Lights |
+| Pet Stats | Alarm | Lights |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/c3d8fb36-c271-43e3-aaae-064a454a47d1" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/0ec20e9d-604d-42d6-af8c-a3e9a942bc81" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/89d52cd2-bf4a-4153-8976-c82599caa683" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/c3d8fb36-c271-43e3-aaae-064a454a47d1" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/9ec11e2d-854a-42f0-80bf-edd46cfb073d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/89d52cd2-bf4a-4153-8976-c82599caa683" width="320" height="200"/> |
 
 | Scenes | AirCon | Blinds |
 |--------|--------|--------|
 | <img src="https://github.com/user-attachments/assets/e7f3b548-7c1d-434d-b05b-0dd217de039e" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/2e7e9043-120e-4ed1-9fa3-8dadd75654a9" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/b6f6191c-42a0-4dcf-9d75-c17f05e09222" width="320" height="200"/> |
 
-| Habit History | Mood History | and Shumi 🐱 |
-|--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/dbfc0e7e-ee10-4f49-a716-b9f43e7213c5" width="320" height="557"/> | <img src="https://github.com/user-attachments/assets/4e0bdf03-5a79-4ea3-99e7-c6328223c79b" width="320" height="557"/> | <img src="https://github.com/user-attachments/assets/2b4c66f6-2b31-4a11-b967-55e7fc3f4b0a" width="320" height="557"/> |
 
 ## Themes
 
@@ -207,6 +197,12 @@ Remember to clear the cache/hard refresh so the new file changes apply in the br
 
 <details>
 <summary>View version history</summary>
+
+New in v4.2.0
+- New Dashboards design
+- Favorites panel
+- New Settings design
+- 3 new dashboards: Indoor AQI, Insights and Indoor Presence
 
 New in v4.0.0
 - Card based overview screen

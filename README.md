@@ -72,7 +72,8 @@ http://YOUR_HA_IP:8123/local/homie-dashboard.html
 
 | Pet Stats | Alarm | Lights |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/c3d8fb36-c271-43e3-aaae-064a454a47d1" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/9ec11e2d-854a-42f0-80bf-edd46cfb073d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/89d52cd2-bf4a-4153-8976-c82599caa683" width="320" height="200"/> |
+| <img src="https://github.com/user-attachments/assets/5622becd-5831-4316-9119-e0cb64b31a8f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/94e1de82-dc86-4f2c-823b-033814d190f3" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/89d52cd2-bf4a-4153-8976-c82599caa683" width="320" height="200"/> |
+
 
 | Scenes | AirCon | Blinds |
 |--------|--------|--------|
@@ -198,11 +199,17 @@ Remember to clear the cache/hard refresh so the new file changes apply in the br
 <details>
 <summary>View version history</summary>
 
+New in v4.3.0
+- New Dashboard: Alarm
+- New Dashboard: Pet Stats
+
 New in v4.2.0
-- New Dashboards design
+- New Dashboards screen design
+- New Dashboard: Indoor AQI
+- New Dashboard: Insights
+- New Dashboard: Indoor Presence
 - Favorites panel
-- New Settings design
-- 3 new dashboards: Indoor AQI, Insights and Indoor Presence
+- New Settings screen design
 
 New in v4.0.0
 - Card based overview screen

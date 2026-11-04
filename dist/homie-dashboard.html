@@ -26,7 +26,7 @@
 <head>
 <meta charset="UTF-8">
 <!-- DASHBOARD VERSION — update this when releasing a new version -->
-<script>const DASHBOARD_VERSION = "4.2.0";</script>
+<script>const DASHBOARD_VERSION = "4.3.0";</script>
 <!-- GITHUB REPO — used only to check for the latest tagged release in Settings -->
 <script>const GITHUB_REPO = "Big-Edge2297/homie-dashboard";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -284,108 +284,90 @@
     pointer-events: none;
   }
 
-  /* ─── PET STATS GRID (inside popup overlay) ─── */
-  /* ── Litter Box Action Buttons ── */
-  .litter-action-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  .litter-action-btn {
-    background: #111;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 15px 10px;
-    text-align: center;
+  /* ─── PET STATS FULL-SCREEN DASHBOARD ───
+     Closed via the exit gesture chosen in Settings → Gestures (registered in
+     MODE_OVERLAYS). Entities come from CONFIG.petStats. */
+  #pet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background:
+      radial-gradient(900px 600px at 0% 0%, color-mix(in srgb, var(--accent, #d4ae78) 24%, #121214) 0%, transparent 70%),
+      radial-gradient(1000px 700px at 100% 100%, #16373a 0%, transparent 70%),
+      #121214;
+    color: #f2efe9;
+    font-family: 'Montserrat', sans-serif;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: background 0.2s;
-    -webkit-tap-highlight-color: transparent;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    isolation: isolate;
   }
-  .litter-action-btn:active { background: rgba(255,255,255,0.07); transform: scale(0.97); }
-
-  .pet-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-top: 10px;
+  #pet-overlay.open { opacity: 1; pointer-events: auto; }
+  .pet-fs-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 2.5rem 2.25rem; }
+  .pet-fs-title { height: 5.5rem; flex: none; display: flex; align-items: center; font-size: 1.4rem; font-weight: 500; }
+  /* Stats + cards grouped and centered; they don't stretch edge to edge */
+  .pet-content {
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column; justify-content: center; gap: 44px;
+    width: 100%; max-width: 1100px; margin: 0 auto;
+    padding-bottom: 40px; box-sizing: border-box;
   }
-  /* ─── LITTER CHART ─── */
-  .litter-chart-section {
-    margin-top: 14px;
-    background: #111;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 14px 14px 10px;
-  }
-  .litter-chart-title {
-    font-size: 8px;
-    letter-spacing: 0.28em;
-    color: #fff;
-    text-transform: uppercase;
-    margin-bottom: 16px;
-    text-align: center;
-  }
-  .litter-chart-bars {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-around;
-    gap: 6px;
-    height: 90px;
-  }
-  .litter-bar-col {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-  }
-  .litter-bar-val {
-    font-size: 9px;
-    color: #fff;
-    letter-spacing: 0.05em;
-    min-height: 12px;
-  }
-  .litter-bar-wrap {
-    width: 100%;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    height: 56px;
-  }
-  .litter-bar {
-    width: 70%;
-    border-radius: 4px 4px 2px 2px;
-    transition: height 0.4s ease;
-    min-height: 3px;
-  }
-  .litter-bar-label {
-    font-size: 8px;
-    color: #fff;
-    letter-spacing: 0.1em;
-    text-align: center;
-  }
+  .pet-stat-row { display: grid; grid-template-columns: 2fr 1fr 1fr; column-gap: 20px; padding-top: 6px; }
+  .pet-stat { display: flex; flex-direction: column; gap: 10px; }
+  .pet-stat:not(:first-child) { margin-left: -10px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.1); }
+  .pet-stat-litter { flex-direction: row; justify-content: space-between; align-items: flex-start; padding-right: 20px; }
+  .pet-stat-col { display: flex; flex-direction: column; gap: 10px; }
+  .pet-stat-label { display: flex; align-items: center; gap: 10px; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+  .pet-stat-num { font-size: clamp(3.5rem, 14vh, 6.9rem); font-weight: 200; line-height: 1.05; }
+  .pet-stat-num .pet-unit { font-size: 1.6rem; color: rgba(255,255,255,0.6); }
+  .pet-stat-sub { font-size: 0.88rem; color: rgba(255,255,255,0.65); line-height: 1.5; }
+  .pet-mini { display: flex; flex-direction: column; gap: 10px; }
+  .litter-chart-bars { display: flex; align-items: flex-end; gap: 10px; height: clamp(110px, 19vh, 150px); width: clamp(220px, 24vw, 300px); }
+  .litter-bar-col { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
+  .litter-bar-val { font-size: 0.85rem; font-weight: 600; min-height: 1.2em; }
+  .litter-bar-wrap { width: 100%; flex: 1; min-height: 0; display: flex; align-items: flex-end; justify-content: center; }
+  .litter-bar { width: 100%; max-width: 40px; border-radius: 8px 8px 3px 3px; transition: height 0.4s ease; min-height: 3px; }
+  .litter-bar-label { font-size: 0.7rem; color: rgba(255,255,255,0.6); text-align: center; white-space: nowrap; }
+  .pet-card-row { display: flex; gap: 20px; }
   .pet-card {
-    background: #111;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 15px 10px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; gap: 12px;
+    background: rgba(20,20,22,0.62);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 22px;
+    padding: 1.5rem;
+    box-sizing: border-box;
   }
-  .pet-card-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 5px; }
-  .pet-card-text {
-    font-size: 9px;
-    line-height: 1.4;
-    color: rgba(255,255,255,0.9);
-    letter-spacing: 0.25em;
+  .pet-card-label { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+  .pet-card-num { font-size: 3.5rem; font-weight: 200; line-height: 1.05; color: var(--accent-hi, var(--accent, #d4ae78)); }
+  .pet-card-num .pet-unit { font-size: 1.25rem; color: rgba(255,255,255,0.6); }
+  .pet-card-actions { display: flex; gap: 10px; }
+  .litter-action-btn {
+    flex: 1;
+    min-height: 48px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--accent, #d4ae78) 40%, transparent);
+    background: color-mix(in srgb, var(--accent, #d4ae78) 10%, transparent);
+    color: #f2efe9;
+    font: 500 0.88rem 'Montserrat', sans-serif;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    cursor: pointer; padding: 0 1rem;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.12s ease, background 0.2s;
+  }
+  .litter-action-btn:active { transform: scale(0.97); background: color-mix(in srgb, var(--accent, #d4ae78) 20%, transparent); }
+  .litter-action-btn .pet-btn-icon { display: flex; }
+  .pet-sup-track { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.1); overflow: hidden; }
+  .pet-sup-track i { display: block; height: 100%; width: 0; background: var(--accent, #d4ae78); transition: width 0.4s ease; }
+  @media (max-width: 900px) {
+    .pet-content { max-width: none; gap: 28px; }
+    .pet-stat-row { grid-template-columns: 1fr 1fr; row-gap: 24px; }
+    .pet-stat-litter { grid-column: 1 / -1; }
+    .pet-stat:nth-child(2) { margin-left: 0; padding-left: 0; border-left: none; }
+    .pet-card-row { flex-wrap: wrap; }
+    .pet-card { flex: 1 1 45%; }
   }
 
   /* ─── HERO ─── */
@@ -988,10 +970,103 @@
     font-size: 13px;
     color: rgba(255,255,255,1);
   }
-  .popup--security {
-    max-width: 380px;
-    width: min(380px, 92vw);
+  /* ─── ALARM FULL PAGE ─── */
+  #security-overlay {
+    --alm-color: #3fd49a;
+    --alm-glow: rgba(63,212,154,0.16);
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #0b0d0e;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    font-family: inherit;
   }
+  #security-overlay.open { opacity: 1; pointer-events: auto; }
+  .alm-bg { position:absolute; inset:0; z-index:0; pointer-events:none;
+    background: radial-gradient(ellipse 100% 55% at 50% 0%, var(--alm-glow), transparent 100%); }
+  .alm-page { position:relative; z-index:1; flex:1; display:flex; overflow-y:auto; scrollbar-width:none;
+    padding: calc(env(safe-area-inset-top, 0px) + 56px) 22px calc(env(safe-area-inset-bottom, 0px) + 28px); }
+  .alm-page::-webkit-scrollbar { display:none; }
+  .alm-inner { width:100%; max-width:440px; margin:auto; }
+
+  /* ── Alarm screen (hero · mode strip · groups · siren · history) ── */
+  .alm-hero { display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center; }
+  .alm-shield { width:56px; height:56px; stroke:var(--alm-color); transition:stroke .5s ease; }
+  .alm-word { font-size:clamp(40px, 11vw, 60px); font-weight:200; line-height:1; letter-spacing:-0.005em; color:var(--alm-color); transition:color .5s ease; }
+  .alm-sub  { font-size:11px; letter-spacing:0.08em; color:#fff; margin-top:-2px; }
+  .alm-since{ font-size:11px; color:#fff; margin-top:2px; min-height:1em; }
+  .alm-warn { font-size:11px; font-weight:500; color:#ff8c93; min-height:1em; }
+  .alm-trig .alm-shield, .alm-trig .alm-word { animation: alarm-pulse 0.7s infinite alternate; }
+
+  .alm-seg { position:relative; display:flex; margin:30px auto 0; width:100%; max-width:400px; padding:4px; border-radius:30px; background:rgba(255,255,255,0.06); }
+  .alm-seg-hi { position:absolute; top:4px; bottom:4px; left:4px; width:calc((100% - 8px) / 4); border-radius:26px; background:var(--alm-color); opacity:0.85; transition:left .3s cubic-bezier(.3,.9,.4,1), background .5s ease, opacity .3s; }
+  .alm-seg-btn { position:relative; z-index:1; flex:1; padding:11px 4px; background:none; border:none; font-family:inherit; font-size:11px; color:#fff; cursor:pointer; transition:color .2s; }
+  .alm-seg-btn.active { color:#06090a; font-weight:500; }
+  #security-overlay .alarm-feedback { text-align:center; min-height:1.2em; margin-top:10px; }
+
+  .alm-groups { position:relative; display:flex; justify-content:space-between; margin:34px auto 0; max-width:400px; }
+  .alm-groups::before { content:''; position:absolute; top:24px; left:12%; right:12%; height:1px; background:rgba(255,255,255,0.12); }
+  .alm-grp { position:relative; flex:1; display:flex; flex-direction:column; align-items:center; gap:7px; --c:#3fd49a; }
+  .alm-grp.alert { --c:#ff6b73; }
+  .alm-grp.unknown { --c:#6b7075; }
+  .alm-grp-icon { width:48px; height:48px; border-radius:50%; border:1.6px solid var(--c); background:#0b0d0e; display:flex; align-items:center; justify-content:center; transition:border-color .3s, box-shadow .3s; }
+  .alm-grp.alert .alm-grp-icon { box-shadow:0 0 14px rgba(255,107,115,0.45); }
+  .alm-grp-icon svg { width:22px; height:22px; fill:none; stroke:var(--c); stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s; }
+  .alm-grp-name  { font-size:10px; letter-spacing:0.03em; color:#fff; margin-top:2px; }
+  .alm-grp-state { font-size:12px; font-weight:600; color:var(--c); margin-top:-3px; transition:color .3s; }
+
+  .alm-siren { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:34px; font-size:11px; color:#fff; }
+  .alm-toggle { position:relative; width:34px; height:19px; border-radius:10px; background:rgba(255,255,255,0.15); cursor:pointer; transition:background .2s; }
+  .alm-toggle::after { content:''; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; transition:.2s; }
+  .alm-toggle.on { background:#ff4d57; }
+  .alm-toggle.on::after { left:17px; }
+
+  .alm-log { margin:30px auto 0; max-width:400px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.08); }
+  .alm-log-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; padding:0; background:none; border:none; cursor:pointer; font-family:inherit; font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:#fff; }
+  .alm-log-toggle svg { width:16px; height:16px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; transition:transform .3s; }
+  .alm-log.open .alm-log-toggle svg { transform:rotate(180deg); }
+  .alm-log-body { max-height:0; overflow:hidden; margin-top:0; transition:max-height .35s ease, margin-top .35s ease; }
+  .alm-log.open .alm-log-body { max-height:420px; margin-top:8px; }
+  .alm-log-row { display:flex; gap:14px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px; color:#fff; }
+  .alm-log-row:last-child { border-bottom:none; }
+  .alm-log-time { flex:0 0 108px; font-size:11px; color:rgba(255,255,255,0.8); font-variant-numeric:tabular-nums; }
+  .alm-log-row b { font-weight:500; color:#fff; }
+  .alm-log-empty { padding:10px 0; font-size:11px; color:rgba(255,255,255,0.8); }
+
+  .alm-modal { position:absolute; inset:0; z-index:5; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); opacity:0; pointer-events:none; transition:opacity .25s; }
+  .alm-modal.show { opacity:1; pointer-events:auto; }
+  .alm-modal-sheet { width:min(340px,100%); padding:28px 24px 22px; text-align:center; background:#0f1214; border:1px solid rgba(255,255,255,0.1); border-radius:20px; transform:translateY(12px) scale(.97); transition:transform .25s; }
+  .alm-modal.show .alm-modal-sheet { transform:none; }
+  .alm-modal-icon { width:44px; height:44px; margin:0 auto 14px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1.6px solid #ff6b73; box-shadow:0 0 16px rgba(255,107,115,0.35); }
+  .alm-modal-icon svg { width:22px; height:22px; fill:none; stroke:#ff6b73; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .alm-modal-title { font-size:17px; font-weight:400; margin-bottom:6px; }
+  .alm-modal-text  { font-size:12px; line-height:1.5; color:rgba(255,255,255,0.85); margin-bottom:22px; }
+  .alm-modal-actions { display:flex; gap:10px; }
+  .alm-modal-btn { flex:1; padding:13px 8px; border-radius:12px; font-family:inherit; font-size:12px; cursor:pointer; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); }
+  .alm-modal-btn.danger { background:#ff4d57; border-color:#ff4d57; color:#fff; font-weight:600; }
+
+  /* ── Alarm PIN keypad (shown when ALARM_CODE is empty in config.js) ── */
+  #alarm-pin { position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,0.65); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); opacity:0; pointer-events:none; transition:opacity .2s; }
+  #alarm-pin.show { opacity:1; pointer-events:auto; }
+  .apin-sheet { width:min(320px,100%); padding:24px 22px 20px; text-align:center; background:#0f1214; border:1px solid rgba(255,255,255,0.1); border-radius:22px; transform:translateY(12px) scale(.97); transition:transform .2s; }
+  #alarm-pin.show .apin-sheet { transform:none; }
+  .apin-title { font-size:16px; font-weight:400; margin-bottom:4px; }
+  .apin-sub { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,0.55); margin-bottom:18px; }
+  .apin-dots { display:flex; justify-content:center; gap:12px; min-height:16px; margin-bottom:6px; }
+  .apin-dot { width:12px; height:12px; border-radius:50%; background:var(--accent-hi); box-shadow:0 0 8px var(--accent-glow); }
+  .apin-err { min-height:16px; margin-bottom:10px; font-size:11px; color:#f28a92; }
+  .apin-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .apin-key { height:54px; border-radius:14px; font-family:inherit; font-size:20px; font-weight:300; color:#fff; cursor:pointer; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); transition:background .12s, transform .08s; }
+  .apin-key:active { background:var(--ac-12, rgba(255,255,255,0.14)); transform:scale(.95); }
+  .apin-key--fn { font-size:12px; color:rgba(255,255,255,0.7); background:transparent; }
+  .apin-key--ok { color:var(--accent-hi); border-color:var(--accent); }
+  #alarm-pin.shake .apin-sheet { animation:apin-shake .35s; }
+  @keyframes apin-shake { 20%,60%{transform:translateX(-8px)} 40%,80%{transform:translateX(8px)} }
   .alarm-badge {
     font-size: 8px;
     letter-spacing: 0.2em;
@@ -2871,6 +2946,77 @@
     overflow: hidden;
   }
   #daily-overlay.open { opacity: 1; pointer-events: auto; }
+
+  /* ─── CALENDAR DASHBOARD (month grid + countdown + agenda) ─── */
+  #cal-overlay{position:fixed;inset:0;z-index:300;background:var(--bg-overlay);display:flex;gap:24px;padding:28px;box-sizing:border-box;color:#fff;opacity:0;pointer-events:none;transition:opacity .35s ease;overflow:hidden}
+  #cal-overlay.open{opacity:1;pointer-events:auto}
+  #cal-overlay button{font:inherit;color:inherit;cursor:pointer;background:none;border:1px solid rgba(255,255,255,.14);border-radius:12px;min-height:44px;padding:0 16px}
+  .cal-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+  .cal-top{display:flex;justify-content:space-between;align-items:center}
+  .cal-nav{display:flex;align-items:center;gap:12px}
+  .cal-nav h1{margin:0 0 0 8px;font-size:34px;font-weight:400;background:linear-gradient(90deg,#fff,var(--accent-hi));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  #cal-overlay .cal-ib{width:44px;padding:0;font-size:22px;line-height:1}
+  .cal-chips{display:flex;gap:10px;flex-wrap:wrap}
+  #cal-overlay .cal-chip{display:flex;align-items:center;gap:8px;font-size:12px;border-radius:22px}
+  #cal-overlay .cal-chip.off{opacity:.4}
+  .cal-dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
+  .cal-wk,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal-wk div{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6);padding-left:8px}
+  .cal-grid{flex:1;min-height:0}
+  #cal-overlay .cal-c{display:block;text-align:left;background:linear-gradient(160deg,#181c21,#0f1214);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:7px 8px;min-width:0;min-height:0;overflow:hidden;font-size:12px}
+  .cal-c b{font-weight:400;display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:50%}
+  .cal-c.o b{color:rgba(255,255,255,.5)}
+  .cal-c.sel{box-shadow:inset 0 0 0 1px rgba(255,255,255,.4)}
+  #cal-overlay .cal-c.t{border-color:var(--accent-hi);box-shadow:0 0 0 1px var(--accent-hi),0 0 18px var(--accent-glow)}
+  .cal-c.t b{background:var(--accent-hi);color:#07080a;font-weight:600}
+  .cal-p{display:block;font-style:normal;font-size:10.5px;padding:3px 6px;border-radius:6px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cal-side{width:min(372px,34vw);display:flex;flex-direction:column;gap:16px;min-height:0}
+  .cal-card{background:linear-gradient(160deg,#1a1f25,#0f1214);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:20px;box-sizing:border-box}
+  .cal-count{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .cal-lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+  .cal-big{font-size:40px;font-weight:300;line-height:1.15;margin-top:4px}
+  .cal-when{text-align:right;font-size:13px;color:rgba(255,255,255,.7);line-height:1.4}
+  .cal-ag{flex:1;overflow-y:auto;padding-top:16px;min-height:0}
+  .cal-ag h2{margin:0;font-size:20px;font-weight:300}
+  .cal-ag .cal-lbl{margin:14px 0 2px}
+  .cal-row{display:flex;gap:12px;align-items:center;padding:8px 12px;margin-top:6px;border-radius:10px;font-size:13px}
+  .cal-row .t{width:46px;flex:none;color:rgba(255,255,255,.6);font-size:12px}
+  .cal-row .n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal-row .g{margin-left:auto;flex:none;font-size:11px;color:rgba(255,255,255,.6)}
+  #cal-overlay .cal-seg{display:flex;gap:4px;padding:4px;border-radius:14px;background:#0f1214;border:1px solid rgba(255,255,255,.08)}
+  #cal-overlay .cal-seg button{border:0;color:rgba(255,255,255,.7)}
+  #cal-overlay .cal-seg button.on{background:var(--accent-hi);color:#07080a;font-weight:600}
+  .cal-week,.cal-agv{flex:1;min-height:0;display:none;flex-direction:column;gap:10px}
+  .cal-wh,.cal-ws{display:grid;grid-template-columns:56px repeat(7,1fr);gap:6px;align-items:start}
+  .cal-wd{text-align:center;padding:6px 0;border-radius:12px}
+  .cal-wd span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.6)}
+  .cal-wd b{font-size:22px;font-weight:300}
+  .cal-wd.t{background:var(--accent-hi)}
+  .cal-wd.t span,.cal-wd.t b{color:#07080a}
+  .cal-wd.t b{font-weight:600}
+  .cal-ws{background:linear-gradient(160deg,#1a1f25,#0f1214);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:8px 0;min-height:44px;max-height:110px;overflow-y:auto}
+  .cal-ws .cal-lbl{padding-left:8px}
+  .cal-wg{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:56px 1fr;padding-top:8px;align-content:start}
+  .cal-wt div{font-size:11px;color:rgba(255,255,255,.6);transform:translateY(-7px)}
+  .cal-wc{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-col{position:relative;border-left:1px solid rgba(255,255,255,.07)}
+  .cal-ev{position:absolute;border-radius:8px;padding:4px 7px;font-size:11px;box-sizing:border-box;overflow:hidden}
+  .cal-days{flex:1;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;align-content:start}
+  .cal-day{background:#0f1214;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px 20px}
+  .cal-day .cal-lbl{margin:0 0 2px}
+  .cal-agv{flex-direction:row;gap:24px}
+  .cal-aglist{flex:1;min-width:0;overflow-y:auto;padding-top:0}
+  .cal-agside{width:min(372px,34vw);display:flex;flex-direction:column;gap:16px;overflow-y:auto;min-height:0;padding-top:16px} /* 16px = first date heading's top margin in the list */
+  .cal-count.v{display:block}
+  .cal-count.v .cal-big{font-size:56px}
+  .cal-count.v .cal-when{text-align:left;margin-top:2px}
+  .cal-mm{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px}
+  #cal-overlay .cal-mm button{border:0;min-height:0;padding:0;height:34px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px}
+  #cal-overlay .cal-mm button.o{color:rgba(255,255,255,.5)}
+  #cal-overlay .cal-mm button.sel{box-shadow:inset 0 0 0 1px var(--accent-hi)}
+  #cal-overlay .cal-mm button.t{background:var(--accent-hi);color:#07080a;font-weight:600}
+  #cal-overlay .cal-mm button.t u{visibility:hidden}
+  .cal-mm u{width:5px;height:5px;border-radius:50%;text-decoration:none}
   .daily-header {
     flex-shrink: 0;
     display: grid;
@@ -8478,9 +8624,17 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
             <span class="launcher-label" data-label>My Day</span>
           </button>
+          <button class="topbar-btn" id="calendar-open-btn" onclick="openCalendarView()" title="Calendar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+            <span class="launcher-label" data-label>Calendar</span>
+          </button>
           <button class="topbar-btn" id="photoframe-open-btn" onclick="openPhotoFrame()" title="Memories">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             <span class="launcher-label" data-label>Memories</span>
+          </button>
+          <button class="topbar-btn" id="alarm-open-btn" onclick="openSecurity()" title="Alarm">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7L12 2z"/><path d="M9 12l2 2 4-4"/></svg>
+            <span class="launcher-label" data-label>Alarm</span>
           </button>
           <button class="topbar-btn" id="cameras-open-btn" onclick="openCameras()" title="Cameras">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -9007,15 +9161,15 @@
             <!-- Page 1: arm modes + siren -->
             <div class="ov3-sec-panel">
               <div class="ov3-sec-btns" style="margin-top:5px">
-                <button class="ov3-sec-btn" id="ov3-alarm-btn-home" onclick="alarmAction('arm_home');_ov3SecFeedback('Sending…','')">
+                <button class="ov3-sec-btn" id="ov3-alarm-btn-home" onclick="alarmAction('arm_home')">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
                   <span>Arm Home</span>
                 </button>
-                <button class="ov3-sec-btn" id="ov3-alarm-btn-away" onclick="alarmAction('arm_away');_ov3SecFeedback('Sending…','')">
+                <button class="ov3-sec-btn" id="ov3-alarm-btn-away" onclick="alarmAction('arm_away')">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7L12 2z"/><circle cx="12" cy="11" r="2"/></svg>
                   <span>Arm Away</span>
                 </button>
-                <button class="ov3-sec-btn ov3-sec-btn--disarm" id="ov3-alarm-btn-disarm" onclick="alarmAction('disarm');_ov3SecFeedback('Sending…','')">
+                <button class="ov3-sec-btn ov3-sec-btn--disarm" id="ov3-alarm-btn-disarm" onclick="alarmAction('disarm')">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17"/></svg>
                   <span>Disarm</span>
                 </button>
@@ -9168,175 +9322,150 @@
   </div>
 </div>
 
-<!-- ─── ALARMO SECURITY OVERLAY ─── -->
-<div class="popup-overlay" id="security-overlay" onclick="closeSecurityOverlay(event)">
-  <div class="popup popup--security">
-    <div class="popup-title popup-title--flex">
-      <span>SECURITY</span>
-      <span id="alarm-status-badge" class="alarm-badge alarm-badge--disarmed">DISARMED</span>
+<!-- ─── ALARM PIN KEYPAD (used only when ALARM_CODE is empty) ─── -->
+<div id="alarm-pin" role="dialog" aria-modal="true" aria-labelledby="apin-title" onclick="if(event.target===this)alarmPinCancel()">
+  <div class="apin-sheet">
+    <div class="apin-title" id="apin-title">Enter code</div>
+    <div class="apin-sub" id="apin-sub"></div>
+    <div class="apin-dots" id="apin-dots"></div>
+    <div class="apin-err" id="apin-err"></div>
+    <div class="apin-grid">
+      <button class="apin-key" onclick="alarmPinDigit('1')">1</button>
+      <button class="apin-key" onclick="alarmPinDigit('2')">2</button>
+      <button class="apin-key" onclick="alarmPinDigit('3')">3</button>
+      <button class="apin-key" onclick="alarmPinDigit('4')">4</button>
+      <button class="apin-key" onclick="alarmPinDigit('5')">5</button>
+      <button class="apin-key" onclick="alarmPinDigit('6')">6</button>
+      <button class="apin-key" onclick="alarmPinDigit('7')">7</button>
+      <button class="apin-key" onclick="alarmPinDigit('8')">8</button>
+      <button class="apin-key" onclick="alarmPinDigit('9')">9</button>
+      <button class="apin-key apin-key--fn" onclick="alarmPinCancel()">Cancel</button>
+      <button class="apin-key" onclick="alarmPinDigit('0')">0</button>
+      <button class="apin-key apin-key--fn" onclick="alarmPinBack()">⌫</button>
     </div>
-
-    <!-- Arm mode buttons -->
-    <div class="alarm-mode-row">
-      <button class="alarm-mode-btn" id="alarm-btn-home" onclick="alarmAction('arm_home')">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
-        <span>ARM HOME</span>
-      </button>
-      <button class="alarm-mode-btn" id="alarm-btn-away" onclick="alarmAction('arm_away')">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7L12 2z"/><circle cx="12" cy="11" r="2"/></svg>
-        <span>ARM AWAY</span>
-      </button>
-      <button class="alarm-mode-btn alarm-mode-btn--disarm" id="alarm-btn-disarm" onclick="alarmAction('disarm')">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><line x1="12" y1="15" x2="12" y2="17"/></svg>
-        <span>DISARM</span>
-      </button>
-    </div>
-
-    <!-- Siren controls -->
-    <div class="alarm-action-section-label">SIREN</div>
-    <div class="alarm-action-row">
-      <button class="alarm-mode-btn alarm-mode-btn--siren-on" onclick="securityAction('siren','turn_on')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-        <span>SIREN ON</span>
-      </button>
-      <button class="alarm-mode-btn alarm-mode-btn--siren-off" onclick="securityAction('siren','turn_off')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-        <span>SIREN OFF</span>
-      </button>
-    </div>
-
-    <!-- Garage / Gate controls -->
-    <div class="alarm-action-section-label">GARAGE / GATE</div>
-    <div class="alarm-action-row">
-      <button class="alarm-mode-btn alarm-mode-btn--garage-open" onclick="securityAction('cover','open_cover')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="13" width="20" height="8" rx="1"/><polyline points="12 3 12 13"/><polyline points="8 7 12 3 16 7"/></svg>
-        <span>OPEN</span>
-      </button>
-      <button class="alarm-mode-btn alarm-mode-btn--garage-close" onclick="securityAction('cover','close_cover')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="8" rx="1"/><polyline points="12 21 12 11"/><polyline points="8 17 12 21 16 17"/></svg>
-        <span>CLOSE</span>
-      </button>
-    </div>
-
-    <div id="alarm-feedback" class="alarm-feedback"></div>
+    <button class="apin-key apin-key--ok" style="width:100%;margin-top:10px;font-size:13px;letter-spacing:.1em" onclick="alarmPinSubmit()">OK</button>
   </div>
 </div>
 
-<div class="popup-overlay" id="pet-overlay" onclick="closePetStats(event)">
-  <div class="popup popup--pet">
-    <div class="popup-title">Pet Status</div>
-    <!-- Litter Box Actions -->
-    <div class="litter-action-row">
-      <!-- Reset Counter -->
-      <button class="litter-action-btn" onclick="litterAction()" title="Reset counter">
-        <div class="pet-card-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--accent)">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-            <path d="M3 3v5h5"/>
-          </svg>
-        </div>
-        <div class="pet-card-text">Reset Counter</div>
-      </button>
+<!-- ─── ALARMO SECURITY OVERLAY ─── -->
+<div id="security-overlay">
+  <div class="alm-bg"></div>
+  <div class="alm-page"><div class="alm-inner">
 
-      <!-- Since Last Clean — number only -->
-      <div class="litter-action-btn" style="cursor:default; pointer-events:none;">
-        <div class="pet-card-icon">
-          <span id="litter-gauge-num" style="font-size:22px;font-weight:600;color:var(--accent);letter-spacing:0.05em;line-height:1;">—</span>
-        </div>
-        <div class="pet-card-text">Since Last Clean</div>
-      </div>
-
-      <!-- Toggle Clean -->
-      <button class="litter-action-btn" id="litter-toggle-btn" onclick="litterToggleAction()" title="Toggle clean">
-        <div class="pet-card-icon">
-          <!-- Default icon: checkmark -->
-          <svg id="litter-icon-check" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--accent)">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          <!-- Cleaning icon: broom (shown when active) -->
-          <svg id="litter-icon-clean" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--accent);display:none">
-            <path d="M3 21l7-7"/>
-            <path d="M10 14l1.5-1.5"/>
-            <path d="M14 10l5-5"/>
-            <path d="M17 3l4 4-8.5 8.5-4-4L17 3z"/>
-            <path d="M10 14c-.5 1.5-1.5 3.5-4 4.5 1-2.5.5-4 .5-4"/>
-          </svg>
-        </div>
-        <div class="pet-card-text" id="litter-toggle-label">Toggle Clean</div>
-      </button>
+    <!-- Status hero -->
+    <div class="alm-hero" id="alm-hero">
+      <svg class="alm-shield" id="alm-shield" viewBox="0 0 24 24" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5l8-3z"/>
+        <g id="alm-glyph"></g>
+      </svg>
+      <div class="alm-word"  id="alm-word">—</div>
+      <div class="alm-sub"   id="alm-sub"></div>
+      <div class="alm-since" id="alm-since"></div>
+      <div class="alm-warn"  id="alm-warn"></div>
     </div>
 
-    <div class="pet-grid" id="pet-stats-content">
-      <div class="pet-card">
-        <div class="pet-card-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Cat face -->
-            <ellipse cx="12" cy="13" rx="8" ry="7" fill="none" style="stroke:var(--accent)" stroke-width="1.4"/>
-            <!-- Ears -->
-            <path d="M5.5 8 L4 3.5 L8 6.5 Z" fill="none" style="stroke:var(--accent)" stroke-width="1.3" stroke-linejoin="round"/>
-            <path d="M18.5 8 L20 3.5 L16 6.5 Z" fill="none" style="stroke:var(--accent)" stroke-width="1.3" stroke-linejoin="round"/>
-            <!-- Eyes -->
-            <ellipse cx="9.5" cy="12" rx="1" ry="1.3" style="fill:var(--accent)"/>
-            <ellipse cx="14.5" cy="12" rx="1" ry="1.3" style="fill:var(--accent)"/>
-            <!-- Nose -->
-            <path d="M11.2 14.5 L12 15.2 L12.8 14.5" fill="none" style="stroke:var(--accent)" stroke-width="1" stroke-linejoin="round"/>
-            <!-- Whiskers left -->
-            <line x1="4" y1="13.5" x2="9" y2="14" style="stroke:var(--accent)" stroke-width="0.8" opacity="0.7"/>
-            <line x1="4" y1="15" x2="9" y2="14.8" style="stroke:var(--accent)" stroke-width="0.8" opacity="0.7"/>
-            <!-- Whiskers right -->
-            <line x1="20" y1="13.5" x2="15" y2="14" style="stroke:var(--accent)" stroke-width="0.8" opacity="0.7"/>
-            <line x1="20" y1="15" x2="15" y2="14.8" style="stroke:var(--accent)" stroke-width="0.8" opacity="0.7"/>
-          </svg>
-        </div>
-        <div class="pet-card-text">
-          Visits Today: <span id="pet-litter-today">—</span><br>
-          <span id="pet-litter-last" style="opacity:0.7">—</span>
-        </div>
-      </div>
-      <div class="pet-card">
-        <div class="pet-card-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Bowl base -->
-            <path d="M4 11 Q4 18 12 18 Q20 18 20 11 Z" fill="none" style="stroke:var(--accent)" stroke-width="1.4" stroke-linejoin="round"/>
-            <!-- Bowl rim -->
-            <line x1="3.5" y1="11" x2="20.5" y2="11" style="stroke:var(--accent)" stroke-width="1.4" stroke-linecap="round"/>
-            <!-- Food pellets -->
-            <circle cx="9" cy="14" r="1.2" style="fill:var(--accent)" opacity="0.8"/>
-            <circle cx="12" cy="14.8" r="1.2" style="fill:var(--accent)" opacity="0.8"/>
-            <circle cx="15" cy="14" r="1.2" style="fill:var(--accent)" opacity="0.8"/>
-            <!-- Steam lines -->
-            <path d="M9 8 Q9.5 6.5 9 5" style="stroke:var(--accent)" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
-            <path d="M12 7.5 Q12.5 6 12 4.5" style="stroke:var(--accent)" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
-            <path d="M15 8 Q15.5 6.5 15 5" style="stroke:var(--accent)" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
-          </svg>
-        </div>
-        <div class="pet-card-text">
-          Feeds: <span id="pet-food-count">—</span>, <span id="pet-food-weight">—</span>g<br>
-          Desiccant: <span id="pet-food-desiccant">—</span>d
-        </div>
-      </div>
-      <div class="pet-card">
-        <div class="pet-card-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 3 Q12 3 7 10 Q4.5 14 4.5 16 A7.5 7.5 0 0 0 19.5 16 Q19.5 14 17 10 Z" fill="none" style="stroke:var(--accent)" stroke-width="1.4" stroke-linejoin="round"/>
-            <!-- Shine -->
-            <path d="M9.5 14 Q9 12 10.5 11" style="stroke:var(--accent)" stroke-width="1" stroke-linecap="round" opacity="0.5"/>
-          </svg>
-        </div>
-        <div class="pet-card-text">
-          Purified: <span id="pet-water-vol">—</span><br>
-          Filter: <span id="pet-water-filter-wrap">—</span>
-        </div>
+    <!-- Mode strip -->
+    <div class="alm-seg" id="alm-seg">
+      <div class="alm-seg-hi" id="alm-seg-hi"></div>
+      <button class="alm-seg-btn" onclick="alarmAction('disarm')">Disarm</button>
+      <button class="alm-seg-btn" onclick="alarmAction('arm_home')">Home</button>
+      <button class="alm-seg-btn" onclick="alarmAction('arm_away')">Away</button>
+      <button class="alm-seg-btn" onclick="alarmAction('arm_night')">Night</button>
+    </div>
+    <div id="alarm-feedback" class="alarm-feedback"></div>
+
+    <!-- Grouped status line (built from CONFIG.alarmGroups) -->
+    <div class="alm-groups" id="alm-groups"></div>
+
+    <!-- Siren -->
+    <div class="alm-siren">Siren <div class="alm-toggle" id="alm-siren-toggle" onclick="almSirenTap()"></div></div>
+
+    <!-- History (collapsed by default) -->
+    <div class="alm-log" id="alm-log">
+      <button class="alm-log-toggle" onclick="almToggleLog()">Alarm history
+        <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="alm-log-body" id="alm-log-rows"></div>
+    </div>
+  </div></div>
+
+  <!-- Siren confirmation -->
+  <div class="alm-modal" id="alm-modal" role="dialog" aria-modal="true" aria-labelledby="alm-modal-title">
+    <div class="alm-modal-sheet">
+      <div class="alm-modal-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg></div>
+      <div class="alm-modal-title" id="alm-modal-title">Sound the siren?</div>
+      <div class="alm-modal-text">The siren will start immediately and be very loud. You can switch it off again from this screen.</div>
+      <div class="alm-modal-actions">
+        <button class="alm-modal-btn" onclick="almCloseModal()">Cancel</button>
+        <button class="alm-modal-btn danger" onclick="almSirenConfirm()">Sound siren</button>
       </div>
     </div>
-    <div class="litter-chart-section">
-      <div class="litter-chart-title">Litter Box — Last 5 Days</div>
-      <div class="litter-chart-bars" id="litter-chart-bars">
-        <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v0"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b0" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l0">—</div></div>
-        <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v1"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b1" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l1">—</div></div>
-        <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v2"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b2" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l2">—</div></div>
-        <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v3"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b3" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l3">—</div></div>
-        <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v4"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b4" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l4">—</div></div>
+  </div>
+</div>
+
+<div id="pet-overlay">
+  <div class="pet-fs-body">
+    <div class="pet-fs-title" id="pet-fs-title">Pet Status</div>
+
+    <div class="pet-content">
+      <div class="pet-stat-row">
+        <div class="pet-stat pet-stat-litter">
+          <div class="pet-stat-col">
+            <div class="pet-stat-label"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="13" rx="8" ry="7"/><path d="M5.5 8 4 3.5 8 6.5ZM18.5 8 20 3.5 16 6.5Z"/><ellipse cx="9.5" cy="12" rx="1" ry="1.3" style="fill:var(--accent)"/><ellipse cx="14.5" cy="12" rx="1" ry="1.3" style="fill:var(--accent)"/><path d="M11.2 14.5 12 15.2 12.8 14.5"/></svg>Litter today</div>
+            <div class="pet-stat-num"><span id="pet-litter-today">—</span><span class="pet-unit"> visits</span></div>
+            <div class="pet-stat-sub" id="pet-litter-last">—</div>
+          </div>
+          <div class="pet-mini">
+            <div class="pet-stat-label"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="20" x2="6" y2="13"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="18" y1="20" x2="18" y2="10"/></svg>Last 5 days</div>
+            <div class="litter-chart-bars" id="litter-chart-bars">
+          <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v0"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b0" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l0">—</div></div>
+          <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v1"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b1" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l1">—</div></div>
+          <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v2"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b2" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l2">—</div></div>
+          <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v3"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b3" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l3">—</div></div>
+          <div class="litter-bar-col"><div class="litter-bar-val" id="lbc-v4"></div><div class="litter-bar-wrap"><div class="litter-bar" id="lbc-b4" style="height:3px;background:rgba(255,255,255,0.1)"></div></div><div class="litter-bar-label" id="lbc-l4">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="pet-stat">
+          <div class="pet-stat-label"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11Q4 18 12 18Q20 18 20 11ZM3.5 11h17"/><circle cx="9" cy="14" r="1" style="fill:var(--accent)"/><circle cx="12" cy="14.8" r="1" style="fill:var(--accent)"/><circle cx="15" cy="14" r="1" style="fill:var(--accent)"/></svg>Fed today</div>
+          <div class="pet-stat-num"><span id="pet-food-weight">—</span><span class="pet-unit"> g</span></div>
+          <div class="pet-stat-sub"><span id="pet-food-count">—</span> feeds dispensed</div>
+        </div>
+        <div class="pet-stat">
+          <div class="pet-stat-label"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3Q12 3 7 10 4.5 14 4.5 16A7.5 7.5 0 0 0 19.5 16Q19.5 14 17 10Z"/></svg>Water purified</div>
+          <div class="pet-stat-num"><span id="pet-water-vol">—</span><span class="pet-unit"> ml</span></div>
+          <div class="pet-stat-sub">Purified today</div>
+        </div>
+      </div>
+
+      <div class="pet-card-row">
+        <div class="pet-card">
+          <div class="pet-card-label">Since last clean</div>
+          <div class="pet-card-num"><span id="litter-gauge-num">—</span><span class="pet-unit"> visits</span></div>
+          <div class="pet-card-actions">
+            <button class="litter-action-btn" onclick="litterAction()" title="Reset counter">
+              <span class="pet-btn-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></span>Reset
+            </button>
+            <button class="litter-action-btn" id="litter-toggle-btn" onclick="litterToggleAction()" title="Toggle clean">
+              <span class="pet-btn-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" id="litter-icon-check"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" id="litter-icon-clean" style="display:none"><path d="M3 21l7-7"/><path d="M10 14l1.5-1.5"/><path d="M14 10l5-5"/><path d="M17 3l4 4-8.5 8.5-4-4L17 3z"/><path d="M10 14c-.5 1.5-1.5 3.5-4 4.5 1-2.5.5-4 .5-4"/></svg>
+              </span><span id="litter-toggle-label">Toggle Clean</span>
+            </button>
+          </div>
+        </div>
+        <div class="pet-card">
+          <div class="pet-card-label">Feeder desiccant</div>
+          <div class="pet-card-num"><span id="pet-food-desiccant">—</span><span class="pet-unit"> days</span></div>
+          <div class="pet-stat-sub">Dry-pack life left</div>
+          <div class="pet-sup-track"><i id="pet-sup-des-bar"></i></div>
+        </div>
+        <div class="pet-card">
+          <div class="pet-card-label">Water filter</div>
+          <div class="pet-card-num"><span id="pet-sup-filter-val">—</span></div>
+          <div class="pet-stat-sub">Filter life left</div>
+          <div class="pet-sup-track"><i id="pet-sup-fil-bar"></i></div>
+        </div>
       </div>
     </div>
   </div>
@@ -9705,6 +9834,7 @@ function _wsConnect() {
             _stateCacheSeenAt.set(newState.entity_id, Date.now());
             // Keep alarm badge in sync with live WS events
             if (newState.entity_id === CONFIG.alarmEntity) refreshAlarmUI(newState.state);
+            else if (document.getElementById("security-overlay")?.classList.contains("open")) almScheduleRender();
             // Only sync AC/purifier derived state when popup is closed
             const popupOpen = document.getElementById("popup-overlay")
               ?.classList.contains("open");
@@ -14054,6 +14184,9 @@ function refreshAlarmUI(state) {
   if (state === "armed_home") document.getElementById("ov3-alarm-btn-home")?.classList.add("active");
   if (state === "armed_away") document.getElementById("ov3-alarm-btn-away")?.classList.add("active");
   if (state === "disarmed")   document.getElementById("ov3-alarm-btn-disarm")?.classList.add("active");
+
+  // ── Sync the Alarm screen (security overlay) ──
+  almRender();
 }
 
 async function openSecurity() {
@@ -14071,13 +14204,21 @@ async function openSecurity() {
     );
     setAlarmFeedback("Entity not found — check ALARM_ENTITY in config.js", "error");
   }
+  almRender();
+  if (typeof _closeLauncher === "function") _closeLauncher();
   document.getElementById("security-overlay").classList.add("open");
+  window._showSwipeDownHint?.();
 }
 
-function closeSecurityOverlay(e) {
-  if (e && e.target !== document.getElementById("security-overlay")) return;
+function closeSecurity() {
   haptic("light");
   document.getElementById("security-overlay").classList.remove("open");
+  if (typeof almCloseModal === "function") almCloseModal();
+}
+// Kept for backwards compatibility with any older callers
+function closeSecurityOverlay(e) {
+  if (e && e.target !== document.getElementById("security-overlay")) return;
+  closeSecurity();
 }
 
 // Module-level references for the active alarm WS handler and its safety
@@ -14087,7 +14228,66 @@ function closeSecurityOverlay(e) {
 let _alarmWsHandler  = null;
 let _alarmWsTimeout  = null;
 
+/* Public entry point for all arm/disarm buttons.
+ * ALARM_CODE set in config.js  → sent silently, no keypad.
+ * ALARM_CODE empty             → keypad is shown and the typed PIN is sent. */
 function alarmAction(service) {
+  if (ALARM_CODE) { _alarmSend(service, ALARM_CODE); return; }
+  alarmPinOpen(service);
+}
+
+const _ALARM_PIN_LABELS = { arm_home:"Arm Home", arm_away:"Arm Away", arm_night:"Arm Night", disarm:"Disarm" };
+let _alarmPinService = null;
+let _alarmPinValue   = "";
+
+function alarmPinOpen(service) {
+  haptic("light");
+  _alarmPinService = service;
+  _alarmPinValue = "";
+  document.getElementById("apin-sub").textContent = _ALARM_PIN_LABELS[service] || service;
+  document.getElementById("apin-err").textContent = "";
+  _alarmPinRender();
+  document.getElementById("alarm-pin").classList.add("show");
+}
+function alarmPinCancel() {
+  _alarmPinService = null;
+  _alarmPinValue = "";
+  document.getElementById("alarm-pin").classList.remove("show");
+}
+function alarmPinDigit(d) {
+  if (_alarmPinValue.length >= 12) return;
+  haptic("light");
+  _alarmPinValue += d;
+  document.getElementById("apin-err").textContent = "";
+  _alarmPinRender();
+}
+function alarmPinBack() {
+  _alarmPinValue = _alarmPinValue.slice(0, -1);
+  _alarmPinRender();
+}
+function alarmPinSubmit() {
+  if (!_alarmPinValue) {
+    document.getElementById("apin-err").textContent = "Enter your code";
+    return;
+  }
+  const svc = _alarmPinService, code = _alarmPinValue;
+  alarmPinCancel();             // clears the PIN from memory + closes pad
+  _alarmSend(svc, code);
+}
+function _alarmPinRender() {
+  document.getElementById("apin-dots").innerHTML =
+    '<span class="apin-dot"></span>'.repeat(_alarmPinValue.length);
+}
+// Physical keyboard support while the keypad is open
+document.addEventListener("keydown", e => {
+  if (!document.getElementById("alarm-pin")?.classList.contains("show")) return;
+  if (/^[0-9]$/.test(e.key)) alarmPinDigit(e.key);
+  else if (e.key === "Backspace") alarmPinBack();
+  else if (e.key === "Enter") alarmPinSubmit();
+  else if (e.key === "Escape") alarmPinCancel();
+});
+
+function _alarmSend(service, code) {
   haptic("medium");
   setAlarmFeedback("Sending…", "");
   if (!_ws || _ws.readyState !== WebSocket.OPEN) {
@@ -14106,7 +14306,7 @@ function alarmAction(service) {
   }
 
   const serviceData = { entity_id: CONFIG.alarmEntity };
-  if (ALARM_CODE) serviceData.code = ALARM_CODE;
+  if (code) serviceData.code = code;
   const msgId = _wsNextId();
   // HA 2024.8+ renamed services: arm_home → alarm_arm_home etc.
   const serviceMap = {
@@ -14140,9 +14340,16 @@ function alarmAction(service) {
       // Give the user a clear hint: wrong PIN vs connection/config problem
       const isCodeError = /code|invalid|incorrect/i.test(raw);
       const friendlyMsg = isCodeError
-        ? "Wrong PIN — check ALARM_CODE in config.js"
+        ? (ALARM_CODE ? "Wrong PIN — check ALARM_CODE in config.js" : "Wrong code — try again")
         : "Connection error — check WebSocket status";
       setAlarmFeedback(friendlyMsg, "error");
+      if (isCodeError && !ALARM_CODE) {
+        // Re-open the keypad with an error so the user can retry immediately
+        alarmPinOpen(service);
+        document.getElementById("apin-err").textContent = "Wrong code";
+        const pin = document.getElementById("alarm-pin");
+        pin.classList.remove("shake"); void pin.offsetWidth; pin.classList.add("shake");
+      }
       console.error("[Alarm] WS error:", msg.error);
     }
   };
@@ -14215,6 +14422,234 @@ function securityAction(domain, service) {
   };
   _ws.addEventListener("message", handler);
   setTimeout(() => { _ws.removeEventListener("message", handler); }, 10000);
+}
+
+/* ─── ALARM SCREEN (hero · mode strip · grouped status · siren · history) ─────
+ * Reads CONFIG.alarmEntity (Alarmo) plus the helper groups in CONFIG.alarmGroups.
+ * Arm/disarm reuse alarmAction(); siren reuses securityAction().
+ * ─────────────────────────────────────────────────────────────────────────── */
+const ALM_GLYPHS = {
+  disarm:  '<rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 0 1 3.8-.8"/>',
+  home:    '<path d="M8.5 12L12 8.5l3.5 3.5"/><path d="M9.5 11.5V16h5v-4.5"/>',
+  away:    '<rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 0 1 4 0V11"/>',
+  night:   '<path d="M15 12.5A4 4 0 1 1 11.5 8a3.2 3.2 0 0 0 3.5 4.5z"/>',
+  clock:   '<circle cx="12" cy="11" r="3.4"/><path d="M12 9.3V11l1.3.8"/>',
+  alert:   '<path d="M12 8v4M12 14.5h.01"/>',
+  unknown: '<path d="M10.2 9.6a1.9 1.9 0 1 1 2.6 1.8c-.6.3-.8.7-.8 1.2M12 15h.01"/>',
+};
+const ALM_ICONS = {
+  windows: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M12 4v16M4 12h16"/>',
+  doors:   '<rect x="7" y="3" width="10" height="18" rx="1.5"/><circle cx="14.5" cy="12" r="0.8"/>',
+  motion:  '<circle cx="10" cy="5" r="1.6"/><path d="M10 8l-2.5 4.5 3 2.5-1 5M10 8l3 3 2.5.5M7.5 12.5L5 13M17 6.5c1 .8 1.6 1.8 1.8 3M19.5 4.5c1.6 1.3 2.5 3 2.8 5"/>',
+  garage:  '<path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8M7 15.5h10M7 18h10"/>',
+  generic: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/>',
+};
+// state → look. idx = position of the highlight in the mode strip (-1 = none)
+const ALM_STATES = {
+  disarmed:    { color:"#c9cdd3", glow:"rgba(201,205,211,0.10)", word:"Disarmed", sub:"Ready to arm",                glyph:"disarm", idx:0 },
+  armed_home:  { color:"#d4ae78", glow:"rgba(184,150,92,0.18)",  word:"Home",     sub:"Armed · perimeter monitored", glyph:"home",   idx:1 },
+  armed_away:  { color:"#3fd49a", glow:"rgba(63,212,154,0.16)",  word:"Away",     sub:"Armed · all sensors active",  glyph:"away",   idx:2 },
+  armed_night: { color:"#93a6f2", glow:"rgba(147,166,242,0.16)", word:"Night",    sub:"Armed · interior paused",     glyph:"night",  idx:3 },
+  arming:      { color:"#f2cf41", glow:"rgba(242,207,65,0.14)",  word:"Arming",   sub:"Exit delay · leave now",      glyph:"clock",  idx:-1 },
+  pending:     { color:"#f2cf41", glow:"rgba(242,207,65,0.14)",  word:"Pending",  sub:"Entry delay · disarm now",    glyph:"clock",  idx:-1 },
+  triggered:   { color:"#ff4d57", glow:"rgba(255,77,87,0.22)",   word:"Triggered",sub:"The alarm is sounding",       glyph:"alert",  idx:-1 },
+};
+const ALM_UNKNOWN = { color:"#6b7075", glow:"rgba(107,112,117,0.10)", word:"Unavailable", sub:"Can't reach the alarm", glyph:"unknown", idx:-1 };
+const ALM_ARM_IDX = { armed_home:1, armed_away:2, armed_night:3 };
+const ALM_ACTIVE  = new Set(["on", "open", "opening", "detected", "unlocked"]);
+
+let _almSirenLocal = false;
+let _almRenderTimer = null;
+let _almLastState = null;
+
+function almScheduleRender() {
+  clearTimeout(_almRenderTimer);
+  _almRenderTimer = setTimeout(almRender, 150);
+}
+
+function almFmtWhen(iso, timeOnly) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const t = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return timeOnly ? t : "Today " + t;
+  const y = new Date(now.getTime() - 864e5);
+  if (d.toDateString() === y.toDateString()) return "Yesterday " + t;
+  return d.toLocaleDateString([], { weekday: "short" }) + " " + t;
+}
+
+function almGroupInfo(g) {
+  const st = haGetCached(g.entity);
+  if (!st || st.state === "unavailable" || st.state === "unknown") {
+    return { unknown: true, active: false, count: 0, label: "—" };
+  }
+  const active = ALM_ACTIVE.has(String(st.state).toLowerCase());
+  let count = 0;
+  if (active && g.count !== false) {
+    const members = st.attributes && Array.isArray(st.attributes.entity_id) ? st.attributes.entity_id : [];
+    count = members.filter(id => {
+      const m = haGetCached(id);
+      return m && ALM_ACTIVE.has(String(m.state).toLowerCase());
+    }).length;
+  }
+  let label = active ? (g.bad || "Open") : (g.ok || "Closed");
+  if (active && count > 1) label = count + " " + label;
+  return { unknown: false, active, count, label };
+}
+
+function almRender() {
+  const root = document.getElementById("security-overlay");
+  if (!root) return;
+
+  // ── Alarm state ──
+  const st = haGetCached(CONFIG.alarmEntity);
+  const state = st ? st.state : "unavailable";
+  const look = ALM_STATES[state] || ALM_UNKNOWN;
+  root.style.setProperty("--alm-color", look.color);
+  root.style.setProperty("--alm-glow", look.glow);
+  document.getElementById("alm-hero").classList.toggle("alm-trig", state === "triggered");
+  document.getElementById("alm-word").textContent = look.word;
+  document.getElementById("alm-sub").textContent = look.sub;
+  document.getElementById("alm-glyph").innerHTML = ALM_GLYPHS[look.glyph];
+
+  const since = document.getElementById("alm-since");
+  if (st && ALM_STATES[state]) {
+    const by = st.attributes && st.attributes.changed_by;
+    since.textContent = "Since " + almFmtWhen(st.last_changed, true) + (by ? " · by " + by : "");
+  } else {
+    since.textContent = "";
+  }
+
+  // ── Mode strip highlight (arming/pending follow the target mode) ──
+  let idx = look.idx;
+  if ((state === "arming" || state === "pending") && st && st.attributes) {
+    const target = ALM_ARM_IDX[st.attributes.arm_mode || st.attributes.next_state];
+    if (target !== undefined) idx = target;
+  }
+  const hi = document.getElementById("alm-seg-hi");
+  hi.style.opacity = idx < 0 ? "0" : "0.85";
+  if (idx >= 0) hi.style.left = "calc(4px + " + idx + " * (100% - 8px) / 4)";
+  document.querySelectorAll("#alm-seg .alm-seg-btn").forEach((b, i) => b.classList.toggle("active", i === idx));
+
+  // ── Grouped status line ──
+  const wrap = document.getElementById("alm-groups");
+  const groups = CONFIG.alarmGroups || [];
+  wrap.innerHTML = "";
+  const warn = [];
+  groups.forEach(g => {
+    const info = almGroupInfo(g);
+    const el = document.createElement("div");
+    el.className = "alm-grp" + (info.active ? " alert" : "") + (info.unknown ? " unknown" : "");
+    const icon = document.createElement("div");
+    icon.className = "alm-grp-icon";
+    icon.innerHTML = '<svg viewBox="0 0 24 24">' + (ALM_ICONS[g.icon] || ALM_ICONS.generic) + "</svg>";
+    const name = document.createElement("div");
+    name.className = "alm-grp-name";
+    name.textContent = g.label;
+    const stt = document.createElement("div");
+    stt.className = "alm-grp-state";
+    stt.textContent = info.label;
+    el.append(icon, name, stt);
+    wrap.appendChild(el);
+    if (info.active && g.warn !== false) {
+      const n = info.count || 1;
+      warn.push(n + " " + (g.noun || g.label.toLowerCase()) + (n > 1 ? "s" : "") + " open");
+    }
+  });
+  wrap.style.display = groups.length ? "flex" : "none";
+  document.getElementById("alm-warn").textContent = warn.join(" · ");
+
+  // ── Siren toggle ──
+  const sirenEnt = CONFIG.alarmUi && CONFIG.alarmUi.sirenEntity;
+  const sirenOn = sirenEnt ? (haGetCached(sirenEnt)?.state === "on") : _almSirenLocal;
+  document.getElementById("alm-siren-toggle").classList.toggle("on", sirenOn);
+
+  // ── Keep history fresh if it's open and the alarm just changed ──
+  if (_almLastState !== null && _almLastState !== state &&
+      document.getElementById("alm-log").classList.contains("open")) {
+    setTimeout(almLoadHistory, 600);
+  }
+  _almLastState = state;
+}
+
+/* ── Siren (with confirmation before turning ON) ── */
+function almSirenTap() {
+  const sirenEnt = CONFIG.alarmUi && CONFIG.alarmUi.sirenEntity;
+  const isOn = sirenEnt ? (haGetCached(sirenEnt)?.state === "on") : _almSirenLocal;
+  if (isOn) {                       // turning off needs no confirmation
+    _almSirenLocal = false;
+    securityAction("siren", "turn_off");
+    almRender();
+  } else {
+    haptic("medium");
+    document.getElementById("alm-modal").classList.add("show");
+  }
+}
+function almCloseModal() { document.getElementById("alm-modal").classList.remove("show"); }
+function almSirenConfirm() {
+  almCloseModal();
+  _almSirenLocal = true;
+  securityAction("siren", "turn_on");
+  almRender();
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") almCloseModal(); });
+
+/* ── History (arm / disarm times from HA's recorder) ── */
+function almToggleLog() {
+  haptic("light");
+  const box = document.getElementById("alm-log");
+  const open = box.classList.toggle("open");
+  if (open) almLoadHistory();
+}
+
+async function almLoadHistory() {
+  const body = document.getElementById("alm-log-rows");
+  if (!body || !HA_TOKEN) return;
+  const label = { disarmed:"Disarmed", armed_home:"Armed Home", armed_away:"Armed Away", armed_night:"Armed Night", triggered:"Triggered" };
+  try {
+    const end = new Date();
+    const start = new Date(end.getTime() - 3 * 864e5);
+    const r = await fetch(
+      `${BASE}/api/history/period/${start.toISOString()}?filter_entity_id=${CONFIG.alarmEntity}&end_time=${end.toISOString()}`,
+      { headers: { Authorization: `Bearer ${HA_TOKEN}` } }
+    );
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+    const series = (data && data[0]) || [];
+    const rows = [];
+    let prev = null;
+    series.forEach(s => {
+      if (!label[s.state] || s.state === prev) return;
+      prev = s.state;
+      rows.push({ when: s.last_changed, text: label[s.state], by: s.attributes && s.attributes.changed_by });
+    });
+    rows.reverse();
+    body.innerHTML = "";
+    if (!rows.length) {
+      const e = document.createElement("div");
+      e.className = "alm-log-empty";
+      e.textContent = "No alarm activity in the last 3 days";
+      body.appendChild(e);
+      return;
+    }
+    rows.slice(0, 5).forEach(row => {
+      const el = document.createElement("div");
+      el.className = "alm-log-row";
+      const t = document.createElement("span");
+      t.className = "alm-log-time";
+      t.textContent = almFmtWhen(row.when);
+      const d = document.createElement("span");
+      const b = document.createElement("b");
+      b.textContent = row.text;
+      d.appendChild(b);
+      if (row.by) d.appendChild(document.createTextNode(" · " + row.by));
+      el.append(t, d);
+      body.appendChild(el);
+    });
+  } catch (err) {
+    console.warn("[Alarm] history load failed:", err);
+    body.innerHTML = '<div class="alm-log-empty">Couldn\'t load history</div>';
+  }
 }
 
 /* ─── MEDIA BROWSER ─────────────────────────────────────────────────────────
@@ -14452,6 +14887,9 @@ async function openPetStats() {
     filterEl.textContent = isKnown ? `${filterVal}%` : filterVal;
   }
 
+  _petUpdateSupplies(data);
+  window._showSwipeDownHint?.();
+
   // Seed the toggle-clean button from the litterCleanBoolean entity in CONFIG.petStats.
   // Reading from stateCache means we get the current live value instantly
   // without an extra REST round-trip.
@@ -14509,6 +14947,8 @@ async function _refreshPetStatsLive() {
     filterEl.textContent = isKnown ? `${filterVal}%` : filterVal;
   }
 
+  _petUpdateSupplies(data);
+
   // Sync toggle-clean button from input_boolean via stateCache (no REST call needed)
   const boolEntity = CONFIG.petStats.litterCleanBoolean;
   if (boolEntity) {
@@ -14523,10 +14963,25 @@ async function _refreshPetStatsLive() {
 }
 
 /**
- * closePetStats — closes the pet stats popup when the backdrop is tapped.
+ * _petUpdateSupplies — fills the Supplies bars (desiccant + water filter).
+ * Desiccant bar scale comes from CONFIG.petStats.desiccantMaxDays (default 30).
  */
-function closePetStats(e) {
-  if (e && e.target !== document.getElementById("pet-overlay")) return;
+function _petUpdateSupplies(data) {
+  const desMax = Number(CONFIG.petStats.desiccantMaxDays) || 30;
+  const des = parseFloat(data.foodDes);
+  const desBar = document.getElementById("pet-sup-des-bar");
+  if (desBar) desBar.style.width = isNaN(des) ? "0%" : Math.max(0, Math.min(100, des / desMax * 100)) + "%";
+  const fil = parseFloat(data.waterFilter);
+  safeText("pet-sup-filter-val", isNaN(fil) ? "—" : `${fil}%`);
+  const filBar = document.getElementById("pet-sup-fil-bar");
+  if (filBar) filBar.style.width = isNaN(fil) ? "0%" : Math.max(0, Math.min(100, fil)) + "%";
+}
+
+/**
+ * closePetStats — closes the full-screen pet stats dashboard.
+ * Triggered by the exit gesture chosen in Settings → Gestures.
+ */
+function closePetStats() {
   haptic("light");
   document.getElementById("pet-overlay").classList.remove("open");
 }
@@ -14647,7 +15102,7 @@ async function fetchLitterHistory() {
     for (let i = 4; i >= 0; i--) {
       const d     = new Date(nowMs - i * 86_400_000);
       const key   = d.toISOString().slice(0, 10);
-      const label = `${d.getDate()} ${MONTH_ABBR[d.getMonth()]}`;
+      const label = i === 0 ? "Today" : `${d.getDate()} ${MONTH_ABBR[d.getMonth()]}`;
       days.push({ date: key, label, value: byDay[key] ?? 0 });
     }
     return days;
@@ -14662,7 +15117,8 @@ async function fetchLitterHistory() {
 function renderLitterChart(days) {
   if (!days) return;
   const maxVal = Math.max(...days.map(d => d.value), 1); // avoid /0
-  const BAR_MAX_PX = 56; // matches .litter-bar-wrap height
+  // Bars scale to the rendered height of the chart area (full-screen layout)
+  const BAR_MAX_PX = Math.max(40, (document.querySelector("#pet-overlay .litter-bar-wrap")?.clientHeight || 160) - 4);
 
   // Read thresholds from config, with safe fallbacks
   const lc      = (CONFIG.petStats && CONFIG.petStats.litterChart) || {};
@@ -14915,6 +15371,12 @@ function init() {
     setTimeout(() => openSolarFS(), 300);
   } else if (_startupMode === "indooraqi") {
     setTimeout(() => openIndoorAQI(), 300);
+  } else if (_startupMode === "indoorpresence") {
+    setTimeout(() => openPresenceTimeline(), 300);
+  } else if (_startupMode === "alarm") {
+    setTimeout(() => openSecurity(), 300);
+  } else if (_startupMode === "pet") {
+    setTimeout(() => openPetStats(), 300);
   }
 
   // Hide page dots for any disabled Overview screens, and bounce off the
@@ -14936,11 +15398,13 @@ function init() {
   [
     { id: "np-fs-open-btn",      flag: "showNowPlayingButton"  },
     { id: "daily-open-btn",      flag: "showDailyButton"       },
+    { id: "calendar-open-btn",   flag: "showCalendarButton"    },
     { id: "photoframe-open-btn", flag: "showPhotoButton"       },
     { id: "thermostat-open-btn", flag: "showThermostatButton"  },
     { id: "cameras-open-btn",    flag: "showCamerasButton"     },
     { id: "clock-open-btn",  flag: "showClockButton" },
     { id: "security-btn",        flag: "showSecurityButton"    },
+    { id: "alarm-open-btn",      flag: "showSecurityButton"    },
     { id: "weather-fs-open-btn", flag: "showWeatherFSButton"   },
     { id: "solar-fs-open-btn",   flag: "showSolarFSButton"     },
     { id: "aqi-fs-open-btn",     flag: "showAqiFSButton"       },
@@ -14951,7 +15415,7 @@ function init() {
       if (el) el.style.display = "none";
     }
   });
-  const petTitleEl = document.querySelector("#pet-overlay .popup-title");
+  const petTitleEl = document.getElementById("pet-fs-title");
   if (petTitleEl) petTitleEl.textContent = `${petName}'s Status`;
 
   // Open the WebSocket — this triggers the auth handshake, get_states bulk
@@ -15064,6 +15528,238 @@ const _pf = {
 };
 
 /* ── Cameras overlay ─────────────────────────────────────────────────────── */
+
+/* ── CamLive: live WebRTC video for the fullscreen + doorbell camera views ───
+ * Plays the camera over WebRTC (HA "camera/webrtc/offer"). For UniFi Protect it
+ * tries the high-resolution channel first and, if that fails, the medium one.
+ * If neither works, the normal snapshots keep running underneath.
+ * config.js options:
+ *   cameraLiveStream: false   disable live video (snapshots only)
+ *   cameraShowStats:  false   hide the small status label                   */
+const CamLive = (function () {
+
+  // One-shot websocket request helper
+  function wsRequest(msg, timeoutMs) {
+    return new Promise((res, rej) => {
+      if (!_ws || !_wsReady) return rej(new Error("Home Assistant not connected"));
+      const id = _wsNextId();
+      const timer = setTimeout(() => { _ws.removeEventListener("message", onMsg); rej(new Error("request timed out")); }, timeoutMs);
+      function onMsg(evt) {
+        let m; try { m = JSON.parse(evt.data); } catch { return; }
+        if (m.id !== id) return;
+        clearTimeout(timer); _ws.removeEventListener("message", onMsg);
+        m.success ? res(m.result) : rej(new Error((m.error && m.error.message) || "request failed"));
+      }
+      _ws.addEventListener("message", onMsg);
+      _ws.send(JSON.stringify({ id, ...msg }));
+    });
+  }
+
+  // ICE servers as HA's own UI uses them (STUN fallback if HA gives none)
+  async function getIceServers(entity) {
+    const fallback = [{ urls: "stun:stun.l.google.com:19302" }];
+    try {
+      const r = await wsRequest({ type: "camera/webrtc/get_client_config", entity_id: entity }, 3000);
+      const s = r && r.configuration && r.configuration.iceServers;
+      return s && s.length ? s : fallback;
+    } catch { return fallback; }
+  }
+
+  // Channels to try, in order: the configured entity, then its medium version
+  function channels(entity) {
+    const list = [entity];
+    const m = entity.match(/^(.*)_high_resolution_channel$/);
+    if (m) {
+      const medium = `${m[1]}_medium_resolution_channel`;
+      let ok = false; try { ok = !!haGetCached(medium); } catch {}
+      if (ok) list.push(medium);
+    }
+    return list;
+  }
+  const chanName = e => (e.match(/_(high|medium|low)_resolution_channel$/) || [, "stream"])[1].toUpperCase();
+
+  // Channels for the small grid cells: the lightest ones that exist in HA.
+  // cameraGridChannel in config.js: "auto" (low, then medium), "low" or "medium"
+  function gridChannels(entity) {
+    const m = entity.match(/^(.*)_(high|medium|low)_resolution_channel$/);
+    if (!m) return [entity];
+    const pref = (typeof CONFIG !== "undefined" && CONFIG.cameraGridChannel) || "auto";
+    const order = pref === "medium" ? ["medium", "low"] : ["low", "medium"];
+    return order.map(q => `${m[1]}_${q}_resolution_channel`).filter(e => {
+      try { return !!haGetCached(e); } catch { return false; }
+    });
+  }
+
+  // opts: { channels: [entity,...], fit: "contain"|"cover", label: false }
+  function start(entity, imgEl, opts) {
+    opts = opts || {};
+    const h = { live: false, stop() {} };
+    if (typeof CONFIG !== "undefined" && CONFIG.cameraLiveStream === false) return h;
+    if (!imgEl || !imgEl.parentNode || !window.RTCPeerConnection) return h;
+    const parent = imgEl.parentNode;
+    const entities = opts.channels || channels(entity);
+    if (!entities.length) return h;
+
+    let stopped = false, idx = 0, gen = 0, pc = null, wsCleanup = null, retryTimer = null;
+    let lastTime = -1, stalls = 0;
+
+    // Video sits on top of the snapshot and is revealed once it plays
+    const video = document.createElement("video");
+    video.muted = true; video.defaultMuted = true; video.autoplay = true;
+    video.playsInline = true; video.controls = false;
+    video.setAttribute("muted", ""); video.setAttribute("playsinline", ""); video.setAttribute("webkit-playsinline", "");
+    video.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:" + (opts.fit || "contain") + ";background:#000;opacity:0;pointer-events:none;";
+    parent.insertBefore(video, imgEl.nextSibling);
+
+    let label = null;
+    if (opts.label !== false && !(typeof CONFIG !== "undefined" && CONFIG.cameraShowStats === false)) {
+      label = document.createElement("div");
+      label.style.cssText = "position:absolute;top:12px;right:12px;z-index:9;max-width:70%;padding:4px 10px;border-radius:8px;background:rgba(0,0,0,.6);color:#fff;font:600 11px/1.4 monospace;letter-spacing:.04em;pointer-events:none;white-space:pre-wrap;";
+      parent.appendChild(label);
+    }
+    const say = txt => { if (label) label.textContent = txt; };
+
+    // Only shown if the browser refuses to autoplay
+    let tapBtn = null;
+    function showTap() {
+      if (tapBtn || stopped) return;
+      tapBtn = document.createElement("div");
+      tapBtn.textContent = "\u25b6  Tap to play";
+      tapBtn.style.cssText = "position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:9;padding:14px 26px;border-radius:30px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.4);color:#fff;font:600 15px sans-serif;cursor:pointer;";
+      tapBtn.onclick = e => { e.stopPropagation(); video.play().catch(() => {}); };
+      parent.appendChild(tapBtn);
+    }
+    const hideTap = () => { if (tapBtn) { tapBtn.remove(); tapBtn = null; } };
+    const play = () => { video.play().catch(e => { if (!e || e.name !== "AbortError") showTap(); }); };
+
+    video.addEventListener("playing", () => {
+      if (stopped) return;
+      h.live = true; stalls = 0;
+      video.style.opacity = "1"; imgEl.style.display = "none"; hideTap();
+    });
+    video.addEventListener("pause", () => { if (h.live && !stopped) play(); });
+
+    // Close everything belonging to the current attempt
+    function release() {
+      if (wsCleanup) { try { wsCleanup(); } catch {} wsCleanup = null; }
+      if (pc) { try { pc.close(); } catch {} pc = null; }
+      video.srcObject = null;
+    }
+
+    // Resolves when the video starts playing; rejects on timeout or cancel
+    function waitPlaying(g, ms) {
+      return new Promise((res, rej) => {
+        let left = ms;
+        const on = () => { clearInterval(iv); video.removeEventListener("playing", on); res(); };
+        const iv = setInterval(() => {
+          if (stopped || g !== gen) { clearInterval(iv); video.removeEventListener("playing", on); return rej(new Error("cancelled")); }
+          if (tapBtn) return; // waiting for the user to tap play
+          left -= 250;
+          if (left <= 0) { clearInterval(iv); video.removeEventListener("playing", on); rej(new Error("no video received")); }
+        }, 250);
+        video.addEventListener("playing", on);
+      });
+    }
+
+    async function connect() {
+      if (stopped) return;
+      const g = ++gen;
+      release();
+      const ent = entities[idx];
+      try {
+        say(`Connecting (${chanName(ent)})\u2026`);
+        const servers = await getIceServers(ent);
+        if (stopped || g !== gen) return;
+        const p = new RTCPeerConnection({ iceServers: servers });
+        pc = p;
+        const stream = new MediaStream();
+        p.addTransceiver("video", { direction: "recvonly" });
+        p.addTransceiver("audio", { direction: "recvonly" });
+        p.createDataChannel("dataSendChannel");
+        p.ontrack = e => { stream.addTrack(e.track); if (video.srcObject !== stream) video.srcObject = stream; play(); };
+        p.onconnectionstatechange = () => {
+          if (p.connectionState === "failed" && g === gen && !stopped) fail(new Error("connection failed"));
+        };
+        await p.setLocalDescription(await p.createOffer());
+
+        const id = _wsNextId();
+        let sessionId = null; const pending = [];
+        const sendCand = c => _ws.send(JSON.stringify({ id: _wsNextId(), type: "camera/webrtc/candidate",
+                                                        entity_id: ent, session_id: sessionId, candidate: c }));
+        p.onicecandidate = e => {
+          if (!e.candidate) return;
+          const c = e.candidate.toJSON();
+          sessionId ? sendCand(c) : pending.push(c);
+        };
+        const rejected = new Promise((_, rej) => {
+          const onMsg = async evt => {
+            let m; try { m = JSON.parse(evt.data); } catch { return; }
+            if (m.id !== id) return;
+            if (m.type === "result" && !m.success) return rej(new Error((m.error && m.error.message) || "offer rejected"));
+            if (m.type !== "event") return;
+            const ev = m.event;
+            if (ev.type === "session") { sessionId = ev.session_id; pending.splice(0).forEach(sendCand); }
+            else if (ev.type === "answer") { try { await p.setRemoteDescription({ type: "answer", sdp: ev.answer }); } catch (e) { rej(e); } }
+            else if (ev.type === "candidate") { p.addIceCandidate(ev.candidate).catch(() => {}); }
+            else if (ev.type === "error") rej(new Error(ev.message || ev.code));
+          };
+          _ws.addEventListener("message", onMsg);
+          wsCleanup = () => {
+            _ws.removeEventListener("message", onMsg);
+            try { _ws.send(JSON.stringify({ id: _wsNextId(), type: "unsubscribe_events", subscription: id })); } catch {}
+          };
+          _ws.send(JSON.stringify({ id, type: "camera/webrtc/offer", entity_id: ent, offer: p.localDescription.sdp }));
+        });
+        await Promise.race([waitPlaying(g, 8000), rejected]);
+      } catch (e) {
+        if (stopped || g !== gen) return;
+        fail(e);
+      }
+    }
+
+    // Move to the next channel; when none are left, leave the snapshots running
+    function fail(reason) {
+      if (stopped) return;
+      gen++; h.live = false; release();
+      const msg = reason && reason.message || String(reason);
+      console.warn(`[CamLive] ${entities[idx]} failed:`, reason);
+      if (idx < entities.length - 1) {
+        const failedCh = chanName(entities[idx]);
+        idx++;
+        say(`${failedCh} failed: ${msg}\nTrying ${chanName(entities[idx])}\u2026`);
+        retryTimer = setTimeout(connect, 500);
+      } else {
+        video.style.opacity = "0"; imgEl.style.display = "";
+        say(`SNAPSHOT (live video failed)\n${msg}`);
+      }
+    }
+
+    // Watchdog: if the picture freezes, treat it as a failure; keep label current
+    const watchdog = setInterval(() => {
+      if (stopped || !h.live) return;
+      say(`LIVE ${chanName(entities[idx])} ${video.videoWidth}\u00d7${video.videoHeight}`);
+      if (!video.paused && Math.abs(video.currentTime - lastTime) < 0.01) {
+        if (++stalls >= 3) { stalls = 0; fail(new Error("stream froze")); }
+      } else stalls = 0;
+      lastTime = video.currentTime;
+    }, 2500);
+
+    // Runs inside the user's tap, which lets the browser allow playback later
+    try { video.play().catch(() => {}); } catch {}
+    connect();
+
+    h.stop = () => {
+      stopped = true; h.live = false; gen++;
+      clearInterval(watchdog); clearTimeout(retryTimer);
+      release(); video.remove(); hideTap();
+      if (label) label.remove();
+      imgEl.style.display = "";
+    };
+    return h;
+  }
+  return { start, gridChannels };
+})();
+
 // All camera config comes from CONFIG.cameras — see config.js
 function _getCamEntities() {
   return (typeof CONFIG !== "undefined" && Array.isArray(CONFIG.cameras))
@@ -15078,6 +15774,7 @@ let _camRefreshInterval  = null;
 let _camMotionInterval   = null;
 let _camFsIndex          = -1;
 let _camFullscreenInterval = null;
+let _camFsLive = null;
 
 // Fetch a single frame flicker-free via back-buffer pre-load.
 // A hidden Image() pre-loads the new frame completely before it is assigned
@@ -15107,12 +15804,37 @@ function _camRefreshOne(entity, imgEl) {
   .catch(() => {}); // silently ignore network errors — keep showing last good frame
 }
 
+// ── Live video in the grid cells ──
+// Each cell plays a light WebRTC stream (low/medium channel). Cells whose stream
+// is live skip snapshot polling; others keep using snapshots. Paused while a
+// camera is open fullscreen so the tablet only decodes one stream at a time.
+let _camGridLive = [];
+function _camGridLiveStop() {
+  _camGridLive.forEach(h => h && h.stop());
+  _camGridLive = [];
+}
+function _camGridLiveStart() {
+  if (!document.getElementById("cameras-overlay")?.classList.contains("open")) return;
+  if (typeof CONFIG !== "undefined" && CONFIG.cameraGridLive === false) return;
+  _camGridLiveStop();
+  _getCamEntities().forEach((cam, i) => {
+    setTimeout(() => {   // staggered so six streams don't negotiate at once
+      if (!document.getElementById("cameras-overlay")?.classList.contains("open") || _camFsIndex >= 0) return;
+      const img = document.getElementById(`cam-img-${i}`);
+      if (!img || _camGridLive[i]) return;
+      _camGridLive[i] = CamLive.start(cam.entity, img,
+        { channels: CamLive.gridChannels(cam.entity), fit: "cover", label: false });
+    }, 300 * i);
+  });
+}
+
 // Refresh all grid cells (skipped when fullscreen is open).
 // Cameras are staggered 150 ms apart to avoid simultaneous request bursts.
 function _camRefresh() {
   if (_camFsIndex >= 0) return; // paused while fullscreen
   _getCamEntities().forEach((cam, i) => {
     setTimeout(() => {
+      if (_camGridLive[i]?.live) return; // live video is playing in this cell
       _camRefreshOne(cam.entity, document.getElementById(`cam-img-${i}`));
     }, i * 150);
   });
@@ -15149,7 +15871,7 @@ function openCamFullscreen(idx) {
   const cam  = cams[idx];
   if (!cam) return;
   const srcImg = document.getElementById(`cam-img-${idx}`);
-  if (!srcImg?.classList.contains("loaded")) return; // only if live
+  if (!srcImg?.classList.contains("loaded") && !_camGridLive[idx]?.live) return; // only if live
   haptic("light");
   _camFsIndex = idx;
   const fsImg   = document.getElementById("cam-fullscreen-img");
@@ -15169,8 +15891,11 @@ function openCamFullscreen(idx) {
     }
   }
   document.getElementById("cam-fullscreen").classList.add("open");
+  _camGridLiveStop();   // free the decoder: one stream at a time
+  if (_camFsLive) _camFsLive.stop();
+  _camFsLive = CamLive.start(cam.entity, fsImg);
   _camFullscreenInterval = setInterval(() => {
-    _camRefreshOne(cam.entity, fsImg);
+    if (!_camFsLive?.live) _camRefreshOne(cam.entity, fsImg);
     // Keep motion icon in sync
     if (cam.motionEntity && fsMicon) {
       const d = haGetCached(cam.motionEntity);
@@ -15181,9 +15906,12 @@ function openCamFullscreen(idx) {
 
 
 function closeCamFullscreen() {
+  const _wasFs = _camFsIndex >= 0;
   clearInterval(_camFullscreenInterval);
   _camFullscreenInterval = null;
+  if (_camFsLive) { _camFsLive.stop(); _camFsLive = null; }
   _camFsIndex = -1;
+  if (_wasFs) setTimeout(_camGridLiveStart, 200); // resume grid streams (no-op if overlay closed)
   const fs    = document.getElementById("cam-fullscreen");
   const fsImg = document.getElementById("cam-fullscreen-img");
   fs.classList.remove("open");
@@ -15247,12 +15975,14 @@ function openCameras() {
   document.getElementById("cameras-overlay").classList.add("open");
   _camRefresh();
   _camRefreshInterval = setInterval(_camRefresh, _camRefreshMs());
+  _camGridLiveStart();
   _camMotionPoll();
   _camMotionInterval  = setInterval(_camMotionPoll, 5000);
 }
 
 function closeCameras() {
   haptic("light");
+  _camGridLiveStop();
   closeCamFullscreen();
   clearInterval(_camRefreshInterval);
   clearInterval(_camMotionInterval);
@@ -17355,6 +18085,7 @@ document.addEventListener('keydown', e => {
   if (popup?.classList.contains("open")) closePopup();
   // Close fullscreen overlays
   if (document.getElementById("daily-overlay")?.classList.contains("open"))       closeDailyView();
+  if (document.getElementById("cal-overlay")?.classList.contains("open"))         closeCalendarView();
   if (document.getElementById("nowplaying-overlay")?.classList.contains("open"))  closeNowPlayingFS();
   if (document.getElementById("cameras-overlay")?.classList.contains("open"))     closeCameras();
   if (document.getElementById("photoframe-overlay")?.classList.contains("open"))  closePhotoFrame();
@@ -18226,7 +18957,7 @@ function switchOverview(idx) {
 
 /* Elements where a horizontal drag should NOT switch overview screens —
  * shared by both the touch and mouse-drag handlers below. */
-const OV3_SWIPE_EXCLUDE_SELECTOR = ".popup-overlay.open, #daily-overlay, #thermostat-overlay, #photoframe-overlay, #nowplaying-fs-overlay, .sensor-row, .ov2-sensor-strip, .ov3-wx-hourly, .ov3-wx-scroll, .ov3-floors-scroll, .ov3-garden-scroll, .ov3-sec-scroll, .mush-ac-card, #ov3-ac-viewport, #ov3-ac-card, #ov3-pur-viewport, #ov3-pur-card";
+const OV3_SWIPE_EXCLUDE_SELECTOR = ".popup-overlay.open, #daily-overlay, #cal-overlay, #thermostat-overlay, #pet-overlay, #photoframe-overlay, #nowplaying-fs-overlay, .sensor-row, .ov2-sensor-strip, .ov3-wx-hourly, .ov3-wx-scroll, .ov3-floors-scroll, .ov3-garden-scroll, .ov3-sec-scroll, .mush-ac-card, #ov3-ac-viewport, #ov3-ac-card, #ov3-pur-viewport, #ov3-pur-card";
 
 /* ─────────────────────────────────────────────────────────────────────────────
  * Swipe gesture — swipe left anywhere on the screen to go to screen 2,
@@ -18316,14 +19047,17 @@ const OV3_SWIPE_EXCLUDE_SELECTOR = ".popup-overlay.open, #daily-overlay, #thermo
     { id: "doorbell-overlay",    close: () => closeDoorbellCamera()  },
     { id: "nowplaying-overlay",  close: () => closeNowPlayingFS() },
     { id: "daily-overlay",       close: () => closeDailyView()    },
+    { id: "cal-overlay",         close: () => closeCalendarView() },
     { id: "cameras-overlay",     close: () => closeCameras()      },
     { id: "photoframe-overlay",  close: () => closePhotoFrame()   },
     { id: "thermostat-overlay",  close: () => closeThermostat()   },
     { id: "clock-overlay",       close: () => closeClock()        },
     { id: "weather-fs-overlay",  close: () => closeWeatherFS()    },
     { id: "solar-fs-overlay",    close: () => closeSolarFS()      },
+    { id: "security-overlay",    close: () => closeSecurity()     },
     { id: "aqi-fs-overlay",      close: () => closeIndoorAQI()    },
     { id: "presence-overlay",    close: () => closePresenceTimeline() },
+    { id: "pet-overlay",         close: () => closePetStats()     },
     { id: "dashboards-hub-overlay", close: () => closeDashboardsHub() },
     { id: "system-stats-overlay",   close: () => closeSystemStats() },
     { id: "settings-overlay",    close: () => closeSettings()     },
@@ -20451,6 +21185,7 @@ const SETTINGS_DEFAULTS = {
   showThermostatButton:true,
   showCamerasButton:   true,
   showClockButton:true,
+  showCalendarButton:true,
   showWeatherFSButton: true,
   showSolarFSButton:   true,
   showAqiFSButton:     true,
@@ -20554,6 +21289,7 @@ function applyAllSettings() {
     "fav-wrap":            "showFavoritesButton",
     "np-fs-open-btn":      "showNowPlayingButton",
     "daily-open-btn":      "showDailyButton",
+    "calendar-open-btn":   "showCalendarButton",
     "photoframe-open-btn": "showPhotoButton",
     "thermostat-open-btn": "showThermostatButton",
     "cameras-open-btn":    "showCamerasButton",
@@ -20564,6 +21300,7 @@ function applyAllSettings() {
     "presence-open-btn":   "showPresenceButton",
     "system-open-btn":     "showSystemButton",
     "security-btn":        "showSecurityButton",
+    "alarm-open-btn":      "showSecurityButton",
   };
   Object.entries(btnMap).forEach(([id, key]) => {
     const el = document.getElementById(id);
@@ -20654,7 +21391,26 @@ const _SS_LAUNCHERS = {
   weather:       () => { openWeatherFS   && openWeatherFS();   },
   solar:         () => { openSolarFS     && openSolarFS();     },
   indooraqi:     () => { openIndoorAQI   && openIndoorAQI();   },
+  indoorpresence: () => { openPresenceTimeline && openPresenceTimeline(); },
+  alarm:         () => { _ssCloseOverlaysExcept("security-overlay"); openSecurity && openSecurity(); },
+  pet:           () => { _ssCloseOverlaysExcept("pet-overlay");      openPetStats && openPetStats(); },
 };
+
+// Alarm and Pet Stats are full-screen overlays that share a stacking level with
+// the other dashboards, so close whichever one is open before showing them
+// (otherwise a rotation could leave the previous dashboard on top).
+function _ssCloseOverlaysExcept(keepId) {
+  [
+    ["nowplaying-overlay", "closeNowPlayingFS"], ["daily-overlay", "closeDailyView"], ["cal-overlay", "closeCalendarView"],
+    ["cameras-overlay", "closeCameras"],         ["photoframe-overlay", "closePhotoFrame"],
+    ["clock-overlay", "closeClock"],             ["thermostat-overlay", "closeThermostat"],
+    ["weather-fs-overlay", "closeWeatherFS"],    ["solar-fs-overlay", "closeSolarFS"],
+    ["aqi-fs-overlay", "closeIndoorAQI"],        ["presence-overlay", "closePresenceTimeline"],
+    ["security-overlay", "closeSecurity"],       ["pet-overlay", "closePetStats"],
+  ].forEach(([id, fn]) => {
+    if (id !== keepId && document.getElementById(id)?.classList.contains("open") && typeof window[fn] === "function") window[fn]();
+  });
+}
 
 function _ssGetModes() {
   const modes = _settings.screensaverModes;
@@ -20985,6 +21741,7 @@ function openSettings() {
   syncChk("st-thermostat", _settings.showThermostatButton);
   syncChk("st-cameras",   _settings.showCamerasButton);
   syncChk("st-clock-mode", _settings.showClockButton);
+  syncChk("st-calendar", _settings.showCalendarButton);
   syncChk("st-weather-fs", _settings.showWeatherFSButton);
   syncChk("st-solar-fs",   _settings.showSolarFSButton);
   syncChk("st-aqi-fs",     _settings.showAqiFSButton);
@@ -21613,6 +22370,311 @@ _applyDailyI18n();
   </div>
 
 </div>
+
+<!-- ─── CALENDAR DASHBOARD OVERLAY ─── -->
+<div id="cal-overlay">
+  <div class="cal-main">
+    <div class="cal-top">
+      <div class="cal-nav">
+        <button class="cal-ib" onclick="calShift(-1)" aria-label="Previous">‹</button>
+        <button class="cal-ib" onclick="calShift(1)" aria-label="Next">›</button>
+        <button onclick="calToday()">Today</button>
+        <h1 id="cal-title"></h1>
+      </div>
+      <div class="cal-seg" id="cal-seg">
+        <button data-v="month" class="on" onclick="calView('month')">Month</button>
+        <button data-v="week" onclick="calView('week')">Week</button>
+        <button data-v="agenda" onclick="calView('agenda')">Agenda</button>
+      </div>
+    </div>
+    <div class="cal-chips" id="cal-chips"></div>
+    <div class="cal-wk" id="cal-wk"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-week" id="cal-week"></div>
+    <div class="cal-agv" id="cal-agv"></div>
+  </div>
+</div>
+<script>
+/* ─── CALENDAR DASHBOARD ───────────────────────────────────────────────────
+ * Month grid + countdown + "Coming up" agenda. Reads CONFIG.calendarEntities
+ * and CONFIG.mealCalendarEntity; optional tweaks in CONFIG.calendarDashboard
+ * (labels, colors, countdownEntity, countdownLabel). */
+let _calMonth = null, _calSel = null, _calEvents = [], _calNext = null;
+let _calHidden = new Set(), _calTimer = null, _calLoadId = 0;
+let _calView = "month", _calWkKeep = false;
+
+function _calSources() {
+  const cd = CONFIG.calendarDashboard || {};
+  const colors = cd.colors || {}, labels = cd.labels || {};
+  const pal = ["#ff6b73", "#6cc0f0", "#b48fe8", "#6fd18f"];
+  const list = (CONFIG.calendarEntities || []).map((e, i) => ({
+    entity: e,
+    label: labels[e] || e.replace(/^calendar\./, "").replace(/^local_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+    color: colors[e] || pal[i % pal.length],
+  }));
+  if (CONFIG.mealCalendarEntity) {
+    const e = CONFIG.mealCalendarEntity;
+    list.push({ entity: e, label: labels[e] || "Meals", color: colors[e] || "#d4ae78", meal: true });
+  }
+  return list;
+}
+function _calKey(d) { return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+function _calDay0(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function _calGridStart(m) {
+  const s = new Date(m.getFullYear(), m.getMonth(), 1);
+  s.setDate(1 - ((s.getDay() + 6) % 7)); // Monday-first
+  return s;
+}
+function _calNorm(ev, src) {
+  let end = null;
+  if (ev.end) {
+    if (ev.end.dateTime) end = new Date(ev.end.dateTime);
+    else if (ev.end.date) { const [y, m, d] = ev.end.date.split("-").map(Number); end = new Date(y, m - 1, d); }
+  }
+  return { src, title: ev.summary || "Untitled", start: _parseEventDate(ev), end, allDay: !ev.start.dateTime };
+}
+function _calTime(e) {
+  return e.allDay ? "" : e.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+function _calDayMap() {
+  const map = new Map();
+  _calEvents.forEach(e => {
+    if (_calHidden.has(e.src.entity)) return;
+    const days = [];
+    if (e.allDay && e.end && e.end > e.start) {
+      for (let d = new Date(e.start); d < e.end && days.length < 62; d.setDate(d.getDate() + 1)) days.push(new Date(d));
+    } else days.push(_calDay0(e.start));
+    days.forEach(d => { const k = _calKey(d); if (!map.has(k)) map.set(k, []); map.get(k).push(e); });
+  });
+  map.forEach(a => a.sort((x, y) => x.start - y.start));
+  return map;
+}
+
+async function _calLoad(silent) {
+  const id = ++_calLoadId;
+  const srcs = _calSources(), cd = CONFIG.calendarDashboard || {};
+  const [gs, ge] = _calRange();
+  const hdr = { headers: { Authorization: `Bearer ${HA_TOKEN}` } };
+  const get = (ent, a, b) => fetch(`${BASE}/api/calendars/${ent}?start=${a.toISOString()}&end=${b.toISOString()}`, hdr)
+    .then(r => r.json()).then(x => Array.isArray(x) ? x : []).catch(() => []);
+  const now = new Date(), yr = new Date(now.getTime() + 365 * 864e5);
+  // Countdown = soonest upcoming event across every calendar except meals
+  const [res, nextRes] = await Promise.all([
+    Promise.all(srcs.map(s => get(s.entity, gs, ge).then(a => a.map(ev => _calNorm(ev, s))))),
+    Promise.all(srcs.filter(s => !s.meal).map(s => get(s.entity, _calDay0(now), yr).then(a => a.map(ev => _calNorm(ev, s))))),
+  ]);
+  if (id !== _calLoadId) return; // a newer load superseded this one
+  _calEvents = res.flat();
+  const nexts = nextRes.flat()
+    .filter(e => e.allDay ? _calDay0(e.start) >= _calDay0(now) : e.start >= now)
+    .sort((a, b) => a.start - b.start);
+  _calNext = nexts[0] || null;
+  _calRender();
+}
+
+function _calRender() {
+  if (!_calMonth) return;
+  const srcs = _calSources(), map = _calDayMap();
+  const today = _calDay0(new Date());
+  document.getElementById("cal-title").textContent = _calMonth.toLocaleDateString([], { month: "long", year: "numeric" });
+  document.getElementById("cal-wk").innerHTML = Array.from({ length: 7 }, (_, i) =>
+    `<div ${i > 4 ? 'style="color:var(--accent-hi)"' : ""}>${new Date(2024, 0, 1 + i).toLocaleDateString([], { weekday: "short" })}</div>`).join("");
+  document.getElementById("cal-chips").innerHTML = srcs.map((s, i) =>
+    `<button class="cal-chip ${_calHidden.has(s.entity) ? "off" : ""}" onclick="calToggle(${i})" aria-pressed="${!_calHidden.has(s.entity)}" style="background:${s.color}2e;border-color:${s.color}99"><i class="cal-dot" style="background:${s.color}"></i>${escapeHtml(s.label)}</button>`).join("");
+
+  _calPaint(srcs);
+  _calApplyView();
+  if (_calView === "week")   { _calRenderWeek(map, today); return; }
+  if (_calView === "agenda") { _calRenderAgendaView(map, today); return; }
+  const gs = _calGridStart(_calMonth);
+  const first = new Date(_calMonth.getFullYear(), _calMonth.getMonth(), 1);
+  const dim = new Date(_calMonth.getFullYear(), _calMonth.getMonth() + 1, 0).getDate();
+  const weeks = Math.ceil((((first.getDay() + 6) % 7) + dim) / 7);
+  const grid = document.getElementById("cal-grid");
+  grid.style.gridTemplateRows = `repeat(${weeks}, 1fr)`;
+  let html = "";
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(gs); d.setDate(gs.getDate() + i);
+    const evs = map.get(_calKey(d)) || [];
+    const pill = e => `<i class="cal-p" style="color:${e.src.color};background:${e.src.color}40">${escapeHtml(e.title)}${e.allDay ? "" : " " + _calTime(e)}</i>`;
+    let pills = evs.length > 2
+      ? pill(evs[0]) + `<i class="cal-p" style="color:rgba(255,255,255,.7);background:rgba(255,255,255,.08)">+${evs.length - 1} more</i>`
+      : evs.map(pill).join("");
+    const cls = "cal-c" + (d.getMonth() !== _calMonth.getMonth() ? " o" : "") + (+d === +today ? " t" : "") + (_calSel && +d === +_calSel ? " sel" : "");
+    const cc = [...new Set(evs.map(e => e.src.color))].slice(0, 2);
+    const tint = !cc.length ? "" : cc.length > 1
+      ? `background:linear-gradient(135deg,${cc[0]}40,${cc[1]}33),#0f1214;border-color:${cc[0]}66;`
+      : `background:linear-gradient(160deg,${cc[0]}45,${cc[0]}12 70%),#0f1214;border-color:${cc[0]}66;`;
+    html += `<button class="${cls}" style="${tint}" onclick="calPick(${d.getTime()})"><b>${d.getDate()}</b>${pills}</button>`;
+  }
+  grid.innerHTML = html;
+}
+
+function _calRenderCount(target, vertical) {
+  const el = target || document.getElementById("cal-count");
+  const n = _calNext;
+  if (!n) { el.style.background = ""; el.style.borderColor = ""; el.innerHTML = `<div><div class="cal-lbl">Next event</div><div class="cal-big" style="font-size:22px">Nothing upcoming</div></div>`; return; }
+  const days = Math.round((_calDay0(n.start) - _calDay0(new Date())) / 864e5);
+  const big = days <= 0 ? "Today" : days === 1 ? "Tomorrow" : days + " days";
+  const t = _calTime(n);
+  el.style.background = `linear-gradient(135deg,${n.src.color}55,${n.src.color}14 75%),#0f1214`;
+  el.style.borderColor = n.src.color + "88";
+  const a1 = vertical ? " " : "<br>", a2 = vertical ? " · " : "<br>";
+  el.innerHTML = `<div style="min-width:0"><div class="cal-lbl">Next event</div><div class="cal-big" style="color:${n.src.color}">${big}</div>
+    <div style="font-size:13px;margin-top:2px;color:${n.src.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(n.title)} · ${escapeHtml(n.src.label)}</div></div>
+    <div class="cal-when">${n.start.toLocaleDateString([], { weekday: "long" })}${a1}${n.start.toLocaleDateString([], { day: "numeric", month: "long" })}${t ? a2 + t : ""}</div>`;
+}
+
+function _calPaint(srcs) {
+  const c = (i, a) => srcs[i] ? srcs[i].color + a : "transparent";
+  document.getElementById("cal-overlay").style.background =
+    `radial-gradient(1100px 560px at 6% -8%, ${c(0, "3a")}, transparent 62%), radial-gradient(900px 560px at 100% 4%, ${c(1, "30")}, transparent 60%), radial-gradient(1000px 640px at 55% 118%, ${c(2, "30")}, transparent 60%), var(--bg-overlay)`;
+}
+function _calWeekStart(d) { const s = _calDay0(d); s.setDate(s.getDate() - ((s.getDay() + 6) % 7)); return s; }
+function _calRange() {
+  let a, b;
+  if (_calView === "week") { a = _calWeekStart(_calSel); b = new Date(a); b.setDate(a.getDate() + 7); }
+  else if (_calView === "agenda") { a = new Date(Math.min(_calGridStart(_calMonth), _calWeekStart(_calSel))); b = new Date(_calSel); b.setDate(b.getDate() + 60); }
+  else { a = _calGridStart(_calMonth); b = new Date(a); b.setDate(a.getDate() + 56); }
+  return [a, b];
+}
+function _calApplyView() {
+  const v = _calView, set = (id, d) => { const el = document.getElementById(id); if (el) el.style.display = d; };
+  set("cal-wk", v === "month" ? "" : "none"); set("cal-grid", v === "month" ? "" : "none");
+  set("cal-week", v === "week" ? "flex" : "none"); set("cal-agv", v === "agenda" ? "flex" : "none");
+  document.querySelectorAll("#cal-seg button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  const t = document.getElementById("cal-title");
+  if (v === "week") {
+    const a = _calWeekStart(_calSel), b = new Date(a); b.setDate(a.getDate() + 6);
+    const f = d => d.toLocaleDateString([], { day: "numeric", month: "short" });
+    t.textContent = f(a) + " – " + f(b);
+  } else if (v === "agenda") t.textContent = "Coming up";
+  else t.textContent = _calMonth.toLocaleDateString([], { month: "long", year: "numeric" });
+}
+function _calRowHtml(e) {
+  return `<div class="cal-row" style="background:${e.src.color}1f"><span class="t">${e.allDay ? _localeWord("allDay") : _calTime(e)}</span><i class="cal-dot" style="background:${e.src.color}"></i><span class="n">${escapeHtml(e.title)}</span><span class="g">${escapeHtml(e.src.label)}</span></div>`;
+}
+function _calRenderAgendaView(map, today) {
+  const from = _calSel || today;
+  let out = "", n = 0;
+  for (let i = 0; i < 60 && n < 14; i++) {
+    const d = new Date(from); d.setDate(from.getDate() + i);
+    const evs = map.get(_calKey(d));
+    if (!evs || !evs.length) continue;
+    n++;
+    out += `<div class="cal-lbl" style="margin:16px 0 2px;${+d === +today ? "color:var(--accent-hi)" : ""}">${+d === +today ? "Today · " : ""}${d.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })}</div>${evs.map(_calRowHtml).join("")}`;
+  }
+  // mini month
+  const gs = _calGridStart(_calMonth);
+  const first = new Date(_calMonth.getFullYear(), _calMonth.getMonth(), 1);
+  const dim = new Date(_calMonth.getFullYear(), _calMonth.getMonth() + 1, 0).getDate();
+  const weeks = Math.ceil((((first.getDay() + 6) % 7) + dim) / 7);
+  let mm = "";
+  for (let i = 0; i < weeks * 7; i++) {
+    const d = new Date(gs); d.setDate(gs.getDate() + i);
+    const e0 = (map.get(_calKey(d)) || [])[0];
+    const cls = (d.getMonth() !== _calMonth.getMonth() ? "o " : "") + (+d === +today ? "t " : "") + (+d === +_calSel ? "sel" : "");
+    mm += `<button class="${cls}" onclick="calPick(${d.getTime()})">${d.getDate()}<u style="background:${e0 ? e0.src.color : "transparent"}"></u></button>`;
+  }
+  const wkh = Array.from({ length: 7 }, (_, i) => `<div class="cal-lbl" style="text-align:center;padding:0">${new Date(2024, 0, 1 + i).toLocaleDateString([], { weekday: "narrow" })}</div>`).join("");
+  // dinners this week
+  const ws = _calWeekStart(_calSel);
+  const dn = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(ws); d.setDate(ws.getDate() + i);
+    const ev = (map.get(_calKey(d)) || []).find(e => e.src.meal && _mealSlotFor(e.title, e.allDay ? 12 : e.start.getHours()) === "dinner");
+    const name = ev ? ev.title.replace(/^dinner\s*[:\-–·]?\s*/i, "") : "";
+    const c = ev ? ev.src.color : "#fff";
+    return `<div style="text-align:center;min-width:0"><div class="cal-lbl" style="padding:0">${d.toLocaleDateString([], { weekday: "narrow" })}</div>` +
+      (ev ? `<i class="cal-p" title="${escapeHtml(name)}" style="color:${c};background:${c}40;font-size:10px;padding:3px 2px">${escapeHtml(name)}</i>` : `<i class="cal-p" style="color:rgba(255,255,255,.4)">–</i>`) + `</div>`;
+  }).join("");
+  document.getElementById("cal-agv").innerHTML =
+    `<div class="cal-aglist">${out || '<div class="cal-lbl" style="margin-top:16px">Nothing planned</div>'}</div>
+     <div class="cal-agside">
+       <div class="cal-card cal-count v" id="cal-count2"></div>
+       <div class="cal-card"><div style="font-size:18px;font-weight:300;margin-bottom:8px">${_calMonth.toLocaleDateString([], { month: "long" })}</div><div class="cal-mm" style="margin-bottom:4px">${wkh}</div><div class="cal-mm">${mm}</div></div>
+       <div class="cal-card"><div class="cal-lbl" style="margin-bottom:8px">Dinners this week</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${dn}</div></div>
+     </div>`;
+  _calRenderCount(document.getElementById("cal-count2"), true);
+}
+function _calRenderWeek(map, today) {
+  const ws = _calWeekStart(_calSel), HH = 40;
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(ws); d.setDate(ws.getDate() + i); return d; });
+  const allBy = days.map(() => []), timed = days.map(() => []);
+  let h0 = 7, h1 = 22;
+  days.forEach((d, i) => (map.get(_calKey(d)) || []).forEach(e => {
+    if (e.allDay || e.src.meal) { allBy[i].push(e); return; }
+    const sH = e.start.getHours() + e.start.getMinutes() / 60;
+    let eH = e.end ? Math.min(24, (e.end - d) / 36e5) : sH + 1;
+    if (eH <= sH) eH = sH + 1;
+    e._sH = sH; e._eH = eH; timed[i].push(e);
+    h0 = Math.min(h0, Math.floor(sH)); h1 = Math.max(h1, Math.ceil(eH));
+  }));
+  const pill = e => `<i class="cal-p" style="color:${e.src.color};background:${e.src.color}40">${escapeHtml(e.title)}</i>`;
+  const head = `<div class="cal-wh"><div></div>${days.map(d => `<div class="cal-wd ${+d === +today ? "t" : ""}"><span>${d.toLocaleDateString([], { weekday: "short" })}</span><b>${d.getDate()}</b></div>`).join("")}</div>`;
+  const strip = `<div class="cal-ws"><div class="cal-lbl">All day</div>${allBy.map(a => `<div style="min-width:0;padding:0 3px">${a.map(pill).join("")}</div>`).join("")}</div>`;
+  const hours = Array.from({ length: h1 - h0 }, (_, k) => `<div style="height:${HH}px">${String(h0 + k).padStart(2, "0")}:00</div>`).join("");
+  const now = new Date(), nowH = now.getHours() + now.getMinutes() / 60;
+  const cols = days.map((d, i) => {
+    const lanes = [];
+    timed[i].sort((a, b) => a._sH - b._sH).forEach(e => {
+      let l = lanes.findIndex(x => x <= e._sH);
+      if (l < 0) { l = lanes.length; lanes.push(0); }
+      lanes[l] = e._eH; e._lane = l;
+    });
+    const evs = timed[i].map(e => `<div class="cal-ev" style="top:${(e._sH - h0) * HH}px;height:${Math.max(24, (e._eH - e._sH) * HH - 2)}px;left:calc(${e._lane / lanes.length * 100}% + 3px);width:calc(${100 / lanes.length}% - 6px);color:${e.src.color};background:${e.src.color}40">${escapeHtml(e.title)}<br>${_calTime(e)}</div>`).join("");
+    const line = (+d === +today && nowH >= h0 && nowH <= h1) ? `<div style="position:absolute;left:0;right:0;top:${(nowH - h0) * HH}px;height:2px;background:var(--accent-hi)"></div>` : "";
+    return `<div class="cal-col" style="${+d === +today ? "background-color:rgba(212,174,120,.08);" : ""}height:${(h1 - h0) * HH}px;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent ${HH - 1}px,rgba(255,255,255,.07) ${HH - 1}px,rgba(255,255,255,.07) ${HH}px)">${evs}${line}</div>`;
+  }).join("");
+  const old = document.getElementById("cal-wg");
+  const keep = (old && _calWkKeep) ? old.scrollTop : null;
+  _calWkKeep = true;
+  document.getElementById("cal-week").innerHTML = head + strip + `<div class="cal-wg" id="cal-wg"><div class="cal-wt">${hours}</div><div class="cal-wc">${cols}</div></div>`;
+  const wg = document.getElementById("cal-wg");
+  wg.scrollTop = keep != null ? keep : Math.max(0, (now.getHours() - 1 - h0) * HH);
+}
+function calView(v) {
+  haptic("light");
+  _calView = v; _calWkKeep = false;
+  if (v === "month") _calMonth = new Date(_calSel.getFullYear(), _calSel.getMonth(), 1);
+  _calRender(); _calLoad();
+}
+function calShift(n) {
+  haptic("light");
+  if (_calView === "month") _calMonth = new Date(_calMonth.getFullYear(), _calMonth.getMonth() + n, 1);
+  else { const d = new Date(_calSel); d.setDate(d.getDate() + 7 * n); _calSel = _calDay0(d); _calMonth = new Date(d.getFullYear(), d.getMonth(), 1); _calWkKeep = false; }
+  _calRender(); _calLoad();
+}
+function calToday() { haptic("light"); _calWkKeep = false; const n = _calDay0(new Date()); _calSel = n; _calMonth = new Date(n.getFullYear(), n.getMonth(), 1); _calRender(); _calLoad(); }
+function calPick(ts) {
+  haptic("light");
+  _calSel = _calDay0(new Date(ts));
+  if (_calView === "agenda") { _calMonth = new Date(_calSel.getFullYear(), _calSel.getMonth(), 1); _calRender(); _calLoad(); return; }
+  _calRender();
+}
+function calToggle(i) {
+  const s = _calSources()[i]; if (!s) return;
+  if (_calHidden.has(s.entity)) _calHidden.delete(s.entity); else _calHidden.add(s.entity);
+  _calRender();
+}
+async function openCalendarView() {
+  haptic("light");
+  if (typeof _closeLauncher === "function") _closeLauncher();
+  const n = _calDay0(new Date());
+  _calSel = n; _calMonth = new Date(n.getFullYear(), n.getMonth(), 1);
+  _calView = "month"; _calWkKeep = false;
+  document.getElementById("cal-overlay").classList.add("open");
+  window._showSwipeDownHint?.();
+  _calRender();
+  clearInterval(_calTimer);
+  _calTimer = setInterval(() => _calLoad(true), 300000);
+  await _calLoad();
+}
+function closeCalendarView() {
+  haptic("light");
+  clearInterval(_calTimer);
+  document.getElementById("cal-overlay").classList.remove("open");
+}
+</script>
 
 <!-- ─── DAILY VIEW FULLSCREEN OVERLAY ─── -->
 <div id="daily-overlay">
@@ -22587,6 +23649,10 @@ _applyDailyI18n();
       <label class="settings-check"><input type="checkbox" id="st-thermostat" onchange="applySetting('showThermostatButton', this.checked)"><span class="settings-check-mark"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span></label>
     </div>
     <div class="settings-item settings-sub">
+      <span class="settings-label">Calendar</span>
+      <label class="settings-check"><input type="checkbox" id="st-calendar" onchange="applySetting('showCalendarButton', this.checked)"><span class="settings-check-mark"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span></label>
+    </div>
+    <div class="settings-item settings-sub">
       <span class="settings-label">Clock</span>
       <label class="settings-check"><input type="checkbox" id="st-clock-mode" onchange="applySetting('showClockButton', this.checked)"><span class="settings-check-mark"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span></label>
     </div>
@@ -22756,6 +23822,27 @@ _applyDailyI18n();
           <svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg>
         </span>
       </label>
+      <label class="startup-mode-option" onclick="applySetting('startupMode','indoorpresence')">
+        <input type="radio" name="startupMode" value="indoorpresence" id="sm-indoorpresence">
+        <span class="startup-mode-label">Indoor Presence</span>
+        <span class="startup-mode-check">
+          <svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg>
+        </span>
+      </label>
+      <label class="startup-mode-option" onclick="applySetting('startupMode','alarm')">
+        <input type="radio" name="startupMode" value="alarm" id="sm-alarm">
+        <span class="startup-mode-label">Alarm</span>
+        <span class="startup-mode-check">
+          <svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg>
+        </span>
+      </label>
+      <label class="startup-mode-option" onclick="applySetting('startupMode','pet')">
+        <input type="radio" name="startupMode" value="pet" id="sm-pet">
+        <span class="startup-mode-label">Pet Stats</span>
+        <span class="startup-mode-check">
+          <svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg>
+        </span>
+      </label>
     </div>
     </div>
 
@@ -22876,6 +23963,21 @@ _applyDailyI18n();
         <label class="startup-mode-option" onclick="toggleScreensaverMode('indooraqi'); event.preventDefault()">
           <input type="radio" value="indooraqi" id="ssm-indooraqi">
           <span class="startup-mode-label">Indoor AQI</span>
+          <span class="startup-mode-check"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('indoorpresence'); event.preventDefault()">
+          <input type="radio" value="indoorpresence" id="ssm-indoorpresence">
+          <span class="startup-mode-label">Indoor Presence</span>
+          <span class="startup-mode-check"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('alarm'); event.preventDefault()">
+          <input type="radio" value="alarm" id="ssm-alarm">
+          <span class="startup-mode-label">Alarm</span>
+          <span class="startup-mode-check"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span>
+        </label>
+        <label class="startup-mode-option" onclick="toggleScreensaverMode('pet'); event.preventDefault()">
+          <input type="radio" value="pet" id="ssm-pet">
+          <span class="startup-mode-label">Pet Stats</span>
           <span class="startup-mode-check"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span>
         </label>
       </div>
@@ -23067,6 +24169,9 @@ _applyDailyI18n();
     let idx = 0;
     try { idx = parseInt(localStorage.getItem("ov_screen") || "0", 10); } catch {}
     document.querySelectorAll(".page-dot").forEach((el, i) => el.classList.toggle("active", i === idx));
+    // The main script runs before these dots exist, so its first pass at hiding
+    // disabled Overview dots finds nothing. Re-apply now that they are in the DOM.
+    try { if (typeof _applyEnabledOverviews === "function") _applyEnabledOverviews(); } catch (e) {}
   })();
 </script>
 
@@ -23501,30 +24606,32 @@ _applyDailyI18n();
 
   #favorites-popover {
     position: absolute;
-    top: 50%;
+    /* Anchor so the FIRST row is centered on the favorites button; extra rows grow downward */
+    top: calc(50% - 1.9rem);
     right: calc(100% + 12px);
-    transform: translateY(-50%) translateX(8px) scale(0.97);
+    transform: translateX(8px) scale(0.97);
     background: #141416;
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
     padding: 0.6rem;
     display: flex;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    align-items: center;
     gap: 0.55rem;
     width: max-content;
     box-shadow: 0 12px 32px rgba(0,0,0,0.5);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.18s ease, transform 0.18s ease;
-    transform-origin: right center;
+    transform-origin: right 1.9rem;
     z-index: 250;
     font-family: 'Montserrat', sans-serif;
   }
-  #favorites-popover.open { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); pointer-events: auto; }
+  #favorites-popover.open { opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; }
   #favorites-popover::before {
     content: "";
     position: absolute;
-    top: 50%; right: -6px;
+    top: 1.9rem; right: -6px;
     width: 12px; height: 12px;
     background: #141416;
     border-right: 1px solid rgba(255,255,255,0.1);
@@ -23532,6 +24639,7 @@ _applyDailyI18n();
     transform: translateY(-50%) rotate(45deg);
   }
   .fav-pop-empty { max-width: 190px; white-space: normal; }
+  .fav-pop-row { display: flex; flex-wrap: nowrap; justify-content: center; gap: 0.55rem; }
   .fav-pop-icon {
     width: 2.6rem; height: 2.6rem;
     border-radius: 13px;
@@ -23562,9 +24670,11 @@ _applyDailyI18n();
     "weather-fs-open-btn": { category: "Comfort & Energy",     color: "#5b9bd5" },
     "solar-fs-open-btn":   { category: "Comfort & Energy",     color: "#e8b64f" },
     "aqi-fs-open-btn":     { category: "Comfort & Energy",     color: "#4fd1a5" },
+    "alarm-open-btn":      { category: "Security & Presence",  color: "#3fd49a" },
     "cameras-open-btn":    { category: "Security & Presence",  color: "#7f8fa6" },
     "presence-open-btn":   { category: "Security & Presence",  color: "#f0a840" },
     "daily-open-btn":      { category: "Home Life",            color: "#9b7fe8" },
+    "calendar-open-btn":   { category: "Home Life",            color: "#e8836b" },
     "pet-btn":             { category: "Home Life",            color: "#6fbf73" },
     "clock-open-btn":      { category: "Home Life",            color: "#a0a8b8" },
     "np-fs-open-btn":      { category: "Media",                color: "#b47fe8" },
@@ -23669,14 +24779,29 @@ _applyDailyI18n();
       return;
     }
 
-    pop.innerHTML = validFavorites.map(id => {
+    // Max 5 icons per row, split as evenly as possible (6 → 3-3, 8 → 4-4, 7 → 4-3)
+    const MAX_PER_ROW = 5;
+    const rowCount = Math.ceil(validFavorites.length / MAX_PER_ROW);
+    const baseSize = Math.floor(validFavorites.length / rowCount);
+    const extra = validFavorites.length % rowCount; // first `extra` rows get one more
+    const rows = [];
+    let cursor = 0;
+    for (let r = 0; r < rowCount; r++) {
+      const size = baseSize + (r < extra ? 1 : 0);
+      rows.push(validFavorites.slice(cursor, cursor + size));
+      cursor += size;
+    }
+
+    const _favIconHTML = id => {
       const btn = byId[id];
       const meta = HUB_TILE_META[id] || { color: "#b8965c" };
       const svg = _hubBiggerIcon(btn.querySelector("svg")?.outerHTML || "").replace(/width="20"/, 'width="18"').replace(/height="20"/, 'height="18"');
       const onclickAttr = (btn.getAttribute("onclick") || "").replace(/"/g, "&quot;");
       const label = (btn.getAttribute("title") || "").replace(/"/g, "&quot;");
       return `<div class="fav-pop-icon" style="--c:${meta.color}" title="${label}" onclick="${onclickAttr};_closeLauncher();">${svg}</div>`;
-    }).join("");
+    };
+
+    pop.innerHTML = rows.map(ids => `<div class="fav-pop-row">${ids.map(_favIconHTML).join("")}</div>`).join("");
   }
 
   function _favPopoverCloseOutside(e) {
@@ -23758,9 +24883,7 @@ _applyDailyI18n();
   #sys-body { flex: 1; overflow-y: auto; padding: 0 0 2.5rem; -webkit-overflow-scrolling: touch; }
   #sys-body::-webkit-scrollbar { width: 0; }
 
-  #sys-summary-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.7rem; }
-  #sys-integrations-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.7rem; }
-  #sys-status-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.7rem; }
+  .sys-card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 0.7rem; }
   .sys-sum-card {
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.07);
@@ -23781,7 +24904,7 @@ _applyDailyI18n();
   }
   .sys-section-title .sys-section-note { font-size: 0.6rem; letter-spacing: 0.02em; text-transform: none; color: rgba(255,255,255,0.28); }
 
-  #sys-domain-grid { display: flex; flex-direction: column; gap: 0.6rem; }
+  #sys-domain-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.55rem 1.4rem; }
   .sys-domain-row { display: flex; align-items: center; gap: 0.7rem; }
   .sys-domain-icon {
     width: 2rem; height: 2rem; flex-shrink: 0;
@@ -23795,10 +24918,10 @@ _applyDailyI18n();
   .sys-domain-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
   .sys-domain-name { font-size: 0.76rem; font-weight: 500; }
   .sys-domain-count { font-size: 0.76rem; color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums; }
+  .sys-domain-pct { font-size: 0.68rem; color: rgba(255,255,255,0.32); }
   .sys-domain-bar-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; }
   .sys-domain-bar-fill { height: 100%; border-radius: 3px; background: var(--d-color); }
 
-  #sys-footer { padding: 1.6rem 1.8rem 0.5rem; font-size: 0.64rem; color: rgba(255,255,255,0.3); letter-spacing: 0.02em; text-align: center; }
   #sys-loading, #sys-error {
     padding: 3rem 1.8rem;
     text-align: center;
@@ -23854,6 +24977,19 @@ _applyDailyI18n();
   // fallback below since bare group.* IDs are always Group helpers.
   const HELPER_ENTITY_OVERRIDES = ["binary_sensor.shumi_litter_box_valid_use"];
 
+  // Formats a duration in ms as a compact "Xd Yh" / "Xh Ym" / "Xm" string
+  // for the Uptime card.
+  function _sysFormatUptime(ms) {
+    if (ms == null || isNaN(ms) || ms < 0) return "—";
+    const mins = Math.floor(ms / 60000);
+    const days = Math.floor(mins / 1440);
+    const hours = Math.floor((mins % 1440) / 60);
+    const remMins = mins % 60;
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${remMins}m`;
+    return `${remMins}m`;
+  }
+
   function _sysIconSvg(path, size) {
     return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   }
@@ -23871,7 +25007,7 @@ _applyDailyI18n();
   // error, which we treat the same as "not available" rather than a failure.
   function _sysFetchWsData() {
     return new Promise((resolve) => {
-      const empty = { configEntries: null, hacsRepos: null, entityRegistry: null, deviceRegistry: null, users: null };
+      const empty = { configEntries: null, hacsRepos: null, entityRegistry: null, deviceRegistry: null, users: null, systemHealth: null };
       if (typeof HA_TOKEN === "undefined" || !HA_TOKEN || typeof BASE === "undefined") { resolve(empty); return; }
       let ws;
       try {
@@ -23881,7 +25017,7 @@ _applyDailyI18n();
 
       let settled = false;
       const received = new Set();
-      const results = { configEntries: null, hacsRepos: null, entityRegistry: null, deviceRegistry: null, users: null };
+      const results = { configEntries: null, hacsRepos: null, entityRegistry: null, deviceRegistry: null, users: null, systemHealth: null };
       const timeout = setTimeout(() => finish(), 6000);
       function finish() {
         if (settled) return;
@@ -23904,6 +25040,14 @@ _applyDailyI18n();
           ws.send(JSON.stringify({ id: 3, type: "config/entity_registry/list" }));
           ws.send(JSON.stringify({ id: 4, type: "config/device_registry/list" }));
           ws.send(JSON.stringify({ id: 5, type: "config/auth/list" }));
+          // system_health/info is unlike the others: it acks immediately
+          // with an empty result, then streams one "event" message per
+          // component (homeassistant, recorder, hacs, ...) as each finishes
+          // its own async health check — there's no single reply to wait
+          // on. We accumulate events by domain and give it a short grace
+          // window (below) after everything else lands rather than
+          // treating it as a 6th "received" id.
+          ws.send(JSON.stringify({ id: 6, type: "system_health/info" }));
         } else if (msg.type === "result") {
           if (msg.id === 1) results.configEntries = (msg.success && Array.isArray(msg.result)) ? msg.result : null;
           if (msg.id === 2) results.hacsRepos = (msg.success && Array.isArray(msg.result)) ? msg.result : null;
@@ -23911,7 +25055,25 @@ _applyDailyI18n();
           if (msg.id === 4) results.deviceRegistry = (msg.success && Array.isArray(msg.result)) ? msg.result : null;
           if (msg.id === 5) results.users = (msg.success && Array.isArray(msg.result)) ? msg.result : null;
           received.add(msg.id);
-          if (received.size >= 5) finish();
+          if (received.size >= 5) setTimeout(finish, 1200);
+        } else if (msg.type === "event" && msg.id === 6) {
+          const ev = msg.event || {};
+          if (ev.type === "initial" && ev.data) {
+            // Full snapshot: { domain: { info: {key: value, ...} }, ... }
+            results.systemHealth = ev.data;
+          } else if (ev.type === "update" && ev.domain) {
+            // A single key finished its (async) health check after the
+            // initial snapshot; merge it in.
+            if (!results.systemHealth) results.systemHealth = {};
+            if (!results.systemHealth[ev.domain]) results.systemHealth[ev.domain] = { info: {} };
+            if (!results.systemHealth[ev.domain].info) results.systemHealth[ev.domain].info = {};
+            results.systemHealth[ev.domain].info[ev.key] = ev.success ? ev.data : ev.error;
+          } else if (ev.type === "finish") {
+            // Explicit "no more updates coming" signal - safe to stop
+            // waiting on this one right away instead of relying on the
+            // grace timer below.
+            finish();
+          }
         }
       };
       ws.onerror = () => finish();
@@ -23984,10 +25146,10 @@ _applyDailyI18n();
     if (configResp && configResp.ok) {
       try { haConfig = await configResp.json(); } catch { haConfig = null; }
     }
-    return { states, haConfig, configEntries: wsData.configEntries, hacsRepos: wsData.hacsRepos, entityRegistry: wsData.entityRegistry, deviceRegistry: wsData.deviceRegistry, users: wsData.users, addons, helperDomains };
+    return { states, haConfig, configEntries: wsData.configEntries, hacsRepos: wsData.hacsRepos, entityRegistry: wsData.entityRegistry, deviceRegistry: wsData.deviceRegistry, users: wsData.users, systemHealth: wsData.systemHealth, addons, helperDomains };
   }
 
-  function _sysComputeStats(states, configEntries, addons, hacsRepos, helperDomains, entityRegistry, deviceRegistry, users) {
+  function _sysComputeStats(states, configEntries, addons, hacsRepos, helperDomains, entityRegistry, deviceRegistry, users, systemHealth) {
     const byDomain = {};
     let unavailable = [];
     let automationsOn = 0, automationsOff = 0;
@@ -23996,7 +25158,7 @@ _applyDailyI18n();
       const domain = (s.entity_id || "").split(".")[0] || "unknown";
       byDomain[domain] = (byDomain[domain] || 0) + 1;
 
-      if (s.state === "unavailable" || s.state === "unknown") {
+      if (s.state === "unavailable") {
         unavailable.push({ entity: s.entity_id, state: s.state });
       }
       if (domain === "automation") {
@@ -24005,7 +25167,7 @@ _applyDailyI18n();
     });
 
     const domainList = Object.entries(byDomain)
-      .map(([name, count]) => ({ name, count, meta: DOMAIN_META[name] || DOMAIN_META.default }))
+      .map(([name, count]) => ({ name, count, pct: states.length ? Math.round((count / states.length) * 1000) / 10 : 0, meta: DOMAIN_META[name] || DOMAIN_META.default }))
       .sort((a, b) => b.count - a.count);
 
     // The Helpers page (Settings -> Devices & Services -> Helpers) lists one
@@ -24089,6 +25251,42 @@ _applyDailyI18n();
       // than showing nothing.
       helpersCount = [...HELPER_DOMAINS, ...HELPER_DOMAINS_FALLBACK].reduce((sum, d) => sum + (byDomain[d] || 0), 0);
     }
+
+    // ── Disabled entities ────────────────────────────────────────────────
+    // Mirrors the "X disabled" count on Settings -> Entities: entity
+    // registry rows the user (or an integration) has explicitly turned
+    // off. These have no live state at all, so they'd never show up via
+    // /api/states — the registry is the only place they exist.
+    const disabledEntitiesCount = Array.isArray(entityRegistry)
+      ? entityRegistry.filter(e => !!e.disabled_by).length
+      : null;
+
+    // ── Orphaned devices ─────────────────────────────────────────────────
+    // A device row with zero entities pointing at it: usually leftover
+    // from an integration that was removed/reconfigured without HA
+    // cleaning up the device registry, or a device whose only entities
+    // were deleted individually. Devices that are themselves disabled are
+    // excluded — that's a deliberate state, not an orphan. Hub/bridge
+    // devices that legitimately have no entities of their own (they exist
+    // only to group child devices via via_device_id) are rare but do
+    // happen; this is a heuristic, not a guarantee.
+    let orphanedDevicesCount = null;
+    if (Array.isArray(deviceRegistry) && Array.isArray(entityRegistry)) {
+      const deviceIdsWithEntities = new Set(entityRegistry.map(e => e.device_id).filter(Boolean));
+      orphanedDevicesCount = deviceRegistry.filter(d =>
+        !d.disabled_by && !deviceIdsWithEntities.has(d.id)
+      ).length;
+    }
+
+    // ── Automations that never fire ────────────────────────────────────
+    // Every automation entity carries a last_triggered attribute in its
+    // state (null until it has fired at least once). An automation that's
+    // enabled but has never triggered usually means a broken trigger
+    // condition, a typo'd entity_id, or one left over from a test — worth
+    // flagging distinctly from the on/off count above, which only tracks
+    // whether it's enabled, not whether it actually does anything.
+    const automationEntities = states.filter(s => (s.entity_id || "").startsWith("automation."));
+    const automationsNeverFired = automationEntities.filter(s => !s.attributes?.last_triggered).length;
 
     // "Total" is the number of distinct non-helper domains (one card per
     // domain on the Integrations page, e.g. "LIFX", "Wyoming Protocol").
@@ -24188,6 +25386,39 @@ _applyDailyI18n();
       }
     }
 
+    // ── Uptime ───────────────────────────────────────────────────────────
+    // Home Assistant doesn't expose core start time through the REST or
+    // WebSocket API. The only reliable source is a timestamp sensor from
+    // an optional integration — either the built-in "Uptime" integration
+    // (sensor.uptime) or System Monitor's "Last Boot" sensor — so this is
+    // opportunistic: if one exists, use it; otherwise leave it null and
+    // say so in the UI rather than guessing from entity timestamps, which
+    // don't reliably reset on restart.
+    const uptimeSensor = states.find(s => {
+      if ((s.entity_id || "").split(".")[0] !== "sensor") return false;
+      if (s.attributes?.device_class !== "timestamp") return false;
+      if (s.state === "unavailable" || s.state === "unknown" || !s.state) return false;
+      const id = (s.entity_id || "").toLowerCase();
+      const name = (s.attributes?.friendly_name || "").toLowerCase();
+      return id.includes("uptime") || id.includes("last_boot") || name.includes("uptime") || name.includes("last boot");
+    });
+    let uptimeMs = null;
+    if (uptimeSensor) {
+      const t = Date.parse(uptimeSensor.state);
+      if (!isNaN(t)) uptimeMs = Date.now() - t;
+    }
+
+    // ── Recorder database size ───────────────────────────────────────────
+    // Home Assistant doesn't expose the DB file size via REST/WS directly
+    // either, but system_health/info runs the same check the Settings ->
+    // System -> Repairs -> "..." -> System information dialog shows,
+    // including the recorder component's estimated_db_size — so this
+    // reuses that instead of trying to read the file, which the frontend
+    // API doesn't allow anyway.
+    const recorderHealth = systemHealth && systemHealth.recorder && systemHealth.recorder.info ? systemHealth.recorder.info : null;
+    const dbSizeText = recorderHealth?.estimated_db_size || null;
+    const dbEngine = recorderHealth?.database_engine || null;
+
     // ── MQTT devices & entities ──────────────────────────────────────────
     // Everything that arrives via MQTT discovery (including Zigbee2MQTT,
     // Tasmota, ESPHome-over-MQTT, etc.) is registered under the single
@@ -24221,7 +25452,20 @@ _applyDailyI18n();
     // Settings page hides skipped updates from its badge count, so we
     // match that here by excluding entities whose skipped_version equals
     // the latest_version, rather than raw state alone.
-    const updateEntities = states.filter(s => (s.entity_id || "").startsWith("update."));
+    //
+    // Modern HACS versions publish their own "update.*" entity for every
+    // installed repo with a pending upgrade, which would otherwise double
+    // -count those same repos here and in the HACS Updates card below (that
+    // one reads pending_upgrade straight from the HACS API). So entities
+    // that belong to the HACS config entry are excluded from this count —
+    // HACS keeps its own updates in its own card.
+    const hacsEntryIds = Array.isArray(configEntries)
+      ? new Set(configEntries.filter(e => e.domain === "hacs").map(e => e.entry_id))
+      : new Set();
+    const hacsUpdateEntityIds = (hacsEntryIds.size && Array.isArray(entityRegistry))
+      ? new Set(entityRegistry.filter(e => hacsEntryIds.has(e.config_entry_id)).map(e => e.entity_id))
+      : new Set();
+    const updateEntities = states.filter(s => (s.entity_id || "").startsWith("update.") && !hacsUpdateEntityIds.has(s.entity_id));
     const updatesAvailable = updateEntities.filter(s => {
       if (s.state !== "on") return false;
       const a = s.attributes || {};
@@ -24280,6 +25524,12 @@ _applyDailyI18n();
       automationsOn,
       automationsOff,
       unavailable,
+      disabledEntitiesCount,
+      orphanedDevicesCount,
+      automationsNeverFired,
+      uptimeMs,
+      dbSizeText,
+      dbEngine,
       integrationsCount,
       integrationsEnabled,
       integrationsDisabled,
@@ -24313,7 +25563,7 @@ _applyDailyI18n();
       return;
     }
 
-    const topDomains = stats.domainList.slice(0, 10);
+    const topDomains = stats.domainList.slice(0, 12);
     const maxCount = topDomains.length ? topDomains[0].count : 1;
     const moreDomains = stats.totalDomains - topDomains.length;
 
@@ -24323,21 +25573,18 @@ _applyDailyI18n();
         <div class="sys-domain-main">
           <div class="sys-domain-top">
             <span class="sys-domain-name">${escapeHtml(d.name)}</span>
-            <span class="sys-domain-count">${d.count}</span>
+            <span class="sys-domain-count">${d.count} <span class="sys-domain-pct">(${d.pct}%)</span></span>
           </div>
           <div class="sys-domain-bar-track"><div class="sys-domain-bar-fill" style="width:${Math.max(4, (d.count / maxCount * 100)).toFixed(0)}%"></div></div>
         </div>
       </div>`).join("");
 
-    const versionLine = haConfig
-      ? `Home Assistant Core ${escapeHtml(haConfig.version || "")}`
-      : `Home Assistant`;
     const componentsCount = haConfig && Array.isArray(haConfig.components) ? haConfig.components.length : null;
 
     staticEl.innerHTML = `
       <div class="sys-section">
         <div class="sys-section-title">Overview</div>
-        <div id="sys-summary-row">
+        <div class="sys-card-row">
           <div class="sys-sum-card" style="--card-color:#d4ae78">
             <div class="sys-sum-label">Entities</div>
             <div class="sys-sum-num">${stats.totalEntities}</div>
@@ -24347,6 +25594,11 @@ _applyDailyI18n();
             <div class="sys-sum-label">Automations</div>
             <div class="sys-sum-num">${stats.automationsTotal}</div>
             <div class="sys-sum-sub">${stats.automationsOn} enabled</div>
+          </div>
+          <div class="sys-sum-card" style="--card-color:#b0a39a">
+            <div class="sys-sum-label">Scenes</div>
+            <div class="sys-sum-num">${stats.scenes}</div>
+            <div class="sys-sum-sub">saved scenes</div>
           </div>
           <div class="sys-sum-card" style="--card-color:#7f9fe8">
             <div class="sys-sum-label">Scripts</div>
@@ -24358,17 +25610,12 @@ _applyDailyI18n();
             <div class="sys-sum-num">${stats.helpersCount}</div>
             <div class="sys-sum-sub">helper entities</div>
           </div>
-          <div class="sys-sum-card" style="--card-color:#b0a39a">
-            <div class="sys-sum-label">Scenes</div>
-            <div class="sys-sum-num">${stats.scenes}</div>
-            <div class="sys-sum-sub">saved scenes</div>
-          </div>
         </div>
       </div>
 
       <div class="sys-section">
         <div class="sys-section-title">Integrations &amp; Devices</div>
-        <div id="sys-integrations-row">
+        <div class="sys-card-row">
           <div class="sys-sum-card" style="--card-color:#5b9bd5">
             <div class="sys-sum-label">Integrations</div>
             <div class="sys-sum-num">${stats.integrationsCount !== null ? stats.integrationsCount : '—'}</div>
@@ -24378,11 +25625,6 @@ _applyDailyI18n();
             <div class="sys-sum-label">HACS</div>
             <div class="sys-sum-num">${stats.hacsInstalledCount !== null ? stats.hacsInstalledCount : '—'}</div>
             <div class="sys-sum-sub">${stats.hacsInstalledCount !== null ? 'installed repositories' : 'HACS not detected'}</div>
-          </div>
-          <div class="sys-sum-card" style="--card-color:#9aa8b8">
-            <div class="sys-sum-label">Components</div>
-            <div class="sys-sum-num">${componentsCount !== null ? componentsCount : '—'}</div>
-            <div class="sys-sum-sub">${componentsCount !== null ? 'loaded modules' : 'unable to fetch'}</div>
           </div>
           <div class="sys-sum-card" style="--card-color:#5bc9d5">
             <div class="sys-sum-label">Zigbee Devices</div>
@@ -24394,12 +25636,48 @@ _applyDailyI18n();
             <div class="sys-sum-num">${stats.mqttDeviceCount !== null ? stats.mqttDeviceCount : '—'}</div>
             <div class="sys-sum-sub">${stats.mqttDeviceCount !== null ? `${stats.mqttEntityCount} entities` : 'no mqtt integration found'}</div>
           </div>
+          <div class="sys-sum-card" style="--card-color:#9aa8b8">
+            <div class="sys-sum-label">Components</div>
+            <div class="sys-sum-num">${componentsCount !== null ? componentsCount : '—'}</div>
+            <div class="sys-sum-sub">${componentsCount !== null ? 'loaded modules' : 'unable to fetch'}</div>
+          </div>
         </div>
       </div>
 
       <div class="sys-section">
-        <div class="sys-section-title">Users &amp; Health</div>
-        <div id="sys-status-row">
+        <div class="sys-section-title">Needs Attention</div>
+        <div class="sys-card-row">
+          <div class="sys-sum-card" style="--card-color:${stats.unavailable.length ? '#e06565' : '#6fbf73'}">
+            <div class="sys-sum-label">Unavailable Entities</div>
+            <div class="sys-sum-num">${stats.unavailable.length}</div>
+            <div class="sys-sum-sub">${stats.unavailable.length ? 'not responding' : 'all good'}</div>
+          </div>
+          <div class="sys-sum-card" style="--card-color:${stats.disabledEntitiesCount ? '#e8b64f' : '#6fbf73'}">
+            <div class="sys-sum-label">Disabled Entities</div>
+            <div class="sys-sum-num">${stats.disabledEntitiesCount !== null ? stats.disabledEntitiesCount : '—'}</div>
+            <div class="sys-sum-sub">${stats.disabledEntitiesCount !== null ? 'turned off in registry' : 'unable to fetch'}</div>
+          </div>
+          <div class="sys-sum-card" style="--card-color:${stats.automationsNeverFired ? '#e8b64f' : '#6fbf73'}">
+            <div class="sys-sum-label">Automations Never Fired</div>
+            <div class="sys-sum-num">${stats.automationsNeverFired}</div>
+            <div class="sys-sum-sub">${stats.automationsNeverFired ? `of ${stats.automationsTotal} automations` : 'all have run'}</div>
+          </div>
+          <div class="sys-sum-card" style="--card-color:${stats.orphanedDevicesCount ? '#e8b64f' : '#6fbf73'}">
+            <div class="sys-sum-label">Orphaned Devices</div>
+            <div class="sys-sum-num">${stats.orphanedDevicesCount !== null ? stats.orphanedDevicesCount : '—'}</div>
+            <div class="sys-sum-sub">${stats.orphanedDevicesCount !== null ? 'no linked entities' : 'unable to fetch'}</div>
+          </div>
+          <div class="sys-sum-card" style="--card-color:${stats.lowBatteryCount ? '#e06565' : '#6fbf73'}">
+            <div class="sys-sum-label">Low Battery</div>
+            <div class="sys-sum-num">${stats.lowBatteryCount}</div>
+            <div class="sys-sum-sub">${stats.lowBatteryCount ? `≤${20}% or low` : 'all good'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sys-section">
+        <div class="sys-section-title">System</div>
+        <div class="sys-card-row">
           <div class="sys-sum-card" style="--card-color:#e87fb0">
             <div class="sys-sum-label">Users</div>
             <div class="sys-sum-num">${stats.usersCount !== null ? stats.usersCount : '—'}</div>
@@ -24415,15 +25693,15 @@ _applyDailyI18n();
             <div class="sys-sum-num">${stats.hacsUpdatesAvailable !== null ? stats.hacsUpdatesAvailable : '—'}</div>
             <div class="sys-sum-sub">${stats.hacsUpdatesAvailable !== null ? (stats.hacsUpdatesAvailable ? 'pending upgrade' : 'all up to date') : 'HACS not detected'}</div>
           </div>
-          <div class="sys-sum-card" style="--card-color:${stats.lowBatteryCount ? '#e06565' : '#6fbf73'}">
-            <div class="sys-sum-label">Low Battery</div>
-            <div class="sys-sum-num">${stats.lowBatteryCount}</div>
-            <div class="sys-sum-sub">${stats.lowBatteryCount ? `≤${20}% or low` : 'all good'}</div>
+          <div class="sys-sum-card" style="--card-color:#8fb0e8">
+            <div class="sys-sum-label">Uptime</div>
+            <div class="sys-sum-num">${stats.uptimeMs !== null ? _sysFormatUptime(stats.uptimeMs) : '—'}</div>
+            <div class="sys-sum-sub">${stats.uptimeMs !== null ? 'since last restart' : 'no uptime sensor found'}</div>
           </div>
-          <div class="sys-sum-card" style="--card-color:${stats.unavailable.length ? '#e06565' : '#6fbf73'}">
-            <div class="sys-sum-label">Unavailable Entities</div>
-            <div class="sys-sum-num">${stats.unavailable.length}</div>
-            <div class="sys-sum-sub">${stats.unavailable.length ? 'not responding' : 'all good'}</div>
+          <div class="sys-sum-card" style="--card-color:#79c9a0">
+            <div class="sys-sum-label">Database Size</div>
+            <div class="sys-sum-num">${stats.dbSizeText || '—'}</div>
+            <div class="sys-sum-sub">${stats.dbEngine ? escapeHtml(stats.dbEngine) : 'unable to fetch'}</div>
           </div>
         </div>
       </div>
@@ -24431,11 +25709,9 @@ _applyDailyI18n();
 
     body.innerHTML = `
       <div class="sys-section">
-        <div class="sys-section-title"><span>Entities by Domain</span>${moreDomains > 0 ? `<span class="sys-section-note">top 10 of ${stats.totalDomains}</span>` : ""}</div>
+        <div class="sys-section-title"><span>Entities by Domain</span>${moreDomains > 0 ? `<span class="sys-section-note">top 12 of ${stats.totalDomains}</span>` : ""}</div>
         <div id="sys-domain-grid">${domainHtml}</div>
       </div>
-
-      <div id="sys-footer">${versionLine}</div>
     `;
   }
 
@@ -24445,7 +25721,7 @@ _applyDailyI18n();
     try {
       const data = await _sysFetchAll();
       if (!data) { if (!silent) _sysRender(null); return; }
-      const stats = _sysComputeStats(data.states, data.configEntries, data.addons, data.hacsRepos, data.helperDomains, data.entityRegistry, data.deviceRegistry, data.users);
+      const stats = _sysComputeStats(data.states, data.configEntries, data.addons, data.hacsRepos, data.helperDomains, data.entityRegistry, data.deviceRegistry, data.users, data.systemHealth);
       _sysRender(stats, data.haConfig);
     } catch (err) {
       if (!silent) _sysRender(null);
@@ -25024,9 +26300,12 @@ _applyDailyI18n();
     const others = [
       { id: "nowplaying-overlay",  fn: "closeNowPlayingFS" },
       { id: "daily-overlay",       fn: "closeDailyView"    },
+      { id: "cal-overlay",         fn: "closeCalendarView" },
       { id: "cameras-overlay",     fn: "closeCameras"      },
       { id: "weather-fs-overlay",  fn: "closeWeatherFS"    },
       { id: "solar-fs-overlay",    fn: "closeSolarFS"      },
+      { id: "security-overlay",    fn: "closeSecurity"     },
+      { id: "pet-overlay",         fn: "closePetStats"     },
     ];
     others.forEach(({ id, fn }) => {
       if (document.getElementById(id)?.classList.contains("open") && typeof window[fn] === "function") {
@@ -25043,6 +26322,7 @@ _applyDailyI18n();
     feed.classList.remove("errored");
 
     function _doorbellFetch() {
+      if (window._doorbellLive?.live) return;
       fetch(`${BASE}/api/camera_proxy/${CONFIG.doorbell.cameraEntity}`, {
         headers: { Authorization: `Bearer ${HA_TOKEN}` }
       })
@@ -25065,6 +26345,8 @@ _applyDailyI18n();
 
     _doorbellFetch();
     _doorbellSnapshotInterval = setInterval(_doorbellFetch, 1000);
+    if (window._doorbellLive) window._doorbellLive.stop();
+    window._doorbellLive = CamLive.start(CONFIG.doorbell.cameraEntity, feed);
 
     // Start clock
     _updateDoorbellTime();
@@ -25085,6 +26367,7 @@ _applyDailyI18n();
     overlay.classList.remove("open");
 
     // Stop stream and snapshot polling
+    if (window._doorbellLive) { window._doorbellLive.stop(); window._doorbellLive = null; }
     const feed = document.getElementById("doorbell-feed");
     feed.src = "";
     clearInterval(_doorbellSnapshotInterval);

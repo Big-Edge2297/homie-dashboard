@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * HOMIE DASHBOARD CONFIGURATION v4.2.0
+ * HOMIE DASHBOARD CONFIGURATION v4.3.0
  * ═══════════════════════════════════════════════════════════════════════════
  * This is the main configuration file. Edit the sections below to customise the dashboard for your home.
  * Both homie-dashboard.html and config.js must be in the same folder.
@@ -107,9 +107,38 @@ const CONFIG = {
   security: [
     { label: "Siren On",          entity: "YOUR_SIREN_ON_ENTITY"          },
     { label: "Siren Off",         entity: "YOUR_SIREN_OFF_ENTITY"         },
-    { label: "Garage/Gate Open",  entity: "YOUR_GARAGE_GATE_OPEN_ENTITY"  },
-    { label: "Garage/Gate Close", entity: "YOUR_GARAGE_GATE_CLOSE_ENTITY" },
+    { label: "Garage/Gate Open",  entity: "YOUR_GARAGE_GATE_OPEN_ENTITY" },
+    { label: "Garage/Gate Close", entity: "YOUR_GARAGE_GATE_CLOSE_ENTITY"},
   ],
+
+  /* ── ALARM SCREEN ────────────────────────────────────────────────────────
+   * The grouped status line on the Alarm screen (security shield in the top bar).
+   * One entry per category, in display order. Each entry:
+   *   label  — name shown under the icon
+   *   entity — your helper group (binary_sensor / cover). "on"/"open" = alert.
+   *   icon   — windows | doors | motion | garage  (anything else = generic)
+   *   ok     — text when everything is fine (e.g. "Closed", "Clear")
+   *   bad    — text when something is open / detected (e.g. "Open", "Detected")
+   *   noun   — used in the "2 windows open" warning under the status
+   *   count  — false = don't show a number (e.g. motion)
+   *   warn   — false = leave out of the "…open" warning line (e.g. motion)
+   *
+   * Counts ("2 Open") come from the group's member list: a binary_sensor group
+   * helper exposes its members in the entity_id attribute. If your helper doesn't,
+   * it simply shows "Open" without a number.
+   *
+   * alarmUi.sirenEntity — optional. Your real siren entity (e.g. "siren.xyz") so the
+   *   toggle reflects the live state. Leave "" to track taps locally.
+   * ─────────────────────────────────────────────────────────────────────── */
+  alarmGroups: [
+    { label: "Windows", entity: "YOUR_ALL_WINDOWS_ENTITY",        icon: "windows", ok: "Closed", bad: "Open",     noun: "window" },
+    { label: "Doors",   entity: "YOUR_ALL_DOORS_ENTITY",          icon: "doors",   ok: "Closed", bad: "Open",     noun: "door"   },
+    { label: "Motion",  entity: "YOUR_ALL_MOTION_SENSORS_ENTITY", icon: "motion",  ok: "Clear",  bad: "Detected", count: false, warn: false },
+    { label: "Garage",  entity: "YOUR_GARAGE_HELPER",               icon: "garage",  ok: "Closed", bad: "Open",     noun: "garage door" },
+  ],
+  alarmUi: {
+    sirenEntity: "",
+  },
 
   /* ── WEATHER ─────────────────────────────────────────────────────────────
    * HA weather entity shown at the top-centre of the dashboard.
@@ -131,7 +160,7 @@ const CONFIG = {
   sun: {
     sunrise: "YOUR_SUNRISE_ENTITY",   // check HA → Developer Tools → States if unsure
     sunset:  "YOUR_SUNSET_ENTITY",
-    timezone: "YOUR_TIMEZONE",        // e.g. "Europe/London", "America/New_York"
+    timezone: "YOUR_TIMEZONE",          // e.g. "Europe/London", "America/New_York"
   },
 
   /* ── AIR QUALITY INDEX ───────────────────────────────────────────────────
@@ -196,14 +225,14 @@ const CONFIG = {
   homeStats: [
     { label: "Doors",       entity: "YOUR_ALL_DOORS_ENTITY",            onValue: "Open",     offValue: "Closed" },
     { label: "Windows",     entity: "YOUR_ALL_WINDOWS_ENTITY",          onValue: "Open",     offValue: "Closed" },
-    { label: "Alarm",       entity: "YOUR_ALARM_ENTITY",                onValue: "Armed",    offValue: "Disarmed" },
-    { label: "Cameras",     entity: "YOUR_CAMERAS_PRIVACY_ENTITY",       onValue: "Privacy",  offValue: "On", invertColor: true },
+    { label: "Alarm",       entity: "YOUR_ALARM_ENTITY",         onValue: "Armed",    offValue: "Disarmed" },
+    { label: "Cameras",     entity: "YOUR_CAMERAS_PRIVACY_ENTITY",  onValue: "Privacy",  offValue: "On", invertColor: true },
     { label: "Motion",      entity: "YOUR_ALL_MOTION_SENSORS_ENTITY",   onValue: "Detected", offValue: "Clear" },
-    { label: "Lights",      entity: "YOUR_ALL_LIGHTS_ENTITY",           onValue: "On",       offValue: "Off" },
-    { label: "Air Con",     entity: "YOUR_ALL_AC_UNITS_ENTITY",         onValue: "On",       offValue: "Off" },
-    { label: "Purifiers",   entity: "YOUR_ALL_PURIFIERS_ENTITY",        onValue: "On",       offValue: "Off" },
+    { label: "Lights",      entity: "YOUR_ALL_LIGHTS_ENTITY",                   onValue: "On",       offValue: "Off" },
+    { label: "Air Con",     entity: "YOUR_ALL_AC_UNITS_ENTITY",                 onValue: "On",       offValue: "Off" },
+    { label: "Purifiers",   entity: "YOUR_ALL_PURIFIERS_ENTITY",                  onValue: "On",       offValue: "Off" },
     { label: "W. Heater",   entity: "YOUR_WATER_HEATER_ENTITY",         onValue: "On",       offValue: "Off" },
-    { label: "T. Warmer",   entity: "YOUR_ALL_TOWEL_WARMERS_ENTITY",    onValue: "On",       offValue: "Off" },
+    { label: "T. Warmer",   entity: "YOUR_ALL_TOWEL_WARMERS_ENTITY",            onValue: "On",       offValue: "Off" },
   ],  
 
   /* ── SENSOR ROW ────────────────────────────────────────────────────────────────
@@ -289,11 +318,11 @@ const CONFIG = {
    * pill to cycle through multiple active players.
         * ──────────────────────────────────────────────────────────────────── */
   musicPlayers: [
-    { entity: "YOUR_SPOTIFY_MEDIA_PLAYER_ENTITY",                                 label: "Spotify" },
-    { entity: "YOUR_ECHO_MEDIA_PLAYER_ENTITY",                                    label: "Echo"    },
-    { entity: "YOUR_SONOS_MEDIA_PLAYER_ENTITY",                                    label: "Sonos"    },
-    // { entity: "YOUR_APPLE_TV_MEDIA_PLAYER_ENTITY",                              label: "Apple TV" },
-    // { entity: "YOUR_MA_MEDIA_PLAYER_ENTITY",                                    label: "MA"       },
+    { entity: "YOUR_SPOTIFY_MEDIA_PLAYER_ENTITY",                                      label: "Spotify" },
+    { entity: "YOUR_ECHO_MEDIA_PLAYER_ENTITY",         label: "Echo"    },
+    { entity: "YOUR_SONOS_MEDIA_PLAYER_ENTITY",                                               label: "Sonos"    },
+    // { entity: "YOUR_APPLE_TV_MEDIA_PLAYER_ENTITY",                                         label: "Apple TV" },
+    // { entity: "YOUR_MA_MEDIA_PLAYER_ENTITY",                                  label: "MA"       },
   ],
 
   /* musicHideDelay — ms the Now Playing bar stays visible after music stops.
@@ -305,6 +334,24 @@ const CONFIG = {
    * Events are merged and sorted by date. */
   calendarEntities: ["YOUR_CALENDAR_ENTITY_1", "YOUR_CALENDAR_ENTITY_2"],
   mealCalendarEntity: "YOUR_MEAL_CALENDAR_ENTITY",
+
+  /* ── CALENDAR DASHBOARD (Dashboards → Home Life → Calendar) ───────────────
+   * Uses calendarEntities + mealCalendarEntity above. All keys are optional.
+   *   labels          — display name per calendar entity
+   *   colors          — 6-digit hex colour per calendar entity
+   * ──────────────────────────────────────────────────────────────────── */
+  calendarDashboard: {
+    labels: {
+      "YOUR_CALENDAR_ENTITY_1":    "Calendar 1",
+      "YOUR_CALENDAR_ENTITY_2":    "Calendar 2",
+      "YOUR_MEAL_CALENDAR_ENTITY": "Meals",
+    },
+    colors: {
+      "YOUR_CALENDAR_ENTITY_1":    "#ff6b73",
+      "YOUR_CALENDAR_ENTITY_2":    "#6cc0f0",
+      "YOUR_MEAL_CALENDAR_ENTITY": "#d4ae78",
+    },
+  },
   
   /* mealSlots — the four meal periods in the Today's Meals card.
    * Each entry: key (matched case-insensitively against calendar event titles),
@@ -370,9 +417,32 @@ const CONFIG = {
    * motionEntity  — (optional) binary_sensor entity_id for motion detection;
    *                 cell glows red with a pulsing dot when motion is detected
    *
-   * cameraRefreshSeconds — how often each frame is fetched (default: 1)
+   * cameraRefreshSeconds — how often each snapshot frame is fetched (default: 1)
+   *                         (used for the grid thumbnails and as a fallback)
+   *
+   * LIVE VIDEO (fullscreen camera view and the doorbell view):
+   *   Plays the camera over WebRTC. For UniFi Protect it tries the
+   *   ..._high_resolution_channel entity first and, if that fails, the
+   *   ..._medium_resolution_channel entity (it must exist in Home Assistant).
+   *   Point the entity above at the HIGH channel so both can be tried.
+   *   cameraLiveStream — true: live video (default) / false: snapshots only
+   *   cameraShowStats  — true: small LIVE/size label in the corner (default)
+   *                      false: hide it
+   *
+   * LIVE VIDEO IN THE GRID (thumbnails in the Cameras dashboard):
+   *   Each cell plays a light WebRTC stream and falls back to snapshots if it
+   *   cannot start. Uses the LOW (then MEDIUM) channel so six streams are not
+   *   too heavy. Enable the low/medium RTSPS outputs in UniFi Protect, and make
+   *   sure the entities exist in Home Assistant. Streams pause while a camera
+   *   is open fullscreen.
+   *   cameraGridLive    — true: live grid (default) / false: snapshots only
+   *   cameraGridChannel — "auto" (low, then medium) / "low" / "medium"
    * ──────────────────────────────────────────────────────────────────────── */
   cameraRefreshSeconds: 1,
+  cameraLiveStream:     true,
+  cameraShowStats:      true,
+  cameraGridLive:       true,
+  cameraGridChannel:    "auto",
 
   cameras: [
     { entity: "YOUR_CAMERA_1_ENTITY",  label: "Camera 1", motionEntity: "YOUR_CAMERA_1_MOTION_ENTITY" },
@@ -396,8 +466,8 @@ const CONFIG = {
 
 
   /* ── PET STATS ───────────────────────────────────────────────────────────
-   * Entities for the pet stats popup (top-right button).
-   *  petName           — name shown on the button and popup title
+   * Entities for the full-screen pet stats dashboard (top-right button).
+   *  petName           — name shown on the button and dashboard title
    *  litterCount/Last  — visits today / last use timestamp
    *  foodCount/Weight  — portions dispensed / total grams today
    *  foodDes           — feeder desiccant days remaining
@@ -415,6 +485,7 @@ const CONFIG = {
     foodDes:            "YOUR_FOOD_DES_ENTITY",
     waterVol:           "YOUR_WATER_VOL_ENTITY",
     waterFilter:        "YOUR_WATER_FILTER_ENTITY",
+    desiccantMaxDays:   30,   // full-bar value for the Supplies "Feeder desiccant" bar
 
   /* ── LITTER CHART COLOUR THRESHOLDS ──────────────────────────────────────────
    * Bar colours in the "Last 5 Days" litter chart.
@@ -537,19 +608,19 @@ const CONFIG = {
           label: "Living",
           scenes: [
             { label: "Relax",     entity: "YOUR_LIVING_ROOM_RELAX_SCENE_ENTITY",       color: "#4a2d7a",  icon: ICONS.scenes.relax      },
-            { label: "Romantic",  entity: "YOUR_LIVING_ROOM_ROMANTIC_SCENE_ENTITY",    color: "#8b2252",  icon: ICONS.scenes.romantic   },
-            { label: "Movie",     entity: "YOUR_LIVING_ROOM_MOVIE_SCENE_ENTITY",       color: "#f0ece4",  icon: ICONS.scenes.movie      },
-            { label: "Candle",    entity: "YOUR_LIVING_ROOM_CANDLE_SCENE_ENTITY",      color: "#7a4a1e",  icon: ICONS.scenes.candle     },
-            { label: "Fireplace", entity: "YOUR_LIVING_ROOM_FIREPLACE_SCENE_ENTITY",   color: "#8b3a10",  icon: ICONS.scenes.fireplace  },
+            { label: "Romantic",  entity: "YOUR_LIVING_ROOM_ROMANTIC_SCENE_ENTITY",        color: "#8b2252",  icon: ICONS.scenes.romantic   },
+            { label: "Movie",     entity: "YOUR_LIVING_ROOM_MOVIE_SCENE_ENTITY",                  color: "#f0ece4",  icon: ICONS.scenes.movie      },
+            { label: "Candle",    entity: "YOUR_LIVING_ROOM_CANDLE_SCENE_ENTITY",    color: "#7a4a1e",  icon: ICONS.scenes.candle     },
+            { label: "Fireplace", entity: "YOUR_LIVING_ROOM_FIREPLACE_SCENE_ENTITY", color: "#8b3a10",  icon: ICONS.scenes.fireplace  },
           ],
         },
         {
           label: "Bedroom",
           scenes: [
-            { label: "Nightlight", entity: "YOUR_BEDROOM_NIGHTLIGHT_SCENE_ENTITY",     color: "#6b3800",  icon: ICONS.scenes.nightlight },
-            { label: "Romantic",   entity: "YOUR_BEDROOM_ROMANTIC_SCENE_ENTITY",        color: "#8b2252",  icon: ICONS.scenes.romantic   },
-            { label: "Candle",     entity: "YOUR_BEDROOM_CANDLE_SCENE_ENTITY",          color: "#7a4a1e",  icon: ICONS.scenes.candle     },
-            { label: "Fireplace",  entity: "YOUR_BEDROOM_FIREPLACE_SCENE_ENTITY",       color: "#8b3a10",  icon: ICONS.scenes.fireplace  },
+            { label: "Nightlight", entity: "YOUR_BEDROOM_NIGHTLIGHT_SCENE_ENTITY",          color: "#6b3800",  icon: ICONS.scenes.nightlight },
+            { label: "Romantic",   entity: "YOUR_BEDROOM_ROMANTIC_SCENE_ENTITY",           color: "#8b2252",  icon: ICONS.scenes.romantic   },
+            { label: "Candle",     entity: "YOUR_BEDROOM_CANDLE_SCENE_ENTITY",       color: "#7a4a1e",  icon: ICONS.scenes.candle     },
+            { label: "Fireplace",  entity: "YOUR_BEDROOM_FIREPLACE_SCENE_ENTITY",    color: "#8b3a10",  icon: ICONS.scenes.fireplace  },
           ],
         },
       ],

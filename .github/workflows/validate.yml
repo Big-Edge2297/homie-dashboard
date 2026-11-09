@@ -4,16 +4,22 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 3 * * 1"
   workflow_dispatch:
 
-permissions: {}
-
 jobs:
-  validate-hacs:
-    runs-on: "ubuntu-latest"
+  hacs:
+    name: HACS
+    runs-on: ubuntu-latest
     steps:
-      - name: HACS validation
-        uses: "hacs/action@main"
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
         with:
-          category: "plugin"
+          category: integration
+
+  hassfest:
+    name: Hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master

@@ -1,1 +1,0 @@
-console.log("Homie Dashboard package initialized successfully.");

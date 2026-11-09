@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homie Dashboard — Setup</title>
+<style>
+  :root { --bg:#0d0d10; --card:#17171c; --card2:#1f1f26; --line:rgba(255,255,255,.09); --text:#eee; --muted:rgba(255,255,255,.55); --accent:#d4ae78; --danger:#e5665f; --ok:#6fcf97; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; background:var(--bg); color:var(--text); font:15px/1.45 "Montserrat", system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #app { display:flex; flex-direction:column; height:100%; max-width:980px; margin:0 auto; }
+  header { padding:18px 20px 10px; }
+  header h1 { font-size:20px; font-weight:500; letter-spacing:.04em; }
+  header h1 span { color:var(--accent); }
+  .steps { display:flex; gap:6px; margin-top:12px; overflow-x:auto; padding-bottom:4px; }
+  .step-chip { flex:none; padding:7px 13px; border-radius:99px; border:1px solid var(--line); background:none; color:var(--muted); font:inherit; font-size:12px; cursor:pointer; letter-spacing:.04em; }
+  .step-chip.active { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
+  .step-chip.done { color:var(--text); }
+  main { flex:1; overflow-y:auto; padding:8px 20px 24px; -webkit-overflow-scrolling:touch; }
+  footer { display:flex; gap:10px; justify-content:space-between; align-items:center; padding:14px 20px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); background:var(--bg); }
+  h2 { font-size:18px; font-weight:500; margin:14px 0 4px; }
+  p.lead { color:var(--muted); margin-bottom:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin:12px 0; }
+  .card h3 { font-size:14px; font-weight:600; margin-bottom:6px; }
+  .hint { color:var(--muted); font-size:13px; }
+  .warn { color:var(--danger); }
+  .ok { color:var(--ok); }
+  button.btn { font:inherit; font-size:14px; padding:11px 20px; border-radius:10px; border:1px solid var(--line); background:var(--card2); color:var(--text); cursor:pointer; }
+  button.btn.primary { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
+  button.btn.danger { color:var(--danger); }
+  button.btn:disabled { opacity:.4; cursor:default; }
+  button.link { background:none; border:none; color:var(--accent); font:inherit; font-size:12px; cursor:pointer; padding:2px 6px; }
+  input[type=text], input[type=password], input[type=number], select, textarea { font:inherit; font-size:14px; color:var(--text); background:var(--card2); border:1px solid var(--line); border-radius:8px; padding:8px 10px; width:100%; }
+  textarea { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:12px; min-height:340px; }
+  input[type=checkbox] { width:20px; height:20px; accent-color:var(--accent); flex:none; }
+  .search { margin-bottom:10px; }
+  .area-head { display:flex; align-items:center; justify-content:space-between; margin:16px 0 6px; padding:0 2px; color:var(--accent); font-size:12px; letter-spacing:.1em; text-transform:uppercase; }
+  .row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid var(--line); }
+  .row .nm { flex:1 1 220px; min-width:0; }
+  .row .nm b { font-weight:500; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row .nm small { color:var(--muted); font-size:11px; }
+  .row .extra { flex:2 1 300px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .row .extra input[type=text], .row .extra select { flex:1 1 130px; width:auto; }
+  .row .extra label { font-size:12px; color:var(--muted); display:flex; gap:6px; align-items:center; }
+  .row.missing .nm b { color:var(--danger); }
+  .field { margin:12px 0; }
+  .field > label { display:block; font-size:12px; color:var(--muted); margin-bottom:5px; letter-spacing:.04em; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:640px) { .grid2 { grid-template-columns:1fr; } }
+  details.card summary { cursor:pointer; font-weight:600; font-size:14px; }
+  .count { color:var(--muted); font-weight:400; margin-left:6px; }
+  .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:var(--card2); border:1px solid var(--accent); padding:10px 18px; border-radius:10px; z-index:10; max-width:90%; }
+  ul.sum { list-style:none; } ul.sum li { padding:7px 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; }
+</style>
+<script src="homie-common.js"></script>
+<script src="homie-defaults.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function () {
+"use strict";
+var B = null;
+try { B = window.parent && window.parent.homieBridge; } catch (e) {}
+var app = document.getElementById("app");
+if (!B) {
+  app.innerHTML = "<div style='padding:40px;text-align:center'><h2>Open Homie Dashboard from Home Assistant</h2><p class='lead'>This wizard runs inside the Home Assistant sidebar panel.</p></div>";
+  return;
+}
+var C = window.HomieCommon;
+var hass = function () { return B.hass(); };
+
+/* ───────────────────────── helpers ───────────────────────── */
+function h(tag, props) {
+  var el = document.createElement(tag);
+  props = props || {};
+  Object.keys(props).forEach(function (k) {
+    var v = props[k];
+    if (k === "class") el.className = v;
+    else if (k === "html") el.innerHTML = v;
+    else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v);
+    else if (k === "value" || k === "checked" || k === "disabled" || k === "selected") el[k] = v;
+    else if (v !== undefined && v !== null && v !== false) el.setAttribute(k, v === true ? "" : v);
+  });
+  for (var i = 2; i < arguments.length; i++) {
+    var c = arguments[i];
+    if (c === null || c === undefined || c === false) continue;
+    el.appendChild(typeof c === "string" || typeof c === "number" ? document.createTextNode(String(c)) : c);
+  }
+  return el;
+}
+function toast(msg) {
+  var t = h("div", { class: "toast" }, msg);
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 4500);
+}
+function areaOf(id) {
+  var H = hass(), e = H.entities && H.entities[id], a = e && e.area_id;
+  if (!a && e && e.device_id) { var d = H.devices && H.devices[e.device_id]; a = d && d.area_id; }
+  return (a && H.areas && H.areas[a]) ? H.areas[a].name : "";
+}
+function nameOf(id) { var s = hass().states[id]; return (s && s.attributes && s.attributes.friendly_name) || id; }
+function entityList(domains) {
+  var H = hass();
+  return Object.keys(H.states).filter(function (id) {
+    if (domains.indexOf(id.split(".")[0]) < 0) return false;
+    var r = H.entities && H.entities[id];
+    return !(r && (r.hidden || r.entity_category));
+  }).map(function (id) { return { id: id, name: nameOf(id), area: areaOf(id) }; })
+    .sort(function (a, b) { return (a.area ? 0 : 1) - (b.area ? 0 : 1) || a.area.localeCompare(b.area) || a.name.localeCompare(b.name); });
+}
+function autoLabel(name, area) {
+  if (area && name.toLowerCase().indexOf(area.toLowerCase() + " ") === 0) name = name.slice(area.length + 1);
+  return name;
+}
+var SCENE_STYLES = [
+  [/relax|chill|calm|cosy|cozy/i, "relax", "#4a2d7a"], [/romantic|love|date/i, "romantic", "#8b2252"],
+  [/movie|cinema|film|tv/i, "movie", "#f0ece4"], [/candle/i, "candle", "#7a4a1e"],
+  [/fire/i, "fireplace", "#8b3a10"], [/night|sleep|bed/i, "nightlight", "#6b3800"]
+];
+function sceneStyle(label) {
+  for (var i = 0; i < SCENE_STYLES.length; i++) if (SCENE_STYLES[i][0].test(label)) return { icon: "@icon:scenes." + SCENE_STYLES[i][1], color: SCENE_STYLES[i][2] };
+  return { icon: "@icon:scenes.relax", color: "#3a4a6a" };
+}
+
+/* ───────────────────────── state ───────────────────────── */
+var cfg = C.clone(B.rawConfig) || {};
+var settings = Object.assign({ alarmCode: "", photoFrameInterval: 20 }, B.settings || {});
+var KINDS = [
+  { id: "lights",    label: "Lights",    domains: ["light"],                   mode: "rooms",  chip: { showCount: true } },
+  { id: "scenes",    label: "Scenes",    domains: ["scene"],                   mode: "scenes", chip: { noRoomGrouping: true, isSceneChip: true } },
+  { id: "aircon",    label: "Air Con",   domains: ["climate"],                 mode: "flat",   chip: { showCount: true } },
+  { id: "purifiers", label: "Purifiers", domains: ["fan"],                     mode: "flat",   chip: { showCount: true } },
+  { id: "blinds",    label: "Blinds",    domains: ["cover"],                   mode: "flat",   chip: { showCount: true, noRoomGrouping: true }, curtain: true },
+  { id: "switches",  label: "Switches",  domains: ["switch", "input_boolean"], mode: "flat",   chip: { showCount: true } }
+];
+var kindById = function (id) { return KINDS.filter(function (k) { return k.id === id; })[0]; };
+var model, camMap, musicMap, calMap;
+
+function parseChip(k, chip) {
+  var map = new Map();
+  var ok = true;
+  function rest(o, drop) { var r = {}; Object.keys(o).forEach(function (x) { if (drop.indexOf(x) < 0) r[x] = o[x]; }); return r; }
+  if (k.mode === "rooms") {
+    if (chip.subEntities || !Array.isArray(chip.subGroups)) return null;
+    chip.subGroups.forEach(function (g) { (g.subEntities || []).forEach(function (e) {
+      if (e.expandable) ok = false;
+      map.set(e.entity, { label: e.label, room: g.label, x: rest(e, ["label", "entity"]) }); }); });
+  } else if (k.mode === "scenes") {
+    if (!Array.isArray(chip.subGroups)) return null;
+    chip.subGroups.forEach(function (g) { (g.scenes || []).forEach(function (s) {
+      map.set(s.entity, { label: s.label, room: g.label, color: s.color, icon: s.icon, x: rest(s, ["label", "entity", "color", "icon"]) }); }); });
+  } else {
+    if (chip.subGroups || !Array.isArray(chip.subEntities)) return null;
+    chip.subEntities.forEach(function (e) {
+      if (e.expandable) ok = false;
+      map.set(e.entity, { label: e.label, x: rest(e, ["label", "entity"]) }); });
+  }
+  return ok ? { map: map, meta: rest(chip, ["subGroups", "subEntities"]) } : null;
+}
+function parseControls(controls) {
+  var m = { order: [], maps: {}, meta: {} };
+  KINDS.forEach(function (k) { m.maps[k.id] = new Map(); });
+  (controls || []).forEach(function (chip) {
+    var id = chip._homie || (KINDS.filter(function (k) { return k.label.toLowerCase() === String(chip.label || "").toLowerCase(); })[0] || {}).id;
+    var k = id && kindById(id), parsed = k && !m.maps[k.id].size && parseChip(k, chip);
+    if (parsed) { m.maps[k.id] = parsed.map; m.meta[k.id] = parsed.meta; m.order.push({ kind: k.id }); }
+    else m.order.push({ custom: chip });
+  });
+  return m;
+}
+function initModels() {
+  model = parseControls(cfg.controls);
+  camMap = new Map((cfg.cameras || []).map(function (c) { return [c.entity, { label: c.label, motion: c.motionEntity || "" }]; }));
+  musicMap = new Map((cfg.musicPlayers || []).map(function (p) { return [p.entity, { label: p.label }]; }));
+  var labels = (cfg.calendarDashboard && cfg.calendarDashboard.labels) || {};
+  calMap = new Map((cfg.calendarEntities || []).map(function (e) { return [e, { label: labels[e] || autoLabel(nameOf(e), "") }]; }));
+}
+function buildControls() {
+  var out = [];
+  var order = model.order.slice();
+  KINDS.forEach(function (k) { if (!order.some(function (o) { return o.kind === k.id; })) order.push({ kind: k.id }); });
+  order.forEach(function (o) {
+    if (o.custom) { out.push(o.custom); return; }
+    var k = kindById(o.kind), map = model.maps[k.id];
+    if (!map.size) return;
+    var chip = Object.assign({ label: k.label }, k.chip, model.meta[k.id] || {}, { _homie: k.id });
+    var entries = Array.from(map.entries());
+    if (k.mode === "flat") {
+      chip.subEntities = entries.map(function (en) { return Object.assign({ label: en[1].label || nameOf(en[0]), entity: en[0] }, en[1].x || {}); });
+    } else {
+      var rooms = [], by = {};
+      entries.forEach(function (en) { var r = en[1].room || "Other"; if (!by[r]) { by[r] = []; rooms.push(r); } by[r].push(en); });
+      chip.subGroups = rooms.map(function (r) {
+        if (k.mode === "rooms") return { label: r, subEntities: by[r].map(function (en) { return Object.assign({ label: en[1].label || nameOf(en[0]), entity: en[0] }, en[1].x || {}); }) };
+        return { label: r, scenes: by[r].map(function (en) { var st = sceneStyle(en[1].label || ""); return Object.assign({ label: en[1].label, entity: en[0], color: en[1].color || st.color, icon: en[1].icon || st.icon }, en[1].x || {}); }) };
+      });
+    }
+    out.push(chip);
+  });
+  return out;
+}
+var PALETTE = ["#ff6b73", "#6cc0f0", "#d4ae78", "#8fd694", "#b58cf0", "#f0a35e"];
+function collect() {
+  cfg.controls = buildControls();
+  cfg.cameras = Array.from(camMap.entries()).map(function (e) { var o = { entity: e[0], label: e[1].label || nameOf(e[0]) }; if (e[1].motion) o.motionEntity = e[1].motion; return o; });
+  cfg.musicPlayers = Array.from(musicMap.entries()).map(function (e) { return { entity: e[0], label: e[1].label || nameOf(e[0]) }; });
+  cfg.calendarEntities = Array.from(calMap.keys());
+  var old = cfg.calendarDashboard || {}, labels = {}, colors = {}, i = 0;
+  cfg.calendarEntities.concat(cfg.mealCalendarEntity ? [cfg.mealCalendarEntity] : []).forEach(function (e) {
+    labels[e] = (calMap.get(e) && calMap.get(e).label) || (old.labels && old.labels[e]) || (e === cfg.mealCalendarEntity ? "Meals" : nameOf(e));
+    colors[e] = (old.colors && old.colors[e]) || PALETTE[i++ % PALETTE.length];
+  });
+  cfg.calendarDashboard = { labels: labels, colors: colors };
+}
+
+/* ───────────────────────── widgets ───────────────────────── */
+function entitySelect(domains, value, onchange, filter) {
+  var list = entityList(domains);
+  if (filter) list = list.filter(filter);
+  var sel = h("select", { onchange: function () { onchange(sel.value); } }, h("option", { value: "" }, "— none —"));
+  var seen = false;
+  list.forEach(function (e) { if (e.id === value) seen = true; sel.appendChild(h("option", { value: e.id, selected: e.id === value }, e.name + "  (" + e.id + ")")); });
+  if (value && !seen) sel.appendChild(h("option", { value: value, selected: true }, value + " (not found)"));
+  sel.value = value || "";
+  return sel;
+}
+function field(label, control, hint) { return h("div", { class: "field" }, h("label", {}, label), control, hint ? h("div", { class: "hint", style: "margin-top:5px" }, hint) : null); }
+
+/* Generic checkbox picker. opts: kind, map, rooms(bool), scenes(bool), curtain(bool), motion(bool), domains */
+function picker(opts) {
+  var map = opts.map, domains = opts.domains;
+  var all = entityList(domains), known = {};
+  all.forEach(function (e) { known[e.id] = e; });
+  var wrap = h("div", {});
+  var search = h("input", { type: "text", class: "search", placeholder: "Search by name or entity id…", oninput: draw });
+  var counter = h("span", { class: "count" });
+  var body = h("div", {});
+  wrap.appendChild(h("div", { style: "display:flex;align-items:center;gap:8px" }, search, counter));
+  wrap.appendChild(body);
+
+  function motionOptions() { return entityList(["binary_sensor"]).filter(function (e) { var s = hass().states[e.id]; var dc = s && s.attributes && s.attributes.device_class; return dc === "motion" || dc === "occupancy" || dc === "moving" || /motion/i.test(e.id); }); }
+  function guessMotion(camId) {
+    var H = hass(), cam = H.entities && H.entities[camId], opts2 = motionOptions();
+    if (cam && cam.device_id) { var same = opts2.filter(function (m) { var r = H.entities[m.id]; return r && r.device_id === cam.device_id; }); if (same.length) return same[0].id; }
+    var stem = camId.split(".")[1].replace(/_(high|medium|low)_resolution_channel(_insecure)?$/, "").replace(/_(snapshot|stream|fluent|main|sub)$/, "");
+    var m2 = opts2.filter(function (m) { return m.id.split(".")[1].indexOf(stem) === 0; });
+    return m2.length ? m2[0].id : "";
+  }
+
+  function rowFor(e, missing) {
+    var checked = map.has(e.id);
+    var row = h("div", { class: "row" + (missing ? " missing" : "") });
+    function render() {
+      row.innerHTML = "";
+      var cb = h("input", { type: "checkbox", checked: map.has(e.id), onchange: function () {
+        if (cb.checked) {
+          var label = autoLabel(e.name, e.area), entry = { label: label, x: {} };
+          if (opts.rooms || opts.scenes) entry.room = e.area || "Other";
+          if (opts.scenes) { var st = sceneStyle(label); entry.color = st.color; entry.icon = st.icon; }
+          if (opts.motion) entry.motion = guessMotion(e.id);
+          map.set(e.id, entry);
+        } else map.delete(e.id);
+        render(); count();
+      } });
+      row.appendChild(cb);
+      row.appendChild(h("div", { class: "nm" }, h("b", {}, e.name), h("small", {}, e.id + (missing ? " — not found in Home Assistant" : ""))));
+      var cur = map.get(e.id);
+      if (cur) {
+        var extra = h("div", { class: "extra" });
+        extra.appendChild(h("input", { type: "text", value: cur.label || "", placeholder: "Label", oninput: function (ev) { cur.label = ev.target.value; } }));
+        if (opts.rooms || opts.scenes) extra.appendChild(h("input", { type: "text", value: cur.room || "", placeholder: "Room", oninput: function (ev) { cur.room = ev.target.value; } }));
+        if (opts.motion) {
+          var ms = entitySelect(["binary_sensor"], cur.motion, function (v) { cur.motion = v; }, function (x) { return motionOptions().some(function (m) { return m.id === x.id; }); });
+          ms.title = "Motion sensor (optional)";
+          extra.appendChild(ms);
+        }
+        if (opts.curtain) extra.appendChild(h("label", {}, h("input", { type: "checkbox", checked: !!(cur.x && cur.x.isCurtain), onchange: function (ev) { cur.x = cur.x || {}; if (ev.target.checked) cur.x.isCurtain = true; else delete cur.x.isCurtain; } }), "Side curtain"));
+        row.appendChild(extra);
+      }
+    }
+    render();
+    return row;
+  }
+  function count() { counter.textContent = map.size + " selected"; }
+  function draw() {
+    body.innerHTML = "";
+    var q = search.value.trim().toLowerCase(), groups = {}, order = [];
+    var shown = all.filter(function (e) { return !q || e.name.toLowerCase().indexOf(q) >= 0 || e.id.indexOf(q) >= 0; });
+    shown.forEach(function (e) { var a = e.area || "No area"; if (!groups[a]) { groups[a] = []; order.push(a); } groups[a].push(e); });
+    if (!shown.length) body.appendChild(h("p", { class: "hint", style: "padding:14px 2px" }, all.length ? "No matches." : "No matching entities were found in Home Assistant."));
+    order.forEach(function (a) {
+      var items = groups[a];
+      body.appendChild(h("div", { class: "area-head" }, h("span", {}, a),
+        h("span", {}, h("button", { class: "link", onclick: function () { items.forEach(function (e) { if (!map.has(e.id)) { var lab = autoLabel(e.name, e.area), en = { label: lab, x: {} }; if (opts.rooms || opts.scenes) en.room = e.area || "Other"; if (opts.scenes) { var st = sceneStyle(lab); en.color = st.color; en.icon = st.icon; } if (opts.motion) en.motion = guessMotion(e.id); map.set(e.id, en); } }); draw(); } }, "Select all"),
+                       h("button", { class: "link", onclick: function () { items.forEach(function (e) { map.delete(e.id); }); draw(); } }, "None"))));
+      items.forEach(function (e) { body.appendChild(rowFor(e, false)); });
+    });
+    if (!q) {
+      var miss = Array.from(map.keys()).filter(function (id) { return !known[id]; });
+      if (miss.length) {
+        body.appendChild(h("div", { class: "area-head" }, h("span", {}, "Not found in Home Assistant")));
+        miss.forEach(function (id) { body.appendChild(rowFor({ id: id, name: id, area: "" }, true)); });
+      }
+    }
+    count();
+  }
+  draw();
+  return wrap;
+}
+
+/* ───────────────────────── import from v4 config.js ───────────────────────── */
+function parseOldConfig(text) {
+  var fn = new Function("ICONS", text + '\n;return {CONFIG: CONFIG, code: (typeof ALARM_CODE !== "undefined" ? ALARM_CODE : ""), interval: (typeof PHOTO_FRAME_INTERVAL !== "undefined" ? PHOTO_FRAME_INTERVAL : 20)};');
+  var r = fn(C.makeIconProxy());
+  var d = C.serialize(r.CONFIG);
+  delete d.wsUrl; delete d.welcomeText;
+  d = C.sanitize(d) || {};
+  var code = String(r.code || "");
+  return { config: d, settings: { alarmCode: /^YOUR_/.test(code) ? "" : code, photoFrameInterval: Number(r.interval) || 20 } };
+}
+function applyImport(text, sourceLabel) {
+  try {
+    var res = parseOldConfig(text);
+    cfg = res.config; settings = Object.assign(settings, res.settings);
+    initModels();
+    var n = (cfg.controls || []).length;
+    toast("Imported from " + sourceLabel + " — " + n + " control groups, " + (cfg.cameras || []).length + " cameras. Review each step, then save.");
+    go(1);
+  } catch (err) {
+    toast("Could not read that file: " + (err && err.message ? err.message : err));
+  }
+}
+var detected = null;
+function detectOld() {
+  var urls = ["/local/community/homie-dashboard/config.js", "/local/homie-dashboard/config.js", "/local/config.js"];
+  return urls.reduce(function (p, u) {
+    return p.then(function (found) {
+      if (found) return found;
+      return fetch(u, { cache: "no-store" }).then(function (r) { return r.ok ? r.text() : ""; }).then(function (t) {
+        return (/const\s+CONFIG\s*=/.test(t) && /HA_TOKEN/.test(t)) ? { url: u, text: t } : null;
+      }).catch(function () { return null; });
+    });
+  }, Promise.resolve(null));
+}
+
+/* ───────────────────────── steps ───────────────────────── */
+var steps = [
+  { id: "welcome", title: "Welcome", render: function (m) {
+    m.appendChild(h("h2", {}, "Welcome to Homie Dashboard"));
+    m.appendChild(h("p", { class: "lead" }, "Choose the lights, scenes, cameras and more that appear on your dashboard. Nothing here needs a token or a file edit, and your choices are kept safe when Homie updates."));
+    if (!B.isAdmin) m.appendChild(h("div", { class: "card" }, h("p", { class: "warn" }, "Setup needs a Home Assistant administrator account. Sign in as an admin to make changes.")));
+    var up = h("div", { class: "card" }, h("h3", {}, "Coming from Homie v4?"),
+      h("p", { class: "hint" }, "Import your existing config.js and every entity, label and setting carries over. The token inside it is never read or stored."));
+    var status = h("p", { class: "hint", style: "margin-top:8px" }, "Looking for your old config.js…");
+    up.appendChild(status);
+    var actions = h("div", { style: "display:flex;gap:10px;flex-wrap:wrap;margin-top:10px" });
+    var file = h("input", { type: "file", accept: ".js,text/javascript", style: "display:none", onchange: function () {
+      var f = file.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { applyImport(String(rd.result), f.name); }; rd.readAsText(f); } });
+    actions.appendChild(h("button", { class: "btn", onclick: function () { file.click(); } }, "Choose config.js…"));
+    up.appendChild(actions); up.appendChild(file);
+    m.appendChild(up);
+    (detected ? Promise.resolve(detected) : detectOld()).then(function (d) {
+      detected = d || false;
+      if (d) {
+        status.innerHTML = ""; status.appendChild(h("span", { class: "ok" }, "Found your old config at " + d.url));
+        actions.insertBefore(h("button", { class: "btn primary", onclick: function () { applyImport(d.text, d.url); } }, "Import it"), actions.firstChild);
+      } else status.textContent = "No old config found automatically. If you used v4, choose your config.js file below. Otherwise click Next to start fresh.";
+    });
+    m.appendChild(h("div", { class: "card" }, h("h3", {}, "Photos & backgrounds"),
+      h("p", { class: "hint" }, "Copy pictures into /config/homie_dashboard/photos/ (photo frame) and /config/homie_dashboard/photos/background/ (overview backgrounds) on your Home Assistant server. They are detected automatically. Found now: " + B.photos.frame.length + " photo(s), " + B.photos.background.length + " background(s).")));
+  } },
+  { id: "lights", title: "Lights", render: function (m) {
+    m.appendChild(h("h2", {}, "Lights"));
+    m.appendChild(h("p", { class: "lead", html: "Tick the lights to show. Rooms come from your Home Assistant areas; you can rename the room and label of anything you pick." }));
+    m.appendChild(picker({ domains: ["light"], map: model.maps.lights, rooms: true }));
+  } },
+  { id: "scenes", title: "Scenes", render: function (m) {
+    m.appendChild(h("h2", {}, "Scenes"));
+    m.appendChild(h("p", { class: "lead" }, "Pick your scenes. Icons and colours are chosen from the scene name (relax, movie, candle…)."));
+    m.appendChild(picker({ domains: ["scene"], map: model.maps.scenes, scenes: true }));
+  } },
+  { id: "more", title: "Climate & more", render: function (m) {
+    m.appendChild(h("h2", {}, "Climate, purifiers, blinds & switches"));
+    m.appendChild(h("p", { class: "lead" }, "Each group becomes a button on the overview screen. Leave a group empty to hide it."));
+    ["aircon", "purifiers", "blinds", "switches"].forEach(function (id) {
+      var k = kindById(id), d = h("details", { class: "card" }, h("summary", {}, k.label, h("span", { class: "count" }, model.maps[id].size ? model.maps[id].size + " selected" : "")));
+      var built = false;
+      d.addEventListener("toggle", function () { if (d.open && !built) { built = true; d.appendChild(picker({ domains: k.domains, map: model.maps[id], curtain: !!k.curtain })); } });
+      if (model.maps[id].size) { d.open = true; }
+      m.appendChild(d);
+    });
+    var customs = model.order.filter(function (o) { return o.custom; });
+    if (customs.length) {
+      var c = h("div", { class: "card" }, h("h3", {}, "Other groups kept from your old config"), h("p", { class: "hint" }, "These have a custom layout and are carried over unchanged. Edit them in the Advanced step."));
+      customs.forEach(function (o) {
+        var count = JSON.stringify(o.custom).split('"entity"').length - 1;
+        c.appendChild(h("div", { class: "row" }, h("div", { class: "nm" }, h("b", {}, o.custom.label || "(unnamed)"), h("small", {}, count + " entities")),
+          h("button", { class: "btn danger", onclick: function () { model.order = model.order.filter(function (x) { return x !== o; }); render(); } }, "Remove")));
+      });
+      m.appendChild(c);
+    }
+  } },
+  { id: "cameras", title: "Cameras", render: function (m) {
+    m.appendChild(h("h2", {}, "Cameras"));
+    m.appendChild(h("p", { class: "lead" }, "The camera dashboard shows up to six cameras. For UniFi Protect, choose the high-resolution channel entity; the dashboard falls back to lower channels automatically. Motion sensors are suggested when found."));
+    m.appendChild(picker({ domains: ["camera"], map: camMap, motion: true }));
+    var db = cfg.doorbell = cfg.doorbell || {};
+    var card = h("div", { class: "card" }, h("h3", {}, "Doorbell (optional)"),
+      h("p", { class: "hint" }, "When this button entity fires, the dashboard shows the chosen camera full screen."));
+    card.appendChild(field("Doorbell button", entitySelect(["button", "input_button", "binary_sensor", "event"], db.buttonEntity, function (v) { db.buttonEntity = v; })));
+    card.appendChild(field("Doorbell camera", entitySelect(["camera"], db.cameraEntity, function (v) { db.cameraEntity = v; })));
+    card.appendChild(field("Overlay title", h("input", { type: "text", value: db.label || "Doorbell", oninput: function (e) { db.label = e.target.value; } })));
+    m.appendChild(card);
+  } },
+  { id: "home", title: "Home", render: function (m) {
+    m.appendChild(h("h2", {}, "Weather, alarm, music & calendars"));
+    var w = h("div", { class: "card" }, h("h3", {}, "Weather & sky"));
+    cfg.weather = cfg.weather || {};
+    w.appendChild(field("Weather entity", entitySelect(["weather"], cfg.weather.entity, function (v) { cfg.weather.entity = v; })));
+    w.appendChild(field("Temperature unit", (function () { var s = h("select", { onchange: function () { cfg.weather.tempUnit = s.value; } }, h("option", { value: "°C" }, "°C"), h("option", { value: "°F" }, "°F")); s.value = cfg.weather.tempUnit || "°C"; return s; })()));
+    cfg.sun = cfg.sun || {};
+    if (!cfg.sun.sunrise && hass().states["sensor.sun_next_rising"]) cfg.sun.sunrise = "sensor.sun_next_rising";
+    if (!cfg.sun.sunset && hass().states["sensor.sun_next_setting"]) cfg.sun.sunset = "sensor.sun_next_setting";
+    if (!cfg.sun.timezone) cfg.sun.timezone = B.timeZone || "";
+    w.appendChild(h("div", { class: "grid2" },
+      field("Sunrise sensor", entitySelect(["sensor"], cfg.sun.sunrise, function (v) { cfg.sun.sunrise = v; }, function (e) { return /sun|rising|sunrise/i.test(e.id); })),
+      field("Sunset sensor", entitySelect(["sensor"], cfg.sun.sunset, function (v) { cfg.sun.sunset = v; }, function (e) { return /sun|setting|sunset/i.test(e.id); }))));
+    cfg.moon = cfg.moon || {};
+    if (!cfg.moon.entity && hass().states["sensor.moon"]) cfg.moon.entity = "sensor.moon";
+    w.appendChild(field("Moon phase sensor (optional)", entitySelect(["sensor"], cfg.moon.entity, function (v) { cfg.moon.entity = v; }, function (e) { return /moon/i.test(e.id); })));
+    m.appendChild(w);
+
+    var a = h("div", { class: "card" }, h("h3", {}, "Alarm (Alarmo or any alarm panel)"));
+    a.appendChild(field("Alarm panel", entitySelect(["alarm_control_panel"], cfg.alarmEntity, function (v) { cfg.alarmEntity = v; })));
+    a.appendChild(field("Alarm code (optional)", h("input", { type: "password", autocomplete: "off", value: settings.alarmCode || "", oninput: function (e) { settings.alarmCode = e.target.value; } }),
+      "Sent with arm/disarm. Leave empty to show a PIN keypad on the dashboard instead. Stored inside Home Assistant, not in a web-readable file."));
+    m.appendChild(a);
+
+    var mu = h("div", { class: "card" }, h("h3", {}, "Music players"));
+    mu.appendChild(picker({ domains: ["media_player"], map: musicMap }));
+    m.appendChild(mu);
+
+    var ca = h("div", { class: "card" }, h("h3", {}, "Calendars"));
+    ca.appendChild(picker({ domains: ["calendar"], map: calMap }));
+    ca.appendChild(field("Meal calendar (optional)", entitySelect(["calendar"], cfg.mealCalendarEntity, function (v) { cfg.mealCalendarEntity = v; })));
+    m.appendChild(ca);
+
+    m.appendChild(field("Photo frame: seconds per photo", h("input", { type: "number", min: "3", max: "600", value: settings.photoFrameInterval, oninput: function (e) { settings.photoFrameInterval = Math.max(3, Number(e.target.value) || 20); } })));
+  } },
+  { id: "advanced", title: "Advanced", render: function (m) {
+    collect();
+    m.appendChild(h("h2", {}, "Advanced"));
+    m.appendChild(h("p", { class: "lead" }, "For power users: every other dashboard option (solar, garden, indoor air quality, presence, pet stats, home stats, security buttons, alarm groups…) is edited here as JSON. Imported v4 settings for these sections are already in place. Only your own changes are listed; built-in defaults fill the rest."));
+    var ta = h("textarea", { spellcheck: "false" }); ta.value = JSON.stringify(cfg, null, 2);
+    m.appendChild(ta);
+    var row = h("div", { style: "display:flex;gap:10px;margin-top:12px;flex-wrap:wrap" });
+    row.appendChild(h("button", { class: "btn", onclick: function () {
+      try { var v = JSON.parse(ta.value); if (!C.isPlain(v)) throw new Error("Top level must be an object"); cfg = v; initModels(); toast("JSON applied"); }
+      catch (e) { toast("Invalid JSON: " + e.message); } } }, "Apply JSON"));
+    row.appendChild(h("button", { class: "btn danger", onclick: function () {
+      if (!confirm("Delete ALL saved Homie settings and start over?")) return;
+      B.resetConfig().then(function () { cfg = {}; settings = { alarmCode: "", photoFrameInterval: 20 }; initModels(); go(0); toast("Settings cleared"); }); } }, "Reset everything"));
+    m.appendChild(row);
+  } },
+  { id: "review", title: "Review & save", render: function (m) {
+    collect();
+    m.appendChild(h("h2", {}, "Review"));
+    var rows = [];
+    function r(l, v) { rows.push(h("li", {}, h("span", {}, l), h("span", { class: "hint" }, v))); }
+    (cfg.controls || []).forEach(function (c) {
+      var n = JSON.stringify(c).split('"entity"').length - 1;
+      r(c.label, n + " item" + (n === 1 ? "" : "s"));
+    });
+    r("Cameras", (cfg.cameras || []).length);
+    r("Weather", (cfg.weather && cfg.weather.entity) || "not set");
+    r("Alarm panel", cfg.alarmEntity || "not set");
+    r("Music players", (cfg.musicPlayers || []).length);
+    r("Calendars", (cfg.calendarEntities || []).length);
+    var ul = h("ul", { class: "sum" }); rows.forEach(function (x) { ul.appendChild(x); });
+    m.appendChild(h("div", { class: "card" }, ul));
+    m.appendChild(h("p", { class: "hint" }, "You can reopen this wizard any time from Settings → About → Open setup in the dashboard."));
+    if (!B.isAdmin) m.appendChild(h("p", { class: "warn" }, "Saving needs an administrator account."));
+  } }
+];
+
+/* ───────────────────────── shell ───────────────────────── */
+var cur = 0;
+var elHeader, elMain, elFooter;
+function go(i) { cur = Math.max(0, Math.min(steps.length - 1, i)); render(); }
+function render() {
+  app.innerHTML = "";
+  elHeader = h("header", {}, h("h1", {}, "HOMIE ", h("span", {}, "SETUP")));
+  var chips = h("div", { class: "steps" });
+  steps.forEach(function (s, i) {
+    chips.appendChild(h("button", { class: "step-chip" + (i === cur ? " active" : i < cur ? " done" : ""), onclick: function () { go(i); } }, (i + 1) + ". " + s.title));
+  });
+  elHeader.appendChild(chips);
+  elMain = h("main", {});
+  steps[cur].render(elMain);
+  var last = cur === steps.length - 1;
+  var save = h("button", { class: "btn primary", disabled: !B.isAdmin, onclick: function () {
+    collect(); save.disabled = true; save.textContent = "Saving…";
+    B.saveConfig({ config: cfg, settings: settings }).then(function () { return B.openDashboard(); })
+      .catch(function (e) { save.disabled = false; save.textContent = "Save & open dashboard"; toast("Could not save: " + (e && e.message ? e.message : JSON.stringify(e))); });
+  } }, "Save & open dashboard");
+  elFooter = h("footer", {},
+    h("div", { style: "display:flex;gap:10px" },
+      h("button", { class: "btn", disabled: cur === 0, onclick: function () { go(cur - 1); } }, "Back"),
+      B.configured ? h("button", { class: "btn", onclick: function () { B.openDashboard(); } }, "Exit without saving") : null),
+    last ? save : h("button", { class: "btn primary", onclick: function () { go(cur + 1); } }, "Next"));
+  app.appendChild(elHeader); app.appendChild(elMain); app.appendChild(elFooter);
+}
+
+initModels();
+render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Homie Dashboard",
+        "description": "Choose how Homie appears in the Home Assistant sidebar. After setup, open Homie from the sidebar and the setup wizard will guide you through selecting your lights, scenes, cameras and more.",
+        "data": {
+          "sidebar_title": "Sidebar title",
+          "sidebar_icon": "Sidebar icon",
+          "require_admin": "Only show to administrators"
+        }
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Homie Dashboard is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Homie Dashboard options",
+        "data": {
+          "sidebar_title": "Sidebar title",
+          "sidebar_icon": "Sidebar icon",
+          "require_admin": "Only show to administrators"
+        }
+      }
+    }
+  }
+}

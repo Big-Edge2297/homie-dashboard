@@ -1,0 +1,14 @@
+{
+  "domain": "homie_dashboard",
+  "name": "Homie Dashboard",
+  "codeowners": ["@Big-Edge2297"],
+  "config_flow": true,
+  "dependencies": ["http", "frontend", "panel_custom", "websocket_api"],
+  "documentation": "https://github.com/Big-Edge2297/homie-dashboard",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/Big-Edge2297/homie-dashboard/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "5.0.0"
+}

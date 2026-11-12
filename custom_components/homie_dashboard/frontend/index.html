@@ -15,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <!-- DASHBOARD VERSION — update this when releasing a new version -->
-<script>const DASHBOARD_VERSION = "5.0.0";</script>
+<script>const DASHBOARD_VERSION = "5.1.0";</script>
 <!-- GITHUB REPO — used only to check for the latest tagged release in Settings -->
 <script>const GITHUB_REPO = "Big-Edge2297/homie-dashboard";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -23,9 +23,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Homie Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1039,7 +1037,7 @@
   .alm-modal-btn { flex:1; padding:13px 8px; border-radius:12px; font-family:inherit; font-size:12px; cursor:pointer; background:transparent; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.75); }
   .alm-modal-btn.danger { background:#ff4d57; border-color:#ff4d57; color:#fff; font-weight:600; }
 
-  /* ── Alarm PIN keypad (shown when ALARM_CODE is empty in config.js) ── */
+  /* ── Alarm PIN keypad (shown when no alarm code is stored in the Setup wizard) ── */
   #alarm-pin { position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; padding:24px; background:rgba(0,0,0,0.65); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); opacity:0; pointer-events:none; transition:opacity .2s; }
   #alarm-pin.show { opacity:1; pointer-events:auto; }
   .apin-sheet { width:min(320px,100%); padding:24px 22px 20px; text-align:center; background:#0f1214; border:1px solid rgba(255,255,255,0.1); border-radius:22px; transform:translateY(12px) scale(.97); transition:transform .2s; }
@@ -9311,7 +9309,7 @@
   </div>
 </div>
 
-<!-- ─── ALARM PIN KEYPAD (used only when ALARM_CODE is empty) ─── -->
+<!-- ─── ALARM PIN KEYPAD (used only when no alarm code is stored) ─── -->
 <div id="alarm-pin" role="dialog" aria-modal="true" aria-labelledby="apin-title" onclick="if(event.target===this)alarmPinCancel()">
   <div class="apin-sheet">
     <div class="apin-title" id="apin-title">Enter code</div>
@@ -14226,10 +14224,10 @@ let _alarmWsHandler  = null;
 let _alarmWsTimeout  = null;
 
 /* Public entry point for all arm/disarm buttons.
- * ALARM_CODE set in config.js  → sent silently, no keypad.
- * ALARM_CODE empty             → keypad is shown and the typed PIN is sent. */
+ * Alarm code stored in setup → sent silently, no keypad.
+ * No alarm code stored         → keypad is shown and the typed PIN is sent. */
 function alarmAction(service) {
-  if (ALARM_CODE) { _alarmSend(service, ALARM_CODE); return; }
+  if (ALARM_CODE_STORED) { _alarmSend(service, null, true); return; }
   alarmPinOpen(service);
 }
 
@@ -14284,7 +14282,7 @@ document.addEventListener("keydown", e => {
   else if (e.key === "Escape") alarmPinCancel();
 });
 
-function _alarmSend(service, code) {
+function _alarmSend(service, code, useStoredCode) {
   haptic("medium");
   setAlarmFeedback("Sending…", "");
   if (!_ws || _ws.readyState !== WebSocket.OPEN) {
@@ -14314,13 +14312,18 @@ function _alarmSend(service, code) {
   };
   const haDomain  = "alarm_control_panel";
   const haService = serviceMap[service] || service;
-  _ws.send(JSON.stringify({
-    id: msgId,
-    type: "call_service",
-    domain: haDomain,
-    service: haService,
-    service_data: serviceData,
-  }));
+  if (useStoredCode) {
+    // Home Assistant adds the stored alarm code on the server; it never reaches this page.
+    _ws.send(JSON.stringify({ id: msgId, type: "homie_dashboard/alarm", service: service }));
+  } else {
+    _ws.send(JSON.stringify({
+      id: msgId,
+      type: "call_service",
+      domain: haDomain,
+      service: haService,
+      service_data: serviceData,
+    }));
+  }
 
   _alarmWsHandler = (evt) => {
     let msg;
@@ -14337,10 +14340,10 @@ function _alarmSend(service, code) {
       // Give the user a clear hint: wrong PIN vs connection/config problem
       const isCodeError = /code|invalid|incorrect/i.test(raw);
       const friendlyMsg = isCodeError
-        ? (ALARM_CODE ? "Wrong PIN — check the alarm code in the Setup wizard" : "Wrong code — try again")
+        ? (ALARM_CODE_STORED ? "Wrong PIN — check the alarm code in the Setup wizard" : "Wrong code — try again")
         : "Connection error — check WebSocket status";
       setAlarmFeedback(friendlyMsg, "error");
-      if (isCodeError && !ALARM_CODE) {
+      if (isCodeError && !ALARM_CODE_STORED) {
         // Re-open the keypad with an error so the user can retry immediately
         alarmPinOpen(service);
         document.getElementById("apin-err").textContent = "Wrong code";
@@ -14716,7 +14719,7 @@ async function _mbLoad(entity, mediaContentId, mediaContentType, title) {
     if (msg.id !== msgId) return;
     clearTimeout(_handlerTimeout);
     wsRef.removeEventListener("message", _handler);
-    if (!msg.success) { list.innerHTML = `<div class="mb-loading">${msg.error?.message || "Failed"}</div>`; return; }
+    if (!msg.success) { list.innerHTML = `<div class="mb-loading">${escapeHtml(msg.error?.message || "Failed")}</div>`; return; }
     const result = msg.result;
 
     if (isDrill) {
@@ -16182,7 +16185,7 @@ function _pfShow() {
   const img = document.getElementById("pf-img");
   if (!img) return;
   img.classList.remove("visible");
-  img.src = _pf.images[_pf.index];
+  img.src = homiePhotoUrl(_pf.images[_pf.index]);
   // If the image fails to load (wrong path, missing file), skip to the next one
   // so the slideshow never stalls on a blank frame.
   img.onerror = () => {
@@ -17420,7 +17423,7 @@ function _applyPictureBg() {
   const img = _getActiveBackgroundImage();
   if (!img) return;
   document.body.style.background = '#07080a';
-  const layered = `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url("${img}")`;
+  const layered = `linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)), url("${homiePhotoUrl(img)}")`;
 
   const ids = ['hero-bg', 'ov2-hero-bg'];
   ids.forEach(id => {
@@ -21067,7 +21070,7 @@ function _refreshOv3() {
 
 /* ─── FONT PICKER ──────────────────────────────────────────────────────────
  * Manages display font (clock/weather) and body font (everything else).
- * Fonts are loaded on demand via Google Fonts API.
+ * Fonts are bundled (fonts/fonts.css) and loaded by the browser on demand.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 const FONT_CATALOGUE = [
@@ -21090,22 +21093,9 @@ const WEIGHT_OPTIONS = [
   { value: 400, label: 'Regular' },
 ];
 
-let _fontLinkEl = null;
-
-function _buildGoogleFontsUrl(font, weight) {
-  const entry = FONT_CATALOGUE.find(f => f.name === font) || FONT_CATALOGUE[0];
-  const weightsToLoad = [100, 300, 400].filter(w => entry.weights.includes(w) || w === weight);
-  const unique = [...new Set([...entry.weights, weight])].filter(w => w <= 400).sort();
-  return `https://fonts.googleapis.com/css2?family=${encodeURIComponent(font)}:wght@${unique.join(';')}&display=swap`;
-}
-
 function applyFonts(font, weight) {
-  if (!_fontLinkEl) {
-    _fontLinkEl = document.createElement('link');
-    _fontLinkEl.rel = 'stylesheet';
-    document.head.appendChild(_fontLinkEl);
-  }
-  _fontLinkEl.href = _buildGoogleFontsUrl(font, weight);
+  // All fonts are bundled with the integration (fonts/fonts.css) and load on demand.
+  // Nothing is requested from Google.
 
   // Inject/update a style block that overrides all hardcoded font-family and font-weight
   // using !important so it wins over every specific CSS rule in the stylesheet.
@@ -21651,7 +21641,7 @@ function openSettings() {
         <label class="startup-mode-option" onclick="applySetting('bgImage', '${escapeHtml(path)}')">
           <input type="radio" name="bgImage" value="${escapeHtml(path)}" id="st-bgimg-${escapeHtml(name)}" ${activeImg === path ? 'checked' : ''}>
           <span class="startup-mode-label" style="display:flex;align-items:center;gap:8px">
-            <img src="${escapeHtml(path)}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.06)" onerror="this.style.visibility='hidden'">
+            <img src="${escapeHtml(homiePhotoUrl(path))}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.06)" onerror="this.style.visibility='hidden'">
             ${escapeHtml(name)}
           </span>
           <span class="startup-mode-check">

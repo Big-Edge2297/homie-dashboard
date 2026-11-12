@@ -169,7 +169,7 @@ The wizard opens automatically the first time, and any time later from **Setting
 You need a Home Assistant **administrator** account to change the setup. Other users (for example a dedicated tablet user) can view and use the dashboard.
 
 ### Photos and backgrounds
-Copy images (`jpg`, `jpeg`, `png`, `webp`, `gif`) to these folders on your Home Assistant server. They are detected automatically; reload the dashboard after adding files.
+Copy images (`jpg`, `jpeg`, `png`, `webp`, `gif`) to these folders on your Home Assistant server. They are detected automatically and shown to signed-in users only; reload the dashboard after adding files.
 
 | Folder | Used for |
 |---|---|
@@ -202,9 +202,11 @@ Prefer to stay on the old version? It remains available as release [v4.3.0](http
 ## Security
 
 - **No access token is stored anywhere.** Homie uses the short-lived session token of the Home Assistant user that is signed in, refreshed automatically.
-- Your selections are stored in Home Assistant's private `.storage` folder, not in a file served over the web. The **alarm code** (if you set one) is stored there too.
+- Your selections are stored in Home Assistant's private `.storage` folder, not in a file served over the web.
+- **The alarm code never reaches the browser.** If you save one in the wizard, it is kept privately in Home Assistant and added by the server when someone arms or disarms. Home Assistant does not send it to any page, not even to administrators, and the wizard only shows whether one is saved. By default only administrators can use the saved code and other users are asked for the PIN; a wizard option lets non-administrator users, such as a wall-tablet user, use it too. If you leave the code empty, the dashboard asks for a PIN every time.
+- **Photos require authentication.** Pictures in `/config/homie_dashboard/photos/` are served through an authenticated endpoint. The dashboard receives time-limited signed links (valid for 12 hours, tied to the signed-in session, refreshed automatically), so someone who can only reach your instance URL cannot download them.
+- **No third-party requests.** All fonts are bundled with the integration, so nothing is loaded from Google. The only outside request is the dashboard's check for a newer Homie release on GitHub.
 - The dashboard is only reachable by signed-in Home Assistant users. You can restrict it to administrators in the integration's **Configure** options.
-- Photos in `/config/homie_dashboard/photos/` are served without authentication (the same way Home Assistant serves its `www` folder), so don't put anything sensitive there.
 - For remote access use a VPN (e.g. WireGuard) or Home Assistant Cloud. Never expose Home Assistant to the internet without proper protection.
 
 ---

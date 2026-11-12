@@ -67,6 +67,7 @@ class HomieDashboardPanel extends HTMLElement {
       get config() { return self._data.configured ? self._data.config : null; },
       get rawConfig() { return self._data.config || {}; },
       get settings() { return self._data.settings || {}; },
+      get alarmCodeSet() { return !!(self._data.settings && self._data.settings.alarmCodeSet); },
       get photos() { return self._data.photos || { frame: [], background: [] }; },
       get configured() { return !!self._data.configured; },
       get version() { return self._version; },
@@ -75,12 +76,20 @@ class HomieDashboardPanel extends HTMLElement {
       hass: () => self._hass,
       getToken: () => self._freshToken(),
       async saveConfig(payload) {
-        await self._hass.callWS({ type: "homie_dashboard/set_config", config: payload.config || {}, settings: payload.settings || {} });
+        const msg = { type: "homie_dashboard/set_config", config: payload.config || {}, settings: payload.settings || {} };
+        // undefined = keep the stored alarm code, "" = remove it, text = replace it
+        if (payload.alarmCode !== undefined) msg.alarm_code = payload.alarmCode;
+        await self._hass.callWS(msg);
         await self._fetchData();
       },
       async resetConfig() {
         await self._hass.callWS({ type: "homie_dashboard/reset_config" });
         await self._fetchData();
+      },
+      /* Photo URLs are signed and expire; the dashboard asks for fresh ones regularly. */
+      async refreshPhotos() {
+        const r = await self._hass.callWS({ type: "homie_dashboard/get_photos" });
+        self._data.photos = r.photos;
       },
       async openDashboard() { await self._fetchData(); self._show("index"); },
       openSetup() { self._show("setup"); },

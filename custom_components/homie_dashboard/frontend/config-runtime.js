@@ -5,8 +5,10 @@
  *   • the access token comes from your logged-in Home Assistant session
  *   • entities and preferences come from the Setup wizard (stored in HA)
  * It defines the same globals the dashboard has always used:
- *   HA_TOKEN, WS_URL, BASE, ALARM_CODE, ALARM_ENTITY, PHOTO_FRAME_IMAGES,
+ *   HA_TOKEN, WS_URL, BASE, ALARM_ENTITY, PHOTO_FRAME_IMAGES,
  *   PHOTO_FRAME_INTERVAL, BACKGROUND_IMAGES, CONFIG
+ * plus ALARM_CODE_STORED (true/false) and homiePhotoUrl(). The alarm code itself is
+ * never sent to the browser: Home Assistant adds it when the dashboard arms/disarms.
  * ═══════════════════════════════════════════════════════════════════════════ */
 var _homieBridge = null;
 try { _homieBridge = (window.parent && window.parent !== window) ? window.parent.homieBridge : null; } catch (e) { _homieBridge = null; }
@@ -27,13 +29,38 @@ const BASE   = location.origin;
 var _homieStored   = (_homieBridge && _homieBridge.config)   || {};
 var _homieSettings = (_homieBridge && _homieBridge.settings) || {};
 var _homiePhotos   = (_homieBridge && _homieBridge.photos)   || { frame: [], background: [] };
+
+/* Photos are served by an authenticated endpoint and handed out as time-limited signed URLs.
+ * The arrays hold stable paths (so saved choices keep working); homiePhotoUrl() turns a
+ * path into its current signed URL. */
+var _homieSigned = {};
+function _homiePaths(list) {
+  return (list || []).map(function (p) { _homieSigned[p.path] = p.url; return p.path; });
+}
+function homiePhotoUrl(path) { return _homieSigned[path] || path; }
 var _homieCfg = HomieCommon.resolve(HomieCommon.deepMerge(window.HOMIE_DEFAULTS || {}, _homieStored), typeof ICONS !== "undefined" ? ICONS : {});
 
-const ALARM_CODE           = String(_homieSettings.alarmCode || "");
+const ALARM_CODE_STORED    = !!_homieSettings.alarmCodeUsable;   // a saved code exists AND this user may use it
 const ALARM_ENTITY         = _homieCfg.alarmEntity || "";
-const PHOTO_FRAME_IMAGES   = _homiePhotos.frame || [];
+const PHOTO_FRAME_IMAGES   = _homiePaths(_homiePhotos.frame);
 const PHOTO_FRAME_INTERVAL = Number(_homieSettings.photoFrameInterval) || 20;
-const BACKGROUND_IMAGES    = _homiePhotos.background || [];
+const BACKGROUND_IMAGES    = _homiePaths(_homiePhotos.background);
+
+/* Keep signed URLs fresh on displays that stay on for days (URLs are valid for 12 h). */
+function _homieSyncList(target, items) {
+  var paths = _homiePaths(items);
+  var changed = paths.length !== target.length || paths.some(function (p, i) { return target.indexOf(p) < 0; });
+  if (changed) { target.length = 0; Array.prototype.push.apply(target, paths); }
+}
+if (_homieBridge) {
+  setInterval(function () {
+    _homieBridge.refreshPhotos().then(function () {
+      var ph = _homieBridge.photos || {};
+      _homieSyncList(PHOTO_FRAME_IMAGES, ph.frame);
+      _homieSyncList(BACKGROUND_IMAGES, ph.background);
+    }).catch(function (e) { console.warn("[Homie] photo refresh failed", e); });
+  }, 3 * 60 * 60 * 1000);
+}
 
 const CONFIG = Object.assign({}, _homieCfg, { wsUrl: WS_URL, alarmEntity: ALARM_ENTITY });
 if (!CONFIG.sun) CONFIG.sun = {};

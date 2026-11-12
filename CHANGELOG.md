@@ -3,6 +3,19 @@
 All notable changes to Homie Dashboard are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [5.1.0] - 2026-11-11
+
+### Security
+- **Photos are no longer served publicly.** Photo frame and background pictures are now delivered through an authenticated endpoint. The dashboard receives time-limited signed links (12 hours, tied to the signed-in session) and refreshes them automatically. The old unauthenticated `/homie_dashboard_media` path has been removed.
+- **The alarm code is no longer sent to the browser.** It is stored privately in Home Assistant and added on the server when the dashboard arms or disarms through a new `homie_dashboard/alarm` command. The setup wizard never shows the saved code (it only shows that one is saved, and lets you replace or remove it). Codes saved by 5.0.0 are moved automatically on first start.
+- **The saved alarm code is admin-only by default.** Other users (for example a wall-tablet user) are asked for the PIN. A new wizard option lets non-administrator users use the saved code as well.
+- **No more requests to Google.** All 10 fonts of the font picker are now bundled with the integration (SIL Open Font License, licences included) instead of loading from Google Fonts.
+- An error message in the media browser is now escaped before it is shown.
+
+### Changed
+- If no alarm code is saved, the dashboard asks for a PIN every time, as before.
+- Photo and background selections are stored by a stable path. If you had chosen a background picture in 5.0.0, it resets once to the first picture.
+
 ## [5.0.0] - 2026-11-08
 
 **Major release: Homie is now a Home Assistant integration installed through HACS.**
@@ -145,5 +158,6 @@ First release.
 - Music playback and controls
 - Haptic feedback on supported Android devices
 
+[5.1.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.0
 [5.0.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.0.0
 [4.3.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v4.3.0

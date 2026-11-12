@@ -21,9 +21,9 @@ from .const import (
     PANEL_COMPONENT,
     PANEL_URL_PATH,
     URL_FRONTEND,
-    URL_MEDIA,
 )
 from .store import HomieStore
+from .views import HomiePhotoView
 from .websocket_api import async_register_commands
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,14 +47,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data = hass.data.setdefault(DOMAIN, {})
     domain_data.update({"store": store, "media_dir": media_dir, "version": version})
 
-    # Static routes and WS commands cannot be unregistered, so register them once per HA run.
+    # Static routes, views and WS commands cannot be unregistered, so register them once per HA run.
     if not domain_data.get("registered"):
+        # Only the dashboard code is served as static (public) files. Photos go through an
+        # authenticated view and are handed out as time-limited signed URLs.
         await hass.http.async_register_static_paths(
-            [
-                StaticPathConfig(URL_FRONTEND, str(Path(__file__).parent / "frontend"), cache_headers=False),
-                StaticPathConfig(URL_MEDIA, media_dir, cache_headers=False),
-            ]
+            [StaticPathConfig(URL_FRONTEND, str(Path(__file__).parent / "frontend"), cache_headers=False)]
         )
+        hass.http.register_view(HomiePhotoView(hass, media_dir))
         async_register_commands(hass)
         domain_data["registered"] = True
 

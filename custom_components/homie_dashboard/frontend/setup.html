@@ -52,6 +52,7 @@
   .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:var(--card2); border:1px solid var(--accent); padding:10px 18px; border-radius:10px; z-index:10; max-width:90%; }
   ul.sum { list-style:none; } ul.sum li { padding:7px 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; }
 </style>
+<link rel="stylesheet" href="fonts/fonts.css">
 <script src="homie-common.js"></script>
 <script src="homie-defaults.js"></script>
 </head>
@@ -125,7 +126,10 @@ function sceneStyle(label) {
 
 /* ───────────────────────── state ───────────────────────── */
 var cfg = C.clone(B.rawConfig) || {};
-var settings = Object.assign({ alarmCode: "", photoFrameInterval: 20 }, B.settings || {});
+var settings = Object.assign({ photoFrameInterval: 20 }, B.settings || {});
+delete settings.alarmCodeSet; delete settings.alarmCodeUsable;
+/* The saved alarm code is never sent to the browser. Typing here replaces it; leaving it blank keeps it. */
+var alarmInput = "", alarmClear = false;
 var KINDS = [
   { id: "lights",    label: "Lights",    domains: ["light"],                   mode: "rooms",  chip: { showCount: true } },
   { id: "scenes",    label: "Scenes",    domains: ["scene"],                   mode: "scenes", chip: { noRoomGrouping: true, isSceneChip: true } },
@@ -322,7 +326,9 @@ function parseOldConfig(text) {
 function applyImport(text, sourceLabel) {
   try {
     var res = parseOldConfig(text);
-    cfg = res.config; settings = Object.assign(settings, res.settings);
+    cfg = res.config;
+    settings.photoFrameInterval = res.settings.photoFrameInterval;
+    if (res.settings.alarmCode) { alarmInput = res.settings.alarmCode; alarmClear = false; }
     initModels();
     var n = (cfg.controls || []).length;
     toast("Imported from " + sourceLabel + " — " + n + " control groups, " + (cfg.cameras || []).length + " cameras. Review each step, then save.");
@@ -433,8 +439,17 @@ var steps = [
 
     var a = h("div", { class: "card" }, h("h3", {}, "Alarm (Alarmo or any alarm panel)"));
     a.appendChild(field("Alarm panel", entitySelect(["alarm_control_panel"], cfg.alarmEntity, function (v) { cfg.alarmEntity = v; })));
-    a.appendChild(field("Alarm code (optional)", h("input", { type: "password", autocomplete: "off", value: settings.alarmCode || "", oninput: function (e) { settings.alarmCode = e.target.value; } }),
-      "Sent with arm/disarm. Leave empty to show a PIN keypad on the dashboard instead. Stored inside Home Assistant, not in a web-readable file."));
+    var codeBox = h("input", { type: "password", autocomplete: "new-password", value: alarmInput, placeholder: B.alarmCodeSet && !alarmClear ? "Saved. Type a new code to replace it" : "No code saved", oninput: function (e) { alarmInput = e.target.value; if (alarmInput) alarmClear = false; } });
+    a.appendChild(field("Alarm code (optional)", codeBox,
+      "Stored privately inside Home Assistant and never sent to the dashboard page: Home Assistant adds it when someone arms or disarms. By default only administrators can use the saved code and everyone else is asked for the PIN. Leave the code empty to always be asked for a PIN."));
+    a.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:6px" },
+      h("input", { type: "checkbox", checked: !!settings.alarmAllowNonAdmin, onchange: function (e) { settings.alarmAllowNonAdmin = e.target.checked; } }),
+      "Also let non-administrator users (for example a wall-tablet user) arm and disarm with the saved code, without a PIN prompt"));
+    if (B.alarmCodeSet) {
+      a.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:6px" },
+        h("input", { type: "checkbox", checked: alarmClear, onchange: function (e) { alarmClear = e.target.checked; if (alarmClear) { alarmInput = ""; codeBox.value = ""; } } }),
+        "Remove the saved alarm code"));
+    }
     m.appendChild(a);
 
     var mu = h("div", { class: "card" }, h("h3", {}, "Music players"));
@@ -460,7 +475,7 @@ var steps = [
       catch (e) { toast("Invalid JSON: " + e.message); } } }, "Apply JSON"));
     row.appendChild(h("button", { class: "btn danger", onclick: function () {
       if (!confirm("Delete ALL saved Homie settings and start over?")) return;
-      B.resetConfig().then(function () { cfg = {}; settings = { alarmCode: "", photoFrameInterval: 20 }; initModels(); go(0); toast("Settings cleared"); }); } }, "Reset everything"));
+      B.resetConfig().then(function () { cfg = {}; settings = { photoFrameInterval: 20 }; alarmInput = ""; alarmClear = false; initModels(); go(0); toast("Settings cleared"); }); } }, "Reset everything"));
     m.appendChild(row);
   } },
   { id: "review", title: "Review & save", render: function (m) {
@@ -475,6 +490,7 @@ var steps = [
     r("Cameras", (cfg.cameras || []).length);
     r("Weather", (cfg.weather && cfg.weather.entity) || "not set");
     r("Alarm panel", cfg.alarmEntity || "not set");
+    r("Alarm code", alarmClear ? "will be removed" : alarmInput ? "will be saved" : B.alarmCodeSet ? "saved (unchanged)" : "none (PIN keypad)");
     r("Music players", (cfg.musicPlayers || []).length);
     r("Calendars", (cfg.calendarEntities || []).length);
     var ul = h("ul", { class: "sum" }); rows.forEach(function (x) { ul.appendChild(x); });
@@ -501,7 +517,7 @@ function render() {
   var last = cur === steps.length - 1;
   var save = h("button", { class: "btn primary", disabled: !B.isAdmin, onclick: function () {
     collect(); save.disabled = true; save.textContent = "Saving…";
-    B.saveConfig({ config: cfg, settings: settings }).then(function () { return B.openDashboard(); })
+    B.saveConfig({ config: cfg, settings: settings, alarmCode: alarmClear ? "" : (alarmInput ? alarmInput : undefined) }).then(function () { return B.openDashboard(); })
       .catch(function (e) { save.disabled = false; save.textContent = "Save & open dashboard"; toast("Could not save: " + (e && e.message ? e.message : JSON.stringify(e))); });
   } }, "Save & open dashboard");
   elFooter = h("footer", {},

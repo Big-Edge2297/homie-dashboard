@@ -1,8 +1,6 @@
 # **Homie Dashboard**
 
-![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard?style=for-the-badge) ![Downloads](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/total?style=for-the-badge) ![Latest Release Downloads](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/latest/total?style=for-the-badge)
-
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Dashboard-41BDF5?style=for-the-badge&logo=homeassistant&logoColor=white)](https://www.home-assistant.io/) [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://hacs.xyz/) [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+![HACS](https://img.shields.io/badge/HACS-Custom-orange) ![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard) ![Validate](https://img.shields.io/github/actions/workflow/status/Big-Edge2297/homie-dashboard/validate.yml?branch=main&logo=github&label=Validate)
 
 <img src="https://github.com/user-attachments/assets/b9f66b35-5209-4fa8-bdc9-f92d6ed60517" width="400"/> <img src="https://github.com/user-attachments/assets/f17ef08f-a525-45c3-9d25-d641c6c273de" width="400"/>
 

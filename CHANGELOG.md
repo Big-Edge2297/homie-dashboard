@@ -3,6 +3,17 @@
 All notable changes to Homie Dashboard are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [5.1.1] - 2026-11-17
+
+### Security
+- **Names and labels from Home Assistant are escaped everywhere they are shown.** Camera, music player, irrigation and room names (and titles from your music library) were written into the page as HTML in a few places. A name containing markup would have run as HTML inside the dashboard. The music source list, camera grid, camera filter chips, motion log and irrigation buttons now escape them.
+- **Values in inline click handlers are passed safely.** Escaping text for HTML is not enough inside a handler such as `onclick="play('…')"`: the browser decodes it again before running the code, so an apostrophe could break out of the string. Handlers now receive their values through a proper JavaScript string encoder, and camera filter chips pass an index instead of the label. This also covers media browser items, to-do items, notifications, themes and sensor panels.
+- The panel's start-up error message is shown as text only.
+
+### Fixed
+- Rooms, groups and camera filters whose name contains an apostrophe or a quote (for example "Kid's room") no longer break their click handler. Room and group ids are now built only from letters, digits and underscores, so two different names can never share an id either.
+- **Tablets could get IP-banned.** The session token Homie uses lasts 30 minutes. A tablet that slept for a while woke up and sent several requests (calendars, for example) with the expired token, and Home Assistant counted each one as a failed login. The dashboard now makes sure the token is valid before every request and every WebSocket login, re-checks it when the screen wakes, and holds back further requests for a minute after any rejected request instead of repeating them.
+
 ## [5.1.0] - 2026-11-11
 
 ### Security
@@ -158,6 +169,7 @@ First release.
 - Music playback and controls
 - Haptic feedback on supported Android devices
 
+[5.1.1]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.1
 [5.1.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.0
 [5.0.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.0.0
 [4.3.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v4.3.0

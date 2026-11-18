@@ -21,6 +21,36 @@ window.homieRefreshToken = function () {
 };
 if (_homieBridge) setInterval(window.homieRefreshToken, 5 * 60 * 1000);
 
+/* A tablet that sleeps pauses its timers, so the token can be stale when the screen wakes up.
+ * Home Assistant counts every request with a bad token toward an IP ban, so make sure the token
+ * is valid BEFORE anything is sent (cheap when it is still valid: no network request). */
+window.homieEnsureToken = function () {
+  if (!_homieBridge) return Promise.resolve();
+  return _homieBridge.getToken().then(function (t) { HA_TOKEN = t; }).catch(function () {});
+};
+(function () {
+  var origFetch = window.fetch.bind(window), pausedUntil = 0;
+  window.fetch = function (input, init) {
+    var url = typeof input === "string" ? input : (input && input.url) || "";
+    var h = init && init.headers;
+    var isHaApi = _homieBridge && h && (h.Authorization || h.authorization) && url.indexOf("/api/") >= 0 && (url.charAt(0) === "/" || url.indexOf(location.origin) === 0);
+    if (!isHaApi) return origFetch(input, init);
+    if (Date.now() < pausedUntil) return Promise.reject(new Error("Homie: paused after an authentication error"));
+    return window.homieEnsureToken().then(function () {
+      var nh = Object.assign({}, h); delete nh.authorization; nh.Authorization = "Bearer " + HA_TOKEN;
+      return origFetch(input, Object.assign({}, init, { headers: nh }));
+    }).then(function (res) {
+      if (res && res.status === 401) { pausedUntil = Date.now() + 60000; window.homieRefreshToken(); }   // do not keep hammering Home Assistant
+      return res;
+    });
+  };
+  ["visibilitychange", "online", "focus"].forEach(function (ev) {
+    (ev === "visibilitychange" ? document : window).addEventListener(ev, function () {
+      if (ev !== "visibilitychange" || !document.hidden) window.homieEnsureToken();
+    });
+  });
+})();
+
 /* Connection — always the Home Assistant this page is served from. */
 const WS_URL = location.origin.replace(/^http/, "ws") + "/api/websocket";
 const BASE   = location.origin;

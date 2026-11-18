@@ -15,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <!-- DASHBOARD VERSION — update this when releasing a new version -->
-<script>const DASHBOARD_VERSION = "5.1.0";</script>
+<script>const DASHBOARD_VERSION = "5.1.1";</script>
 <!-- GITHUB REPO — used only to check for the latest tagged release in Settings -->
 <script>const GITHUB_REPO = "Big-Edge2297/homie-dashboard";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -9645,6 +9645,21 @@ function escapeHtml(str) {
   return String(str ?? "").replace(/[&<>"']/g, c => _escapeMap[c]);
 }
 
+/* Turns any label (a room or group name, for example "Kid's room") into an id made only of a-z, 0-9 and _,
+ * which is safe in HTML attributes and inside a quoted JavaScript string in an onclick handler.
+ * Every other character becomes _<hex>_, so different labels can never end up with the same id. */
+function _safeId(label) {
+  return String(label ?? "").toLowerCase().replace(/[^a-z0-9]/g, c => "_" + c.charCodeAt(0).toString(16) + "_");
+}
+
+/* Use for a value inside an inline handler, e.g. onclick="doThing(${_jsArg(value)})".
+ * escapeHtml alone is NOT enough there: the browser turns &#39; back into an apostrophe before the code runs,
+ * so a value such as  x');evil();//  would break out of a quoted string. This builds a proper JavaScript
+ * string literal (JSON) and then escapes it for the attribute, so the handler receives the exact value. */
+function _jsArg(value) {
+  return escapeHtml(JSON.stringify(String(value ?? "")));
+}
+
 /* ─── SVG ICON MAP ───────────────────────────────────────────────────────────
  * Single source of truth for frequently-reused SVG icons.
  * Use _icon('name') instead of repeating inline SVG strings.
@@ -9758,7 +9773,9 @@ function _wsConnect() {
 
       /* ── Step 1: server asks for auth ── */
       case "auth_required":
-        _ws.send(JSON.stringify({ type: "auth", access_token: HA_TOKEN }));
+        window.homieEnsureToken().then(() => {
+          if (_ws && _ws.readyState === 1) _ws.send(JSON.stringify({ type: "auth", access_token: HA_TOKEN }));
+        });
         break;
 
       /* ── Step 2: auth accepted ── */
@@ -9786,7 +9803,7 @@ function _wsConnect() {
         _wsConnecting = false; // connection attempt finished (unsuccessfully)
         console.error("[WS] Auth failed — the Home Assistant session token was rejected.");
         // Ask the HA panel for a fresh token and retry a few times before giving up.
-        if (typeof window.homieRefreshToken === "function" && (window._homieAuthRetries = (window._homieAuthRetries || 0) + 1) <= 3) {
+        if (typeof window.homieRefreshToken === "function" && (window._homieAuthRetries = (window._homieAuthRetries || 0) + 1) <= 1) {
           window.homieRefreshToken().then(() => setTimeout(_wsConnect, 500));
           break;
         }
@@ -11712,7 +11729,7 @@ function renderHomeStats(prefix) {
   return CONFIG.homeStats.map(s => `
     <div class="stat">
       <div class="stat-label">${escapeHtml(s.label)}</div>
-      <div class="stat-value" id="${prefix}-${s.label.replace(/\s/g,'_')}">—</div>
+      <div class="stat-value" id="${prefix}-${escapeHtml(s.label.replace(/\s/g,'_'))}">—</div>
     </div>
   `).join('');
 }
@@ -11972,7 +11989,7 @@ function refreshNotifications() {
       const canDismiss = DISMISSABLE.includes(domain);
       const cls = canDismiss ? "notification-item" : "notification-item notification-item--readonly";
       const onclick = canDismiss
-        ? `onclick="dismissNotification('${escapeHtml(n.entity)}')"`
+        ? `onclick="dismissNotification(${_jsArg(n.entity)})"`
         : "";
       const title = canDismiss
         ? `title="Tap to dismiss"`
@@ -12267,8 +12284,8 @@ function openSourceDropdown(dropdownId) {
       isActive  ? "active"  : "",
       isPlaying ? "playing" : ""
     ].filter(Boolean).join(" ");
-    return `<div class="${classes}" onclick="selectMusicSource('${escapeHtml(entity)}')">
-      <span class="np-src-dot"></span>${label}${isPlaying ? '<span style="margin-left:auto;font-size:7px;letter-spacing:0.15em;color:var(--accent);padding-left:12px">▶</span>' : ''}
+    return `<div class="${classes}" onclick="selectMusicSource(${_jsArg(entity)})">
+      <span class="np-src-dot"></span>${escapeHtml(label)}${isPlaying ? '<span style="margin-left:auto;font-size:7px;letter-spacing:0.15em;color:var(--accent);padding-left:12px">▶</span>' : ''}
     </div>`;
   }).join("");
 
@@ -12569,7 +12586,7 @@ async function openPopup(i) {
       (group.scenes || []).forEach((sc, idx) => {
         const bubbleId = `psb-${escapeHtml(group.label)}-${idx}`;
         sceneHtml += `
-          <div class="popup-scene-bubble" onclick="triggerPopupScene('${escapeHtml(sc.entity)}','${escapeHtml(bubbleId)}')">
+          <div class="popup-scene-bubble" onclick="triggerPopupScene(${_jsArg(sc.entity)},${_jsArg(bubbleId)})">
             <div class="popup-scene-icon" id="${bubbleId}" style="background:${sc.color || 'rgba(255,255,255,0.14)'}">${sc.icon || ''}</div>
             <div class="popup-scene-label">${escapeHtml(sc.label)}</div>
           </div>`;
@@ -12638,7 +12655,7 @@ async function openPopup(i) {
     });
 
     // Synthesise a room-id from the group label for stable DOM ids
-    const roomIdOf = label => label.toLowerCase().replace(/\s+/g, "_");
+    const roomIdOf = label => _safeId(label);
 
     let accordionHtml = groupMeta.map(({ label, startIdx, count }) => {
       const rid = roomIdOf(label);
@@ -12723,7 +12740,7 @@ async function openPopup(i) {
       (group.subEntities || []).forEach(s => {
         if (s.expandable) {
           // ── Inline expandable row (e.g. HW Circulation) ──────────────────
-          const gid = s.label.toLowerCase().replace(/\s+/g, "_");
+          const gid = _safeId(s.label);
           const activeCount = (s.subEntities || []).filter(z => {
             const d = haGetCached(z.entity);
             return d && !["off","closed","unavailable","unknown"].includes(d.state);
@@ -14762,10 +14779,10 @@ function _mbRender(entity, items) {
     const canPlay    = item.can_play;
     const canExpand  = item.can_expand;
     const playBtn    = canPlay
-      ? `<button class="mb-play-btn" onclick="event.stopPropagation();_mbPlay('${escapeHtml(entity)}','${escapeHtml(item.media_content_id)}','${escapeHtml(item.media_content_type)}')" title="Play">
+      ? `<button class="mb-play-btn" onclick="event.stopPropagation();_mbPlay(${_jsArg(entity)},${_jsArg(item.media_content_id)},${_jsArg(item.media_content_type)})" title="Play">
            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M5 2.8 L13 8 L5 13.2 Z" fill="var(--accent)"/></svg>
          </button>` : "";
-    return `<div class="mb-item" onclick="${canExpand ? `_mbDrill('${escapeHtml(entity)}','${escapeHtml(item.media_content_id)}','${escapeHtml(item.media_content_type)}','${escapeHtml(item.title||"")}')` : canPlay ? `_mbPlay('${escapeHtml(entity)}','${escapeHtml(item.media_content_id)}','${escapeHtml(item.media_content_type)}')` : ''}">
+    return `<div class="mb-item" onclick="${canExpand ? `_mbDrill(${_jsArg(entity)},${_jsArg(item.media_content_id)},${_jsArg(item.media_content_type)},${_jsArg(item.title||"")})` : canPlay ? `_mbPlay('${escapeHtml(entity)}','${escapeHtml(item.media_content_id)}','${escapeHtml(item.media_content_type)}')` : ''}">
       ${thumb}
       <div class="mb-item-info">
         <div class="mb-item-title">${escapeHtml(item.title || "Untitled")}</div>
@@ -15967,7 +15984,7 @@ function openCameras() {
       </div>
       ${cam.motionEntity ? `<div class="cam-motion-icon" id="cam-motion-${i}"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><circle cx="13" cy="3.5" r="1.8"/><path d="M9.5 8.5L7 21h2l1.5-6 2 3v6h2v-7l-2-3 .5-3.5L15 13h4v-2h-3.5l-2-4.5L9.5 8.5z"/><line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>` : ''}
       ${cam.motionEntity ? `<span class="cam-cell-last-motion" id="cam-last-motion-${i}"></span>` : ''}
-      <div class="cam-cell-label"><span>${cam.label || cam.entity}</span></div>
+      <div class="cam-cell-label"><span>${escapeHtml(cam.label || cam.entity)}</span></div>
     </div>`;
   }).join("");
   // No empty filler cells — the grid fills exactly the camera count.
@@ -16031,13 +16048,15 @@ function _buildLogFilterChips() {
   if (cams.length <= 1) { filtersEl.innerHTML = ""; return; }
 
   const chips = [{ label: "All", value: null }, ...cams.map(c => ({ label: c.label || c.entity, value: c.label || c.entity }))];
-  filtersEl.innerHTML = chips.map(c =>
-    `<div class="cam-log-filter-chip${_camLogFilter === c.value ? " active" : ""}" onclick="_setCamLogFilter(${c.value === null ? "null" : `'${c.value}'`})">${c.label}</div>`
+  _camLogChipValues = chips.map(c => c.value);
+  filtersEl.innerHTML = chips.map((c, i) =>
+    `<div class="cam-log-filter-chip${_camLogFilter === c.value ? " active" : ""}" onclick="_setCamLogFilter(${i})">${escapeHtml(c.label)}</div>`
   ).join("");
 }
 
-function _setCamLogFilter(value) {
-  _camLogFilter = value;
+let _camLogChipValues = [null];
+function _setCamLogFilter(idx) {
+  _camLogFilter = _camLogChipValues[idx] ?? null;
   _buildLogFilterChips();
   _loadMotionLog();
 }
@@ -16114,7 +16133,7 @@ async function _loadMotionLog() {
         html += `<div class="cam-log-event">
           <div class="cam-log-dot${isOn ? "" : " clear"}"></div>
           <div class="cam-log-time">${timeFmt.format(e.time)}</div>
-          <div class="cam-log-cam">${e.cam}</div>
+          <div class="cam-log-cam">${escapeHtml(e.cam)}</div>
           <div class="cam-log-state">${isOn ? "Detected" : "Cleared"}</div>
         </div>`;
       });
@@ -17194,7 +17213,7 @@ function _dailyPatchTodos() {
       }
       const wasCollapsed = _todoCollapsed.has(todoList.entity);
       return `<div class="daily-todo-card${wasCollapsed ? " collapsed" : ""}" id="${cardId}" style="animation-delay:${cardIdx*0.06}s">
-        <div class="daily-todo-card-header" onclick="dailyToggleTodoSection('${escapeHtml(todoList.entity)}')">
+        <div class="daily-todo-card-header" onclick="dailyToggleTodoSection(${_jsArg(todoList.entity)})">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8;flex-shrink:0"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
           <span class="daily-todo-card-title">${escapeHtml(todoList.name)}</span>
           <span class="daily-todo-card-count" id="todo-count-${escapeHtml(todoList.entity)}">${remaining} remaining</span>
@@ -17206,7 +17225,7 @@ function _dailyPatchTodos() {
           ${allItems.map(item => {
             const isDone = item.status === "completed";
             return `<div class="daily-todo${isDone ? " done" : ""}" id="todo-${escapeHtml(item.uid)}"
-                onclick="dailyToggleTodo('${escapeHtml(todoList.entity)}','${escapeHtml(item.uid)}',${isDone})">
+                onclick="dailyToggleTodo(${_jsArg(todoList.entity)},${_jsArg(item.uid)},${isDone})">
               <div class="daily-todo-check">
                 <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="rgba(0,0,0,0.85)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="2 6 5 9 10 3"/>
@@ -17772,7 +17791,7 @@ function buildHabitGrid() {
   if (!grid) return;
 
   grid.innerHTML = habits.map(h => `
-    <div class="habit-bubble" id="habit-${escapeHtml(h.key)}" onclick="toggleHabit('${escapeHtml(h.key)}')">
+    <div class="habit-bubble" id="habit-${escapeHtml(h.key)}" onclick="toggleHabit(${_jsArg(h.key)})">
       <div class="habit-circle">${h.icon}</div>
       <span class="habit-label">${escapeHtml(h.label)}</span>
     </div>
@@ -17907,7 +17926,7 @@ function buildMoodGrid() {
   const grid = document.getElementById("daily-mood-grid");
   if (!grid) return;
   grid.innerHTML = CONFIG.moods.map(m => `
-    <div class="mood-bubble" id="mood-${escapeHtml(m.key)}" onclick="selectMood('${escapeHtml(m.key)}')">
+    <div class="mood-bubble" id="mood-${escapeHtml(m.key)}" onclick="selectMood(${_jsArg(m.key)})">
       <div class="mood-circle">${m.icon}</div>
       <span class="habit-label">${escapeHtml(m.label)}</span>
     </div>
@@ -19839,7 +19858,7 @@ function _buildOv3AcCard() {
       return `<button class="ov3-ac-mode-btn${act}" onclick="event.stopPropagation();_ov3AcSetMode(${idx},'${m}')">${modeIcons[m] || ""}${lbl}</button>`;
     }).join("");
 
-    return `<div class="ov3-ac-slide${modeCls}${onCls}" id="ov3-ac-slide-${idx}" data-entity="${ent.entity}" data-idx="${idx}">
+    return `<div class="ov3-ac-slide${modeCls}${onCls}" id="ov3-ac-slide-${idx}" data-entity="${escapeHtml(ent.entity)}" data-idx="${idx}">
 
       <!-- Header: icon · name · power -->
       <div class="ov3-ac-header">
@@ -20147,7 +20166,7 @@ function _refreshOv3GreetingBubbles() {
         const domain = n.entity.split(".")[0];
         const canDismiss = DISMISSABLE.includes(domain);
         const sep = i < activeNotifs.length - 1 ? '<span style="opacity:0.3;margin:0 2px">·</span>' : "";
-        const onclick = canDismiss ? `onclick="dismissNotification('${escapeHtml(n.entity)}')" style="cursor:pointer"` : "";
+        const onclick = canDismiss ? `onclick="dismissNotification(${_jsArg(n.entity)})" style="cursor:pointer"` : "";
         return `<span ${onclick}>${dotSvg} ${escapeHtml(n.label)}</span>${sep}`;
       }).join("");
       rows.push(inner);
@@ -20586,8 +20605,8 @@ function _buildOv3GardenIrrigation() {
     ? irrCtrl.subGroups.flatMap(g => g.subEntities || [])
     : (irrCtrl.subEntities || []);
   irrRow.innerHTML = _ov3IrrSubs.map((s, i) => `
-    <button class="ov3-garden-irr-btn" id="ov3-irr-${i}" onclick="toggleEntity('${escapeHtml(s.entity)}', this)">
-      <span class="ov3-garden-irr-label">${s.label}</span>
+    <button class="ov3-garden-irr-btn" id="ov3-irr-${i}" onclick="toggleEntity(${_jsArg(s.entity)}, this)">
+      <span class="ov3-garden-irr-label">${escapeHtml(s.label)}</span>
       <div class="ov3-garden-irr-track"></div>
     </button>`).join('');
 }
@@ -20651,7 +20670,7 @@ function _buildGardenPopupHtml(c) {
   _gardenPopupPageCount = pageCount;
 
   const irrHtml = _gardenPopupIrrSubs.map((s, i) => `
-    <button class="ov3-garden-irr-btn" id="pg-irr-${i}" onclick="toggleEntity('${escapeHtml(s.entity)}', this)">
+    <button class="ov3-garden-irr-btn" id="pg-irr-${i}" onclick="toggleEntity(${_jsArg(s.entity)}, this)">
       <span class="ov3-garden-irr-label">${escapeHtml(s.label)}</span>
       <div class="ov3-garden-irr-track"></div>
     </button>`).join('');
@@ -21595,7 +21614,7 @@ function openSettings() {
         <span class="settings-label">${escapeHtml(floor.label)}</span>
         <label class="settings-check">
           <input type="checkbox" id="st-panel-${escapeHtml(floor.label.replace(/\s+/g,'-'))}"
-            onchange="applySensorPanelSetting('${escapeHtml(floor.label)}', this.checked)"
+            onchange="applySensorPanelSetting(${_jsArg(floor.label)}, this.checked)"
             ${_settings.sensorPanels[floor.label] !== false ? "checked" : ""}>
           <span class="settings-check-mark"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span>
         </label>
@@ -21616,7 +21635,7 @@ function openSettings() {
   const themeList = document.getElementById("st-theme-list");
   if (themeList) {
     themeList.innerHTML = Object.entries(THEMES).map(([id, t]) => `
-      <label class="startup-mode-option" onclick="applyTheme('${escapeHtml(id)}')">
+      <label class="startup-mode-option" onclick="applyTheme(${_jsArg(id)})">
         <input type="radio" name="settingsTheme" value="${escapeHtml(id)}" id="st-theme-${escapeHtml(id)}" ${_activeTheme === id ? 'checked' : ''}>
         <span class="startup-mode-label">
           <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${escapeHtml(t.accent)};margin-right:7px;vertical-align:middle;flex-shrink:0"></span>${escapeHtml(t.name)}
@@ -21638,7 +21657,7 @@ function openSettings() {
       bgImageList.innerHTML = bgList.map(path => {
         const name = path.split('/').pop();
         return `
-        <label class="startup-mode-option" onclick="applySetting('bgImage', '${escapeHtml(path)}')">
+        <label class="startup-mode-option" onclick="applySetting('bgImage', ${_jsArg(path)})">
           <input type="radio" name="bgImage" value="${escapeHtml(path)}" id="st-bgimg-${escapeHtml(name)}" ${activeImg === path ? 'checked' : ''}>
           <span class="startup-mode-label" style="display:flex;align-items:center;gap:8px">
             <img src="${escapeHtml(homiePhotoUrl(path))}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,0.06)" onerror="this.style.visibility='hidden'">
@@ -21683,7 +21702,7 @@ function openSettings() {
           <span class="startup-mode-check">${checkSvg}</span>
         </label>`,
         ...Object.entries(THEMES).map(([id, t]) => `
-        <label class="startup-mode-option" onclick="applyTodTheme('${slot}', '${escapeHtml(id)}')">
+        <label class="startup-mode-option" onclick="applyTodTheme('${slot}', ${_jsArg(id)})">
           <input type="radio" name="st-tod-${slot}" value="${escapeHtml(id)}" id="st-tod-${slot}-${escapeHtml(id)}">
           <span class="startup-mode-label">
             <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${escapeHtml(t.accent)};margin-right:7px;vertical-align:middle;flex-shrink:0"></span>${escapeHtml(t.name)}
@@ -25025,7 +25044,7 @@ function closeCalendarView() {
         let msg;
         try { msg = JSON.parse(evt.data); } catch { return; }
         if (msg.type === "auth_required") {
-          ws.send(JSON.stringify({ type: "auth", access_token: HA_TOKEN }));
+          window.homieEnsureToken().then(() => ws.send(JSON.stringify({ type: "auth", access_token: HA_TOKEN })));
         } else if (msg.type === "auth_invalid") {
           finish();
         } else if (msg.type === "auth_ok") {

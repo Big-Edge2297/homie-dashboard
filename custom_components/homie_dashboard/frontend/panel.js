@@ -29,7 +29,13 @@ class HomieDashboardPanel extends HTMLElement {
 
   _fail(msg) {
     console.error("[Homie] " + msg);
-    this.innerHTML = `<div style="padding:32px;color:#eee;font:16px system-ui,sans-serif"><b>Homie Dashboard could not start</b><br><br>${String(msg)}</div>`;
+    this.innerHTML = "";
+    const box = document.createElement("div");
+    box.style.cssText = "padding:32px;color:#eee;font:16px system-ui,sans-serif";
+    const b = document.createElement("b");
+    b.textContent = "Homie Dashboard could not start";
+    box.append(b, document.createElement("br"), document.createElement("br"), document.createTextNode(String(msg)));   // text only, never HTML
+    this.appendChild(box);
   }
 
   set hass(hass) {

@@ -219,6 +219,7 @@ Prefer to stay on the old version? It remains available as release [v4.3.0](http
 | Entities missing in the wizard | Entities hidden or marked as config/diagnostic in HA are not listed. Unhide them in HA, or add them in the Advanced step. |
 | Old settings didn't import | Make sure you chose your v4 `config.js` (not the HTML file). |
 | Blank page after updating | Reload; on the Companion app clear the cache (Settings → Companion app → Troubleshooting). |
+| A tablet gets IP-banned ("Banned IP … for too many login attempts") | Fixed in 5.1.1: the dashboard now checks its session token before every request, so a tablet waking from sleep no longer sends an expired one. Update, then unban the device: remove its address from `/config/ip_bans.yaml` and restart Home Assistant. |
 | "Home Assistant session expired" | Reload the page. If it repeats, sign out and back in on that device. |
 
 More information for the Homie Dashboard elements can be found in [homie-dashboard-elements](https://github.com/Big-Edge2297/homie-dashboard/blob/main/docs/homie-dashboard-elements.md).

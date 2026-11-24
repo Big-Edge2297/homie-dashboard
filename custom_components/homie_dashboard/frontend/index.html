@@ -15,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <!-- DASHBOARD VERSION — update this when releasing a new version -->
-<script>const DASHBOARD_VERSION = "5.1.1";</script>
+<script>const DASHBOARD_VERSION = "5.1.2";</script>
 <!-- GITHUB REPO — used only to check for the latest tagged release in Settings -->
 <script>const GITHUB_REPO = "Big-Edge2297/homie-dashboard";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -14782,7 +14782,7 @@ function _mbRender(entity, items) {
       ? `<button class="mb-play-btn" onclick="event.stopPropagation();_mbPlay(${_jsArg(entity)},${_jsArg(item.media_content_id)},${_jsArg(item.media_content_type)})" title="Play">
            <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M5 2.8 L13 8 L5 13.2 Z" fill="var(--accent)"/></svg>
          </button>` : "";
-    return `<div class="mb-item" onclick="${canExpand ? `_mbDrill(${_jsArg(entity)},${_jsArg(item.media_content_id)},${_jsArg(item.media_content_type)},${_jsArg(item.title||"")})` : canPlay ? `_mbPlay('${escapeHtml(entity)}','${escapeHtml(item.media_content_id)}','${escapeHtml(item.media_content_type)}')` : ''}">
+    return `<div class="mb-item" onclick="${canExpand ? `_mbDrill(${_jsArg(entity)},${_jsArg(item.media_content_id)},${_jsArg(item.media_content_type)},${_jsArg(item.title||"")})` : canPlay ? `_mbPlay(${_jsArg(entity)},${_jsArg(item.media_content_id)},${_jsArg(item.media_content_type)})` : ''}">
       ${thumb}
       <div class="mb-item-info">
         <div class="mb-item-title">${escapeHtml(item.title || "Untitled")}</div>

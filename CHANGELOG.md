@@ -3,6 +3,14 @@
 All notable changes to Homie Dashboard are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [5.1.2] - 2026-11-24
+
+### Security
+- **Playing an item from the music library no longer breaks on special characters.** In the media browser, an item that can be played directly (a local file, a DLNA or Plex item, a streaming service track) passed its id and type to the click handler as plain escaped text. The browser decodes that text again before the code runs, so a name with an apostrophe broke the click, and a crafted name could run script inside the dashboard. These values now go through the same safe helper as the other handlers, so the handler receives the exact text.
+
+### Changed
+- **Releases now include `homie_dashboard.zip`.** HACS installs and updates from it (`zip_release` in `hacs.json`), and GitHub counts its downloads, which two new counters at the top of the README show. Nothing changes for you: update in HACS and restart as before. For a manual install, download `homie_dashboard.zip` from the release and extract it into `config/custom_components/homie_dashboard/`.
+
 ## [5.1.1] - 2026-11-17
 
 ### Security
@@ -169,6 +177,7 @@ First release.
 - Music playback and controls
 - Haptic feedback on supported Android devices
 
+[5.1.2]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.2
 [5.1.1]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.1
 [5.1.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.0
 [5.0.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.0.0

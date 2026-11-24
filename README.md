@@ -1,6 +1,6 @@
 # **Homie Dashboard**
 
-![HACS](https://img.shields.io/badge/HACS-Custom-orange) ![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard) ![Validate](https://img.shields.io/github/actions/workflow/status/Big-Edge2297/homie-dashboard/validate.yml?branch=main&logo=github&label=Validate)
+![HACS](https://img.shields.io/badge/HACS-Custom-orange) ![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard) ![Downloads](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/total?label=Downloads) ![Downloads of latest](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/latest/total?label=Downloads%20of%20latest) ![Validate](https://img.shields.io/github/actions/workflow/status/Big-Edge2297/homie-dashboard/validate.yml?branch=main&logo=github&label=Validate)
 
 <img src="https://github.com/user-attachments/assets/b9f66b35-5209-4fa8-bdc9-f92d6ed60517" width="400"/> <img src="https://github.com/user-attachments/assets/f17ef08f-a525-45c3-9d25-d641c6c273de" width="400"/>
 
@@ -133,9 +133,11 @@ Once Homie is in the default catalog you can keep using this install. Updates co
 <details>
 <summary><b>Option C: Manual installation</b></summary>
 
-1. Download the latest release from the [Releases page](https://github.com/Big-Edge2297/homie-dashboard/releases) (or use **Code → Download ZIP**).
-2. Copy the folder `custom_components/homie_dashboard` from the download into your Home Assistant `config/custom_components/` folder. You should end up with `config/custom_components/homie_dashboard/manifest.json`.
+1. Download **homie_dashboard.zip** from the latest release on the [Releases page](https://github.com/Big-Edge2297/homie-dashboard/releases).
+2. Create the folder `config/custom_components/homie_dashboard/` and extract the zip into it. You should end up with `config/custom_components/homie_dashboard/manifest.json`.
 3. **Restart Home Assistant**.
+
+If you downloaded the source code instead (**Code → Download ZIP**, or the *Source code* file of a release), copy the folder `custom_components/homie_dashboard` from it into `config/custom_components/` instead.
 
 To update later, repeat the steps and overwrite the folder. Your setup is stored separately inside Home Assistant, so it is kept.
 

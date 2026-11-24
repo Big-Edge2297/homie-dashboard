@@ -1,0 +1,57 @@
+name: Release
+
+# When you publish a release on GitHub, this builds homie_dashboard.zip and attaches it to that release.
+# The Marketplace and HACS download this file (see zip_release in hacs.json), and GitHub counts its downloads on the release page.
+# It can also be started by hand for a release that already exists, for example to add the zip to an older one.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to build the zip for, for example v5.2.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  zip:
+    name: Build and attach homie_dashboard.zip
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Check out the tagged code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Build the zip
+        # The files go at the top of the zip, because the Marketplace and HACS extract it straight into custom_components/homie_dashboard/.
+        run: |
+          cd custom_components/homie_dashboard
+          zip -r -X "$GITHUB_WORKSPACE/homie_dashboard.zip" . -x "*.DS_Store" "*__pycache__*" "*.pyc"
+
+      - name: Check the zip layout
+        run: |
+          unzip -Z1 homie_dashboard.zip | grep -qx "manifest.json"
+          unzip -Z1 homie_dashboard.zip | grep -qx "__init__.py"
+          unzip -Z1 homie_dashboard.zip | grep -qx "frontend/index.html"
+          echo "Zip layout is correct:"
+          unzip -Z1 homie_dashboard.zip | head -n 20
+
+      - name: Attach the zip to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" homie_dashboard.zip --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Check the tag matches the version in manifest.json
+        # Runs last, so a mismatch turns the run red but the zip is still attached and installs keep working.
+        run: |
+          version=$(python3 -c "import json; print(json.load(open('custom_components/homie_dashboard/manifest.json'))['version'])")
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "::error::Tag $TAG does not match the manifest.json version $version. Fix the version and publish a new release."
+            exit 1
+          fi

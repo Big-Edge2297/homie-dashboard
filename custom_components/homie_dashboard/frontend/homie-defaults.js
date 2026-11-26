@@ -141,6 +141,7 @@ window.HOMIE_DEFAULTS = {
   "cameraShowStats": true,
   "cameraGridLive": true,
   "cameraGridChannel": "auto",
+  "cameraIceServers": [],
   "cameras": [],
   "doorbell": {
     "buttonEntity": "",

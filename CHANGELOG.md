@@ -3,6 +3,17 @@
 All notable changes to Homie Dashboard are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [5.1.3] - 2026-11-26
+
+### Security
+- **Climate card.** The climate entity's state and target temperature are no longer put into the page as markup. Only the known modes (`cool`, `heat`, `fan_only`, `dry`, `auto`) set a mode class, and the target temperature is always shown as a number.
+- **Setup values are escaped everywhere they are shown.** These values come from the setup wizard, which only admins can save, but they render for every user:
+  - scene icons and colours, the outdoor air quality level colours, and the calendar colours (a colour must now be a plain colour value; calendar colours must be `#rrggbb`);
+  - meal, habit and mood icons: built-in icons are drawn as before and anything else, such as an emoji, is shown as text;
+  - the greeting slot names in the time-of-day theme settings, and the presence detection type (only `person` or `animal`).
+- **Camera streams no longer fall back to Google's public STUN server.** When Home Assistant provides no ICE servers, no third-party server is contacted and the tablet's address is not sent to Google. Cameras on your own network work as before. If you view cameras from outside your network and need a server, add `cameraIceServers` in the Advanced step, for example `[{"urls": "stun:stun.example.com:3478"}]`.
+- **Smaller fixes.** An error message in the camera history and the database size on the System screen are escaped, and a personal entity id was removed from the helper override list.
+
 ## [5.1.2] - 2026-11-24
 
 ### Security
@@ -177,6 +188,7 @@ First release.
 - Music playback and controls
 - Haptic feedback on supported Android devices
 
+[5.1.3]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.3
 [5.1.2]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.2
 [5.1.1]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.1
 [5.1.0]: https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v5.1.0

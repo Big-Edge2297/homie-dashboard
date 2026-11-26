@@ -15,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <!-- DASHBOARD VERSION — update this when releasing a new version -->
-<script>const DASHBOARD_VERSION = "5.1.2";</script>
+<script>const DASHBOARD_VERSION = "5.1.3";</script>
 <!-- GITHUB REPO — used only to check for the latest tagged release in Settings -->
 <script>const GITHUB_REPO = "Big-Edge2297/homie-dashboard";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -9671,6 +9671,37 @@ const _ICONS = {
 /** Return a named icon SVG string, or '' if not found. */
 function _icon(name) { return _ICONS[name] ?? ''; }
 
+/* Config values (scene, meal, habit and mood icons, colours) come from the setup wizard and are rendered for every user,
+ * so they must never reach innerHTML unchecked.
+ *  _iconHtml : a built-in icon (an "@icon:" reference, already turned into its SVG by the config loader) is used as it is;
+ *              anything else, such as an emoji, is escaped and shown as text.
+ *  _safeColor: only a plain colour value is allowed in a style attribute (hex, rgb/hsl, var(--x) or a colour name).
+ *  _hex6     : a #rrggbb colour, for code that appends an alpha suffix such as "40". */
+const _TRUSTED_ICONS = (() => {
+  const set = new Set();
+  const walk = o => { for (const v of Object.values(o || {})) { if (typeof v === "string") set.add(v); else if (v && typeof v === "object") walk(v); } };
+  try { walk(ICONS); } catch (e) { /* no icons */ }
+  return set;
+})();
+function _iconHtml(value) {
+  const s = String(value ?? "");
+  return _TRUSTED_ICONS.has(s) ? s : escapeHtml(s);
+}
+function _safeColor(value, fallback = "") {
+  const s = String(value ?? "").trim();
+  if (/^#[0-9a-fA-F]{3,8}$/.test(s)) return s;
+  if (/^(rgb|hsl)a?\(\s*[0-9.,%\s\/-]+\)$/i.test(s)) return s;
+  if (/^var\(--[a-zA-Z0-9_-]+\)$/.test(s)) return s;
+  if (/^[a-zA-Z]{3,20}$/.test(s)) return s;
+  return fallback;
+}
+function _hex6(value, fallback) {
+  const s = String(value ?? "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(s)) return s;
+  if (/^#[0-9a-fA-F]{3}$/.test(s)) return "#" + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+  return fallback;
+}
+
 
 // Single map of entity_id → state object, kept live by the WebSocket subscription.
 let stateCache = new Map(); // Keyed by entity_id → full HA state object
@@ -10412,7 +10443,7 @@ function _refreshWeatherFS() {
 
     if (el("wfs-aqi-quality")) {
       el("wfs-aqi-quality").textContent = band.label;
-      el("wfs-aqi-quality").style.color = band.color;
+      el("wfs-aqi-quality").style.color = _safeColor(band.color, "#9aa0a6");
     }
 
     const aqiTrendEl = el("wfs-aqi-trend");
@@ -10438,7 +10469,7 @@ function _refreshWeatherFS() {
         const x = cx + radius * Math.cos(angle);
         const y = cy + radius * Math.sin(angle);
         const lit = i < filled;
-        html += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${dotR}" fill="${lit ? band.color : "rgba(255,255,255,0.1)"}"/>`;
+        html += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${dotR}" fill="${lit ? _safeColor(band.color, "#9aa0a6") : "rgba(255,255,255,0.1)"}"/>`;
       }
       dotsEl.innerHTML = html;
     }
@@ -12584,10 +12615,10 @@ async function openPopup(i) {
       sceneHtml += `<div class="popup-group-label">${escapeHtml(group.label)}</div>`;
       sceneHtml += `<div class="popup-scenes-grid">`;
       (group.scenes || []).forEach((sc, idx) => {
-        const bubbleId = `psb-${escapeHtml(group.label)}-${idx}`;
+        const bubbleId = `psb-${_safeId(group.label)}-${idx}`;
         sceneHtml += `
           <div class="popup-scene-bubble" onclick="triggerPopupScene(${_jsArg(sc.entity)},${_jsArg(bubbleId)})">
-            <div class="popup-scene-icon" id="${bubbleId}" style="background:${sc.color || 'rgba(255,255,255,0.14)'}">${sc.icon || ''}</div>
+            <div class="popup-scene-icon" id="${bubbleId}" style="background:${_safeColor(sc.color, 'rgba(255,255,255,0.14)')}">${_iconHtml(sc.icon)}</div>
             <div class="popup-scene-label">${escapeHtml(sc.label)}</div>
           </div>`;
       });
@@ -15573,9 +15604,23 @@ const CamLive = (function () {
     });
   }
 
-  // ICE servers as HA's own UI uses them (STUN fallback if HA gives none)
+  // ICE servers as HA's own UI uses them. When HA gives none, no third-party server is contacted: a tablet on the
+  // same network connects with local candidates alone. For remote access, servers can be added with
+  // "cameraIceServers" in the config, for example [{"urls": "stun:stun.example.com:3478"}].
+  function _extraIceServers() {
+    const list = (typeof CONFIG !== "undefined" && Array.isArray(CONFIG.cameraIceServers)) ? CONFIG.cameraIceServers : [];
+    const okUrl = u => typeof u === "string" && /^(stun|stuns|turn|turns):[^\s]+$/i.test(u);
+    return list.map(e => {
+      const urls = (Array.isArray(e && e.urls) ? e.urls : [e && e.urls]).filter(okUrl);
+      if (!urls.length) return null;
+      const o = { urls };
+      if (typeof e.username === "string") o.username = e.username;
+      if (typeof e.credential === "string") o.credential = e.credential;
+      return o;
+    }).filter(Boolean);
+  }
   async function getIceServers(entity) {
-    const fallback = [{ urls: "stun:stun.l.google.com:19302" }];
+    const fallback = _extraIceServers();
     try {
       const r = await wsRequest({ type: "camera/webrtc/get_client_config", entity_id: entity }, 3000);
       const s = r && r.configuration && r.configuration.iceServers;
@@ -16148,7 +16193,7 @@ async function _loadMotionLog() {
     if (rangeEl) rangeEl.textContent = `${filtered.length} event${filtered.length !== 1 ? "s" : ""} · last 24 h`;
 
   } catch (err) {
-    scroll.innerHTML = `<div class="cam-log-empty">Could not load history.<br><span style="font-size:9px;opacity:0.5">${err}</span></div>`;
+    scroll.innerHTML = `<div class="cam-log-empty">Could not load history.<br><span style="font-size:9px;opacity:0.5">${escapeHtml(err)}</span></div>`;
   }
 }
 
@@ -17078,7 +17123,7 @@ async function _dailyLoadMeals(silent = false) {
       const meta     = _MEAL_SLOTS.find(m => m.key === slot) || _MEAL_SLOTS[2];
 
       return `<div class="daily-meal-row ${escapeHtml(slot)}">
-        <div class="daily-meal-icon">${meta.icon}</div>
+        <div class="daily-meal-icon">${_iconHtml(meta.icon)}</div>
         <div class="daily-meal-meta">
           <div class="daily-meal-name">${escapeHtml(ev.summary || "Untitled")}</div>
         </div>
@@ -17792,7 +17837,7 @@ function buildHabitGrid() {
 
   grid.innerHTML = habits.map(h => `
     <div class="habit-bubble" id="habit-${escapeHtml(h.key)}" onclick="toggleHabit(${_jsArg(h.key)})">
-      <div class="habit-circle">${h.icon}</div>
+      <div class="habit-circle">${_iconHtml(h.icon)}</div>
       <span class="habit-label">${escapeHtml(h.label)}</span>
     </div>
   `).join("");
@@ -17927,7 +17972,7 @@ function buildMoodGrid() {
   if (!grid) return;
   grid.innerHTML = CONFIG.moods.map(m => `
     <div class="mood-bubble" id="mood-${escapeHtml(m.key)}" onclick="selectMood(${_jsArg(m.key)})">
-      <div class="mood-circle">${m.icon}</div>
+      <div class="mood-circle">${_iconHtml(m.icon)}</div>
       <span class="habit-label">${escapeHtml(m.label)}</span>
     </div>
   `).join("");
@@ -18013,7 +18058,7 @@ async function openHabitHistory() {
 
     const dots = habits.map(h => {
       const done = !!state[h.key];
-      return `<div class="history-habit-dot ${done ? 'done' : ''}" title="${escapeHtml(h.label)}">${done ? h.icon : ''}</div>`;
+      return `<div class="history-habit-dot ${done ? 'done' : ''}" title="${escapeHtml(h.label)}">${done ? _iconHtml(h.icon) : ''}</div>`;
     }).join("");
 
     return `
@@ -19812,6 +19857,12 @@ function _gatherOv3AcEntities() {
 }
 
 /* Build/rebuild the entire card */
+/* Only these climate modes get a mode class, and the target temperature is always a number (never markup). */
+const _AC_KNOWN_MODES = ["cool", "heat", "fan_only", "dry", "auto"];
+function _acNumber(v) {
+  return (v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v))) ? Number(v) : null;
+}
+
 function _buildOv3AcCard() {
   _gatherOv3AcEntities();
   _ov3AcSlide = 0;  // always reset to first slide on rebuild
@@ -19832,12 +19883,12 @@ function _buildOv3AcCard() {
     const state = d ? d.state : "off";
     const isOn  = state !== "off" && state !== "unavailable" && state !== "unknown";
     const cur   = attrs.current_temperature ?? null;
-    const tgt   = attrs.temperature ?? null;
-    const modeLabel = state === "fan_only" ? "Fan" : state === "off" ? "Off" : (state.charAt(0).toUpperCase() + state.slice(1));
+    const tgt   = _acNumber(attrs.temperature);
+    const modeLabel = state === "fan_only" ? "Fan" : state === "off" ? "Off" : escapeHtml(state.charAt(0).toUpperCase() + state.slice(1));
     const statusText = isOn
       ? (tgt != null ? `${modeLabel} · to ${tgt}°` : modeLabel)
       : "Off";
-    const modeCls = isOn ? ` mode-${state === "fan_only" ? "fan" : state}` : "";
+    const modeCls = isOn && _AC_KNOWN_MODES.includes(state) ? ` mode-${state === "fan_only" ? "fan" : state}` : "";
     const onCls   = isOn ? " is-on" : "";
 
     const modeIcons = {
@@ -19910,7 +19961,8 @@ function _buildOv3AcCard() {
 /* Build mode icon SVG (20×20) */
 function _ov3AcModeIcon(state, isOn) {
   const modeColors = { cool: "#7cc8e0", heat: "#f07050", fan_only: "#50c8a8", dry: "#d4ae50" };
-  const col  = isOn ? (modeColors[state] || "#7cc8e0") : "rgba(255,255,255,0.4)";
+  const known = Object.prototype.hasOwnProperty.call(modeColors, state);
+  const col  = isOn ? (known ? modeColors[state] : "#7cc8e0") : "rgba(255,255,255,0.4)";
   const icons = {
     cool:     `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/><circle cx="12" cy="12" r="3"/></svg>`,
     heat:     `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"><path d="M12 2 Q14 6 12 10 Q10 14 12 18 Q14 22 12 22"/><path d="M7 4 Q9 7 7 11 Q5 15 7 18"/><path d="M17 4 Q19 7 17 11 Q15 15 17 18"/></svg>`,
@@ -19918,7 +19970,7 @@ function _ov3AcModeIcon(state, isOn) {
     dry:      `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"><path d="M12 3 Q12 3 7 10 Q4.5 14 4.5 16 A7.5 7.5 0 0 0 19.5 16 Q19.5 14 17 10 Z"/><line x1="9" y1="17" x2="15" y2="11" stroke-width="1.4"/></svg>`,
   };
   const base = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="8" rx="2"/><path d="M7 13v3M12 13v3M17 13v3"/><path d="M6 9h.01M9 9h6"/></svg>`;
-  return icons[state] || base;
+  return known ? (icons[state] || base) : base;
 }
 
 /* Scroll viewport to a slide (instant or animated) */
@@ -20025,12 +20077,12 @@ function _ov3AcRefreshSlide(idx) {
   const state  = d ? d.state : "off";
   const isOn   = state !== "off" && state !== "unavailable" && state !== "unknown";
   const cur    = attrs.current_temperature ?? null;
-  const tgt    = attrs.temperature ?? null;
+  const tgt    = _acNumber(attrs.temperature);
   const modeName = state === "fan_only" ? "Fan" : (state.charAt(0).toUpperCase() + state.slice(1).replace("_"," "));
 
   /* Mode/on classes */
   ["mode-cool","mode-heat","mode-fan","mode-dry","is-on"].forEach(c => slide.classList.remove(c));
-  if (isOn) { slide.classList.add("is-on"); slide.classList.add(`mode-${state === "fan_only" ? "fan" : state}`); }
+  if (isOn) { slide.classList.add("is-on"); if (_AC_KNOWN_MODES.includes(state)) slide.classList.add(`mode-${state === "fan_only" ? "fan" : state}`); }
 
   /* Icon */
   const iconEl = document.getElementById(`ov3-ac-icon-${idx}`);
@@ -20081,7 +20133,7 @@ function _ov3AcRefreshSlide(idx) {
       dry:  { bg: "rgba(40,32,8,0.97)",   border: "rgba(200,165,60,0.45)" },
     };
     const modeKey = state === "fan_only" ? "fan" : state;
-    const theme   = isOn && BG[modeKey] ? BG[modeKey] : { bg: "rgba(8,18,36,0.95)", border: "rgba(100,160,255,0.12)" };
+    const theme   = isOn && Object.prototype.hasOwnProperty.call(BG, modeKey) && BG[modeKey] ? BG[modeKey] : { bg: "rgba(8,18,36,0.95)", border: "rgba(100,160,255,0.12)" };
     card.style.backgroundColor = theme.bg;
     card.style.borderColor     = theme.border;
   }
@@ -20562,7 +20614,7 @@ function _refreshOv3Aqi() {
 
   if (badgeEl) {
     badgeEl.textContent  = band ? band.label : "—";
-    badgeEl.style.color  = band ? band.color : "rgba(255,255,255,0.5)";
+    badgeEl.style.color  = band ? _safeColor(band.color, "#9aa0a6") : "rgba(255,255,255,0.5)";
   }
 
   if (cardEl) {
@@ -21687,7 +21739,7 @@ function openSettings() {
       const endH   = i + 1 < rawSlots.length
         ? String(rawSlots[i + 1].from - 1).padStart(2, "0")
         : String(rawSlots[0].from - 1).padStart(2, "0");
-      const uiLabel = s.slot.charAt(0).toUpperCase() + s.slot.slice(1);
+      const uiLabel = String(s.slot).charAt(0).toUpperCase() + String(s.slot).slice(1);
       return { slot: s.slot, label: uiLabel, hours: `${startH}:00 – ${endH}:59` };
     });
     const themeOptions = Object.entries(THEMES)
@@ -21695,15 +21747,16 @@ function openSettings() {
       .join('');
     const checkSvg = _icon('check');
     todRowsEl.innerHTML = todSlotDefs.map(({ slot, label, hours }) => {
+      const slotId = _safeId(slot);
       const themeRadios = [
-        `<label class="startup-mode-option" onclick="applyTodTheme('${slot}', '')">
-          <input type="radio" name="st-tod-${slot}" value="" id="st-tod-${slot}-default">
+        `<label class="startup-mode-option" onclick="applyTodTheme(${_jsArg(slot)}, '')">
+          <input type="radio" name="st-tod-${slotId}" value="" id="st-tod-${slotId}-default">
           <span class="startup-mode-label">Default</span>
           <span class="startup-mode-check">${checkSvg}</span>
         </label>`,
         ...Object.entries(THEMES).map(([id, t]) => `
-        <label class="startup-mode-option" onclick="applyTodTheme('${slot}', ${_jsArg(id)})">
-          <input type="radio" name="st-tod-${slot}" value="${escapeHtml(id)}" id="st-tod-${slot}-${escapeHtml(id)}">
+        <label class="startup-mode-option" onclick="applyTodTheme(${_jsArg(slot)}, ${_jsArg(id)})">
+          <input type="radio" name="st-tod-${slotId}" value="${escapeHtml(id)}" id="st-tod-${slotId}-${escapeHtml(id)}">
           <span class="startup-mode-label">
             <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${escapeHtml(t.accent)};margin-right:7px;vertical-align:middle;flex-shrink:0"></span>${escapeHtml(t.name)}
           </span>
@@ -21712,19 +21765,19 @@ function openSettings() {
       ].join('');
       return `
       <div class="settings-section-title" onclick="toggleSettingsSection(this)" style="font-size:11px">
-        ${label}
-        <span style="opacity:0.4;font-size:9px;letter-spacing:0.1em;font-weight:400;margin-left:auto;padding-right:8px">${hours}</span>
+        ${escapeHtml(label)}
+        <span style="opacity:0.4;font-size:9px;letter-spacing:0.1em;font-weight:400;margin-left:auto;padding-right:8px">${escapeHtml(hours)}</span>
         <span class="settings-section-chevron"><svg width="12" height="12" aria-hidden="true"><use href="#icon-chevron-down"/></svg></span>
       </div>
       <div class="settings-section-body">
-        <div class="startup-mode-list st-tod-select" style="margin:0 12px 4px" id="st-tod-${slot}">${themeRadios}</div>
+        <div class="startup-mode-list st-tod-select" style="margin:0 12px 4px" id="st-tod-${slotId}">${themeRadios}</div>
       </div>`;
     }).join('');
     // Sync current values — check the matching radio input
     const todCurrent = _settings.timeOfDayThemes || {};
     todSlotDefs.forEach(({ slot }) => {
       const val = todCurrent[slot] || '';
-      const radio = document.querySelector(`input[name="st-tod-${slot}"][value="${val}"]`);
+      const radio = document.querySelector(`input[name="st-tod-${_safeId(slot)}"][value="${CSS.escape(String(val))}"]`);
       if (radio) radio.checked = true;
     });
   }
@@ -22416,11 +22469,11 @@ function _calSources() {
   const list = (CONFIG.calendarEntities || []).map((e, i) => ({
     entity: e,
     label: labels[e] || e.replace(/^calendar\./, "").replace(/^local_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-    color: colors[e] || pal[i % pal.length],
+    color: _hex6(colors[e], pal[i % pal.length]),
   }));
   if (CONFIG.mealCalendarEntity) {
     const e = CONFIG.mealCalendarEntity;
-    list.push({ entity: e, label: labels[e] || "Meals", color: colors[e] || "#d4ae78", meal: true });
+    list.push({ entity: e, label: labels[e] || "Meals", color: _hex6(colors[e], "#d4ae78"), meal: true });
   }
   return list;
 }
@@ -24988,7 +25041,7 @@ function closeCalendarView() {
   // normal integration entity), so add each one here by hand once found.
   // `group.*` domain entities get an automatic version of this same
   // fallback below since bare group.* IDs are always Group helpers.
-  const HELPER_ENTITY_OVERRIDES = ["binary_sensor.shumi_litter_box_valid_use"];
+  const HELPER_ENTITY_OVERRIDES = [];   // add entity ids here only if a helper is missing from the registry
 
   // Formats a duration in ms as a compact "Xd Yh" / "Xh Ym" / "Xm" string
   // for the Uptime card.
@@ -25713,7 +25766,7 @@ function closeCalendarView() {
           </div>
           <div class="sys-sum-card" style="--card-color:#79c9a0">
             <div class="sys-sum-label">Database Size</div>
-            <div class="sys-sum-num">${stats.dbSizeText || '—'}</div>
+            <div class="sys-sum-num">${escapeHtml(stats.dbSizeText || '—')}</div>
             <div class="sys-sum-sub">${stats.dbEngine ? escapeHtml(stats.dbEngine) : 'unable to fetch'}</div>
           </div>
         </div>
@@ -26067,7 +26120,7 @@ function closeCalendarView() {
           const t = new Date(s.last_changed || s.last_updated);
           events.push({
             room: meta.room,
-            type: meta.type,
+            type: meta.type === "animal" ? "animal" : "person",
             time: t,
             timeLabel: _fmtClock(t).text,
             agoMs: nowMs - t.getTime(),
@@ -26150,7 +26203,7 @@ function closeCalendarView() {
         <div class="presence-t-row ${side}" style="--room-color:${colorVar}">
           <div class="presence-t-dot"></div>
           <div class="presence-t-bubble" style="animation-delay:${Math.min(i, 12) * 0.04}s">
-            <div class="presence-t-icon ${ev.type}">${_presenceIconSvg(ev.type, 15)}</div>
+            <div class="presence-t-icon ${ev.type === "animal" ? "animal" : "person"}">${_presenceIconSvg(ev.type, 15)}</div>
             <div class="presence-t-text">
               <span class="presence-t-room">${escapeHtml(ev.room)}</span>
               <span class="presence-t-time">${ev.timeLabel} · ${_presenceFmtAgo(ev.agoMs)}</span>

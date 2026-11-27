@@ -4,7 +4,7 @@
   A custom Home Assistant dashboard designed for wall-mounted tablets.
 
   This file is served by the "homie_dashboard" custom integration (install it
-  with HACS) and is shown as a sidebar panel inside Home Assistant.
+  from the Marketplace or HACS) and is shown as a sidebar panel inside Home Assistant.
 
   - It uses your logged-in Home Assistant session. No access token is stored.
   - Your entities and preferences are chosen in the Setup wizard and stored
@@ -15,7 +15,7 @@
 <head>
 <meta charset="UTF-8">
 <!-- DASHBOARD VERSION — update this when releasing a new version -->
-<script>const DASHBOARD_VERSION = "5.1.3";</script>
+<script>const DASHBOARD_VERSION = "5.2.0";</script>
 <!-- GITHUB REPO — used only to check for the latest tagged release in Settings -->
 <script>const GITHUB_REPO = "Big-Edge2297/homie-dashboard";</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -24,6 +24,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <title>Homie Dashboard</title>
 <link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="car.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -8647,6 +8648,10 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 6.5v5.5l-3.2 7.2M12 12l3.2 7.2M8.7 10 5 12.4M15.3 10 19 12.4"/></svg>
             <span class="launcher-label" data-label>Presence</span>
           </button>
+          <button class="topbar-btn" id="car-open-btn" onclick="openCar()" title="Car" style="display:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 16v2M19 16v2M3 16h18v-4l-2-5H5l-2 5zM3 12h18"/><circle cx="7.5" cy="14" r=".6"/><circle cx="16.5" cy="14" r=".6"/></svg>
+            <span class="launcher-label" data-label>Car</span>
+          </button>
           <button class="topbar-btn" id="aqi-fs-open-btn" onclick="openIndoorAQI()" title="Indoor AQI">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2"/><path d="M12.59 19.41A2 2 0 1 0 14 16H2"/><path d="M17.73 7.73A2.5 2.5 0 1 1 19.5 12H2"/></svg>
             <span class="launcher-label" data-label>Indoor AQI</span>
@@ -12808,7 +12813,7 @@ async function openPopup(i) {
             html += buildMushroomCoverCard(i, j, s);
           } else if (isPurifierControl) {
             html += buildMushroomPurifierCard(i, j, s);
-          } else if (domain === "switch" || domain === "input_boolean" || domain === "fan") {
+          } else if (domain === "switch" || domain === "input_boolean" || domain === "automation" || domain === "fan") {
             html += buildMushroomSwitchCard(i, j, s);
           } else {
             html += `<div class="popup-item" id="sub-${i}-${j}" onclick="toggleSubEntity(event,${i},${j})">
@@ -12887,7 +12892,7 @@ async function openPopup(i) {
         updateMushroomPurifierCard(i, j, isOn, d);
       } else {
         const domain = s.entity.split(".")[0];
-        if (domain === "switch" || domain === "input_boolean" || domain === "fan") {
+        if (domain === "switch" || domain === "input_boolean" || domain === "automation" || domain === "fan") {
           updateMushroomSwitchCard(i, j, isOn);
         } else {
           const el = document.getElementById(`sub-${i}-${j}`);
@@ -14008,7 +14013,7 @@ async function toggleRoomAccordion(roomId, ctrlIdx, startIdx, count) {
       else if (isPurifierControl) parts.push(buildMushroomPurifierCard(ctrlIdx, j, s));
       else {
         const domain = s.entity ? s.entity.split(".")[0] : "";
-        if (domain === "switch" || domain === "input_boolean" || domain === "fan")
+        if (domain === "switch" || domain === "input_boolean" || domain === "automation" || domain === "fan")
           parts.push(buildMushroomSwitchCard(ctrlIdx, j, s));
         else
           parts.push(`<div class="popup-item" id="sub-${ctrlIdx}-${j}" onclick="toggleSubEntity(event,${ctrlIdx},${j})">
@@ -14098,7 +14103,7 @@ async function toggleRoomAccordion(roomId, ctrlIdx, startIdx, count) {
         }
         else {
           const domain = sub.entity ? sub.entity.split(".")[0] : "";
-          if (domain === "switch" || domain === "input_boolean" || domain === "fan")
+          if (domain === "switch" || domain === "input_boolean" || domain === "automation" || domain === "fan")
             updateMushroomSwitchCard(ctrlIdx, j, isOn);
           else
             document.getElementById(`sub-${ctrlIdx}-${j}`)?.classList.toggle("on", isOn);
@@ -14421,6 +14426,37 @@ function _alarmSend(service, code, useStoredCode) {
  * domain  — "siren" | "cover"
  * service — "turn_on" | "turn_off" | "open_cover" | "close_cover"
  * ─────────────────────────────────────────────────────────────────────────── */
+/* Works out which Home Assistant action a security button should run.
+ * 1. A v4 config (CONFIG.security with the fixed entity names) keeps working exactly as before.
+ * 2. Otherwise CONFIG.securityControls, set in the Setup wizard:
+ *      siren:  { entity }  or  { onEntity, offEntity }, plus an optional stateEntity that shows whether it is sounding
+ *      garage: { entity }  or  { openEntity, closeEntity }
+ *    A single siren / switch / cover entity is switched with its own service (siren.turn_on, cover.open_cover ...).
+ *    Separate on/off or open/close entities are pressed: button.press, script.turn_on, scene.turn_on ... */
+const _SEC_PRESS = { button: "press", input_button: "press", script: "turn_on", scene: "turn_on", switch: "turn_on", input_boolean: "turn_on" };
+function _resolveSecurity(domain, service) {
+  const secCfg = CONFIG.security || [];
+  const legacy = domain === "siren"
+    ? secCfg.find(e => e.entity === "siren." + service)
+    : secCfg.find(e => e.entity === (service === "open_cover" ? "cover.garage_door_open" : "cover.garage_door_close"));
+  if (legacy) return { domain, service, entityId: legacy.entity };
+  const sc = (CONFIG.securityControls || {})[domain === "siren" ? "siren" : "garage"] || {};
+  const on = service === "turn_on" || service === "open_cover";
+  if (sc.entity) return { domain: sc.entity.split(".")[0], service, entityId: sc.entity };
+  const sep = on ? (sc.onEntity || sc.openEntity) : (sc.offEntity || sc.closeEntity);
+  if (sep) {
+    const d = sep.split(".")[0];
+    if (d === "siren" || d === "cover") return { domain: d, service, entityId: sep };   // separate siren or cover entities for on/off, open/close
+    if (_SEC_PRESS[d]) return { domain: d, service: _SEC_PRESS[d], entityId: sep };
+  }
+  return null;
+}
+/* The entity whose state shows whether the siren is sounding (alarm screen toggle). */
+function _sirenStateEntity() {
+  const sir = (CONFIG.securityControls || {}).siren || {};
+  return sir.stateEntity || (CONFIG.alarmUi && CONFIG.alarmUi.sirenEntity) || sir.entity || "";
+}
+
 function securityAction(domain, service) {
   haptic("medium");
   setAlarmFeedback("Sending…", "");
@@ -14429,21 +14465,9 @@ function securityAction(domain, service) {
     return;
   }
 
-  // Resolve the entity from CONFIG.security
-  const secCfg = (CONFIG.security || []);
-  let entityId = null;
-  if (domain === "siren") {
-    const match = secCfg.find(e => e.entity === "siren." + service);
-    entityId = match ? match.entity : null;
-  } else if (domain === "cover") {
-    const svcToEntity = { open_cover: "cover.garage_door_open", close_cover: "cover.garage_door_close" };
-    const targetEntity = svcToEntity[service];
-    const match = secCfg.find(e => e.entity === targetEntity);
-    entityId = match ? match.entity : null;
-  }
-
-  if (!entityId) {
-    setAlarmFeedback("Entity not configured", "error");
+  const target = _resolveSecurity(domain, service);
+  if (!target) {
+    setAlarmFeedback("Not set up yet (see Setup)", "error");
     return;
   }
 
@@ -14451,9 +14475,9 @@ function securityAction(domain, service) {
   _ws.send(JSON.stringify({
     id: msgId,
     type: "call_service",
-    domain,
-    service,
-    service_data: { entity_id: entityId },
+    domain: target.domain,
+    service: target.service,
+    service_data: { entity_id: target.entityId },
   }));
 
   const handler = (evt) => {
@@ -14608,7 +14632,7 @@ function almRender() {
   document.getElementById("alm-warn").textContent = warn.join(" · ");
 
   // ── Siren toggle ──
-  const sirenEnt = CONFIG.alarmUi && CONFIG.alarmUi.sirenEntity;
+  const sirenEnt = _sirenStateEntity();
   const sirenOn = sirenEnt ? (haGetCached(sirenEnt)?.state === "on") : _almSirenLocal;
   document.getElementById("alm-siren-toggle").classList.toggle("on", sirenOn);
 
@@ -14622,7 +14646,7 @@ function almRender() {
 
 /* ── Siren (with confirmation before turning ON) ── */
 function almSirenTap() {
-  const sirenEnt = CONFIG.alarmUi && CONFIG.alarmUi.sirenEntity;
+  const sirenEnt = _sirenStateEntity();
   const isOn = sirenEnt ? (haGetCached(sirenEnt)?.state === "on") : _almSirenLocal;
   if (isOn) {                       // turning off needs no confirmation
     _almSirenLocal = false;
@@ -15391,7 +15415,15 @@ function init() {
   }
 
   // Apply startup mode from settings
-  const _startupMode = _settings.startupMode || "overview1";
+  // A link such as /homie-dashboard?screen=nowplaying overrides the startup screen for this visit only
+function _deepLinkScreen() {
+  const names = ["overview1", "overview2", "overview3", "nowplaying", "myday", "memories", "thermostat", "clock", "clock-digital", "weather", "cameras", "solar", "indooraqi", "indoorpresence", "alarm", "pet", "car"];
+  try {
+    const s = String(new URLSearchParams(location.search).get("screen") || "").toLowerCase();
+    return names.indexOf(s) >= 0 ? s : "";
+  } catch (e) { return ""; }
+}
+const _startupMode = _deepLinkScreen() || _settings.startupMode || "overview1";
   if (_startupMode === "overview2") {
     _ensureOv2Built();
     switchOverview(1);
@@ -15426,6 +15458,8 @@ function init() {
     setTimeout(() => openSecurity(), 300);
   } else if (_startupMode === "pet") {
     setTimeout(() => openPetStats(), 300);
+  } else if (_startupMode === "car") {
+    setTimeout(() => { if (typeof openCar === "function" && (typeof _carConfigured !== "function" || _carConfigured())) openCar(); }, 300);
   }
 
   // Hide page dots for any disabled Overview screens, and bounce off the
@@ -18162,6 +18196,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById("solar-fs-overlay")?.classList.contains("open"))    closeSolarFS();
   if (document.getElementById("aqi-fs-overlay")?.classList.contains("open"))      closeIndoorAQI();
   if (document.getElementById("presence-overlay")?.classList.contains("open"))   closePresenceTimeline();
+  if (document.getElementById("car-overlay")?.classList.contains("open"))        window.closeCar && window.closeCar();
   if (document.getElementById("dashboards-hub-overlay")?.classList.contains("open")) closeDashboardsHub();
   if (document.getElementById("system-stats-overlay")?.classList.contains("open")) closeSystemStats();
   if (document.getElementById("favorites-popover")?.classList.contains("open")) closeFavoritesPopover();
@@ -19121,6 +19156,7 @@ const OV3_SWIPE_EXCLUDE_SELECTOR = ".popup-overlay.open, #daily-overlay, #cal-ov
     { id: "security-overlay",    close: () => closeSecurity()     },
     { id: "aqi-fs-overlay",      close: () => closeIndoorAQI()    },
     { id: "presence-overlay",    close: () => closePresenceTimeline() },
+    { id: "car-overlay",         close: () => window.closeCar && window.closeCar() },
     { id: "pet-overlay",         close: () => closePetStats()     },
     { id: "dashboards-hub-overlay", close: () => closeDashboardsHub() },
     { id: "system-stats-overlay",   close: () => closeSystemStats() },
@@ -20732,10 +20768,10 @@ function _buildGardenPopupHtml(c) {
       <div class="ov3-garden-scroll" id="pg-garden-scroll">${pagesHtml}</div>
       <div class="ov3-garden-dots" id="pg-garden-dots" style="display:${pageCount > 1 ? "flex" : "none"}">${dotsHtml}</div>
     </div>
-    <div class="popup-group-label" id="pg-irrigation-label">Irrigation</div>
+    ${_gardenPopupIrrSubs.length ? `<div class="popup-group-label" id="pg-irrigation-label">Irrigation</div>
     <div class="pg-irrigation-card" id="pg-irrigation-card">
       <div class="ov3-garden-irrigation-row">${irrHtml}</div>
-    </div>`;
+    </div>` : ''}`;
 }
 
 /** Wires the swipe-to-scroll dot indicator for the popup's plant pages. */
@@ -21248,6 +21284,7 @@ const SETTINGS_DEFAULTS = {
   showSolarFSButton:   true,
   showAqiFSButton:     true,
   showPresenceButton:  true,
+  showCarButton:       true,
   showSystemButton:    true,
   showSecurityButton:  true,
   sensorPanels:        {},     // keyed by floor label → true/false
@@ -21356,13 +21393,14 @@ function applyAllSettings() {
     "solar-fs-open-btn":   "showSolarFSButton",
     "aqi-fs-open-btn":     "showAqiFSButton",
     "presence-open-btn":   "showPresenceButton",
+    "car-open-btn":        "showCarButton",
     "system-open-btn":     "showSystemButton",
     "security-btn":        "showSecurityButton",
     "alarm-open-btn":      "showSecurityButton",
   };
   Object.entries(btnMap).forEach(([id, key]) => {
     const el = document.getElementById(id);
-    if (el) el.style.display = _settings[key] === false ? "none" : "";
+    if (el) el.style.display = (_settings[key] === false || (id === "car-open-btn" && !(typeof _carConfigured === "function" && _carConfigured()))) ? "none" : "";
   });
 
   // Sensor panels — match by data attribute to avoid CSS text-transform mismatches
@@ -21465,10 +21503,28 @@ function _ssCloseOverlaysExcept(keepId) {
     ["weather-fs-overlay", "closeWeatherFS"],    ["solar-fs-overlay", "closeSolarFS"],
     ["aqi-fs-overlay", "closeIndoorAQI"],        ["presence-overlay", "closePresenceTimeline"],
     ["security-overlay", "closeSecurity"],       ["pet-overlay", "closePetStats"],
+    ["car-overlay", "closeCar"],
   ].forEach(([id, fn]) => {
     if (id !== keepId && document.getElementById(id)?.classList.contains("open") && typeof window[fn] === "function") window[fn]();
   });
 }
+
+/* Open a named screen on request: used by links (?screen=…) while the dashboard is already open.
+ * Works like a touch: the screensaver stops, any other full-screen screen closes, then the screen opens. */
+const _SCREEN_OVERLAY_IDS = { nowplaying: "nowplaying-overlay", myday: "daily-overlay", memories: "photoframe-overlay", cameras: "cameras-overlay", thermostat: "thermostat-overlay",
+  clock: "clock-overlay", "clock-digital": "clock-overlay", weather: "weather-fs-overlay", solar: "solar-fs-overlay", indooraqi: "aqi-fs-overlay", indoorpresence: "presence-overlay", alarm: "security-overlay", pet: "pet-overlay", car: "car-overlay" };
+function homieOpenScreen(name) {
+  name = String(name || "").toLowerCase();
+  const isCar = name === "car";
+  if (!isCar && !Object.prototype.hasOwnProperty.call(_SS_LAUNCHERS, name)) return false;
+  if (isCar && !(typeof openCar === "function" && (typeof _carConfigured !== "function" || _carConfigured()))) return false;   // no car set up
+  if (_ssActive) { _ssActive = false; clearTimeout(_ssRotateTimer); _ssRotateTimer = null; }
+  _ssCloseOverlaysExcept(_SCREEN_OVERLAY_IDS[name] || "");
+  if (isCar) openCar(); else _ssLaunchMode(name);
+  _ssResetIdleTimer();
+  return true;
+}
+window.homieOpenScreen = homieOpenScreen;
 
 function _ssGetModes() {
   const modes = _settings.screensaverModes;
@@ -21805,6 +21861,7 @@ function openSettings() {
   syncChk("st-solar-fs",   _settings.showSolarFSButton);
   syncChk("st-aqi-fs",     _settings.showAqiFSButton);
   syncChk("st-presence",   _settings.showPresenceButton);
+  syncChk("st-car",        _settings.showCarButton);
   syncChk("st-system",     _settings.showSystemButton);
   syncChk("st-security",   _settings.showSecurityButton);
 
@@ -23732,6 +23789,10 @@ function closeCalendarView() {
       <label class="settings-check"><input type="checkbox" id="st-presence" onchange="applySetting('showPresenceButton', this.checked)"><span class="settings-check-mark"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span></label>
     </div>
     <div class="settings-item settings-sub">
+      <span class="settings-label">Car</span>
+      <label class="settings-check"><input type="checkbox" id="st-car" onchange="applySetting('showCarButton', this.checked)"><span class="settings-check-mark"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span></label>
+    </div>
+    <div class="settings-item settings-sub">
       <span class="settings-label">Insights</span>
       <label class="settings-check"><input type="checkbox" id="st-system" onchange="applySetting('showSystemButton', this.checked)"><span class="settings-check-mark"><svg width="10" height="10" aria-hidden="true"><use href="#icon-check"/></svg></span></label>
     </div>
@@ -24739,6 +24800,7 @@ function closeCalendarView() {
     "alarm-open-btn":      { category: "Security & Presence",  color: "#3fd49a" },
     "cameras-open-btn":    { category: "Security & Presence",  color: "#7f8fa6" },
     "presence-open-btn":   { category: "Security & Presence",  color: "#f0a840" },
+    "car-open-btn":        { category: "Vehicle",              color: "#0066B1" },
     "daily-open-btn":      { category: "Home Life",            color: "#9b7fe8" },
     "calendar-open-btn":   { category: "Home Life",            color: "#e8836b" },
     "pet-btn":             { category: "Home Life",            color: "#6fbf73" },
@@ -24747,7 +24809,7 @@ function closeCalendarView() {
     "photoframe-open-btn": { category: "Media",                color: "#e87fb0" },
     "system-open-btn":     { category: "Insights",             color: "#5b9bd5" },
   };
-  const HUB_CATEGORY_ORDER = ["Comfort & Energy", "Security & Presence", "Home Life", "Media", "Insights"];
+  const HUB_CATEGORY_ORDER = ["Comfort & Energy", "Security & Presence", "Home Life", "Vehicle", "Media", "Insights"];
   const HUB_STAR_PATH = `<path d="M12 2.5l2.9 6 6.6.7-4.9 4.5 1.3 6.5L12 17l-5.9 3.2L7.4 13.7 2.5 9.2l6.6-.7z" fill="currentColor" stroke="none"/>`;
 
   // Both the Hub and the Favorites popover read live from the (now-hidden)
@@ -25036,7 +25098,7 @@ function closeCalendarView() {
   // Manual safety net for legacy YAML-defined helpers (old-style `group:` /
   // `template:` config without an explicit unique_id) that have a live
   // state but NO entity_registry row at all — confirmed for
-  // shumi_litter_box_valid_use on 2026-09-18. These can't be detected
+  // a litter-box sensor on 2026-09-18. These can't be detected
   // generically (a registry-less binary_sensor could just as easily be a
   // normal integration entity), so add each one here by hand once found.
   // `group.*` domain entities get an automatic version of this same
@@ -25060,7 +25122,7 @@ function closeCalendarView() {
     return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
   }
 
-  // ── Real "Integrations" count + HACS repositories ────────────────────────
+  // ── Real "Integrations" count + HACS repositories (HACS only) ────────────
   // /api/config only exposes loaded component/platform modules (haConfig
   // .components), which is not the same thing as the config entries listed
   // under Settings → Devices & Services. That list — and HACS's own list of
@@ -25071,6 +25133,9 @@ function closeCalendarView() {
   // hacs/repositories/list only exists if the HACS custom integration is
   // installed — on any other setup it comes back as an "unknown_command"
   // error, which we treat the same as "not available" rather than a failure.
+  // From Home Assistant 2026.11 HACS is built in as the Marketplace and that
+  // command is gone, so _sysStoreStats below counts the Marketplace from its
+  // update entities instead.
   function _sysFetchWsData() {
     return new Promise((resolve) => {
       const empty = { configEntries: null, hacsRepos: null, entityRegistry: null, deviceRegistry: null, users: null, systemHealth: null };
@@ -25215,6 +25280,38 @@ function closeCalendarView() {
     return { states, haConfig, configEntries: wsData.configEntries, hacsRepos: wsData.hacsRepos, entityRegistry: wsData.entityRegistry, deviceRegistry: wsData.deviceRegistry, users: wsData.users, systemHealth: wsData.systemHealth, addons, helperDomains };
   }
 
+  // The extension store: HACS before Home Assistant 2026.11, the built-in Marketplace from 2026.11.
+  // HACS answers hacs/repositories/list. The Marketplace has no such command (its marketplace/ commands use a
+  // different format), but it creates one update entity per installed repository, so those are counted instead.
+  function _sysStoreStats(states, configEntries, entityRegistry, hacsRepos) {
+    const entryIds = new Set(Array.isArray(configEntries)
+      ? configEntries.filter(e => e.domain === "hacs" || e.domain === "marketplace").map(e => e.entry_id)
+      : []);
+    const entityIds = new Set(Array.isArray(entityRegistry)
+      ? entityRegistry.filter(e => entryIds.has(e.config_entry_id) || e.platform === "hacs" || e.platform === "marketplace").map(e => e.entity_id)
+      : []);
+    if (Array.isArray(hacsRepos)) {
+      return {
+        name: "HACS",
+        entityIds,
+        installed: hacsRepos.filter(r => r.installed).length,
+        updates: hacsRepos.filter(r => r.installed && r.pending_upgrade).length,
+      };
+    }
+    const own = states.filter(s => (s.entity_id || "").startsWith("update.") && entityIds.has(s.entity_id));
+    const detected = own.length > 0 || (entryIds.size > 0 && Array.isArray(entityRegistry));
+    return {
+      name: "Marketplace",
+      entityIds,
+      installed: detected ? own.length : null,
+      // Same rule as the Updates card: a skipped version does not count as an update.
+      updates: detected ? own.filter(s => {
+        const a = s.attributes || {};
+        return s.state === "on" && a.skipped_version !== a.latest_version;
+      }).length : null,
+    };
+  }
+
   function _sysComputeStats(states, configEntries, addons, hacsRepos, helperDomains, entityRegistry, deviceRegistry, users, systemHealth) {
     const byDomain = {};
     let unavailable = [];
@@ -25292,7 +25389,7 @@ function closeCalendarView() {
       // never see them, even though HA's own Helpers page still lists
       // them. Confirmed via the debug tool that this is a real gap, not a
       // hypothetical one: group.all_ac_units and
-      // binary_sensor.shumi_litter_box_valid_use both have live states but
+      // a litter-box binary_sensor both have live states but
       // zero registry rows.
       //
       // Fix: bare `group.*` entity_ids are, for all practical purposes,
@@ -25519,33 +25616,17 @@ function closeCalendarView() {
     // match that here by excluding entities whose skipped_version equals
     // the latest_version, rather than raw state alone.
     //
-    // Modern HACS versions publish their own "update.*" entity for every
-    // installed repo with a pending upgrade, which would otherwise double
-    // -count those same repos here and in the HACS Updates card below (that
-    // one reads pending_upgrade straight from the HACS API). So entities
-    // that belong to the HACS config entry are excluded from this count —
-    // HACS keeps its own updates in its own card.
-    const hacsEntryIds = Array.isArray(configEntries)
-      ? new Set(configEntries.filter(e => e.domain === "hacs").map(e => e.entry_id))
-      : new Set();
-    const hacsUpdateEntityIds = (hacsEntryIds.size && Array.isArray(entityRegistry))
-      ? new Set(entityRegistry.filter(e => hacsEntryIds.has(e.config_entry_id)).map(e => e.entity_id))
-      : new Set();
-    const updateEntities = states.filter(s => (s.entity_id || "").startsWith("update.") && !hacsUpdateEntityIds.has(s.entity_id));
+    // The extension store (HACS or the Marketplace) publishes an "update.*" entity
+    // for every installed repo. Those would otherwise be counted here and again in
+    // the store's own card, so they are excluded from this count and the store
+    // keeps its own updates in its own card.
+    const store = _sysStoreStats(states, configEntries, entityRegistry, hacsRepos);
+    const updateEntities = states.filter(s => (s.entity_id || "").startsWith("update.") && !store.entityIds.has(s.entity_id));
     const updatesAvailable = updateEntities.filter(s => {
       if (s.state !== "on") return false;
       const a = s.attributes || {};
       return a.skipped_version !== a.latest_version;
     }).length;
-
-    // ── HACS pending upgrades ────────────────────────────────────────────
-    // Distinct from hacsInstalledCount above: this counts installed repos
-    // that HACS has flagged as having a newer version available
-    // ("pending_upgrade" on the hacs/repositories/list response), i.e.
-    // what shows the update badge in the HACS panel itself.
-    const hacsUpdatesAvailable = Array.isArray(hacsRepos)
-      ? hacsRepos.filter(r => r.installed && r.pending_upgrade).length
-      : null;
 
     // ── Low battery devices ───────────────────────────────────────────
     // Two different battery representations exist in HA: a `sensor` with
@@ -25600,7 +25681,8 @@ function closeCalendarView() {
       integrationsEnabled,
       integrationsDisabled,
       appsCount: Array.isArray(addons) ? addons.length : null,
-      hacsInstalledCount: Array.isArray(hacsRepos) ? hacsRepos.filter(r => r.installed).length : null,
+      storeName: store.name,
+      storeInstalledCount: store.installed,
       helpersCount,
       zigbeeCount,
       zigbeeIntegration,
@@ -25608,7 +25690,7 @@ function closeCalendarView() {
       mqttEntityCount,
       updatesAvailable,
       updatesTotal: updateEntities.length,
-      hacsUpdatesAvailable,
+      storeUpdatesAvailable: store.updates,
       lowBatteryCount: lowBatteryEntities.length,
       lowBatteryEntities,
       usersCount,
@@ -25688,9 +25770,9 @@ function closeCalendarView() {
             <div class="sys-sum-sub">${stats.integrationsCount !== null ? stats.integrationsEnabled + ' enabled' : 'unable to fetch'}</div>
           </div>
           <div class="sys-sum-card" style="--card-color:#cc5ec7">
-            <div class="sys-sum-label">HACS</div>
-            <div class="sys-sum-num">${stats.hacsInstalledCount !== null ? stats.hacsInstalledCount : '—'}</div>
-            <div class="sys-sum-sub">${stats.hacsInstalledCount !== null ? 'installed repositories' : 'HACS not detected'}</div>
+            <div class="sys-sum-label">${escapeHtml(stats.storeName)}</div>
+            <div class="sys-sum-num">${stats.storeInstalledCount !== null ? stats.storeInstalledCount : '—'}</div>
+            <div class="sys-sum-sub">${stats.storeInstalledCount !== null ? 'installed repositories' : escapeHtml(stats.storeName) + ' not detected'}</div>
           </div>
           <div class="sys-sum-card" style="--card-color:#5bc9d5">
             <div class="sys-sum-label">Zigbee Devices</div>
@@ -25754,10 +25836,10 @@ function closeCalendarView() {
             <div class="sys-sum-num">${stats.updatesAvailable}</div>
             <div class="sys-sum-sub">${stats.updatesAvailable ? `of ${stats.updatesTotal} tracked` : 'all up to date'}</div>
           </div>
-          <div class="sys-sum-card" style="--card-color:${stats.hacsUpdatesAvailable ? '#e8b64f' : '#6fbf73'}">
-            <div class="sys-sum-label">HACS Updates</div>
-            <div class="sys-sum-num">${stats.hacsUpdatesAvailable !== null ? stats.hacsUpdatesAvailable : '—'}</div>
-            <div class="sys-sum-sub">${stats.hacsUpdatesAvailable !== null ? (stats.hacsUpdatesAvailable ? 'pending upgrade' : 'all up to date') : 'HACS not detected'}</div>
+          <div class="sys-sum-card" style="--card-color:${stats.storeUpdatesAvailable ? '#e8b64f' : '#6fbf73'}">
+            <div class="sys-sum-label">${escapeHtml(stats.storeName)} Updates</div>
+            <div class="sys-sum-num">${stats.storeUpdatesAvailable !== null ? stats.storeUpdatesAvailable : '—'}</div>
+            <div class="sys-sum-sub">${stats.storeUpdatesAvailable !== null ? (stats.storeUpdatesAvailable ? 'pending upgrade' : 'all up to date') : escapeHtml(stats.storeName) + ' not detected'}</div>
           </div>
           <div class="sys-sum-card" style="--card-color:#8fb0e8">
             <div class="sys-sum-label">Uptime</div>
@@ -26372,6 +26454,7 @@ function closeCalendarView() {
       { id: "solar-fs-overlay",    fn: "closeSolarFS"      },
       { id: "security-overlay",    fn: "closeSecurity"     },
       { id: "pet-overlay",         fn: "closePetStats"     },
+      { id: "car-overlay",         fn: "closeCar"          },
     ];
     others.forEach(({ id, fn }) => {
       if (document.getElementById(id)?.classList.contains("open") && typeof window[fn] === "function") {
@@ -26448,5 +26531,6 @@ function closeCalendarView() {
 })();
 </script>
 
+<script src="car.js"></script>
 </body>
 </html>

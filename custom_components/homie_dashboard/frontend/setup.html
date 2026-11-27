@@ -16,6 +16,10 @@
   .step-chip { flex:none; padding:7px 13px; border-radius:99px; border:1px solid var(--line); background:none; color:var(--muted); font:inherit; font-size:12px; cursor:pointer; letter-spacing:.04em; }
   .step-chip.active { background:var(--accent); color:#111; border-color:var(--accent); font-weight:600; }
   .step-chip.done { color:var(--text); }
+  .steps { position:relative; }
+  .steps.sub { margin-top:8px; padding-top:8px; border-top:1px solid var(--line); }
+  .step-chip.sub { padding:5px 12px; font-size:11.5px; border-radius:8px; }
+  .step-chip.sub.active { background:rgba(212,174,120,.16); color:var(--accent); border-color:var(--accent); }
   main { flex:1; overflow-y:auto; padding:8px 20px 24px; -webkit-overflow-scrolling:touch; }
   footer { display:flex; gap:10px; justify-content:space-between; align-items:center; padding:14px 20px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--line); background:var(--bg); }
   h2 { font-size:18px; font-weight:500; margin:14px 0 4px; }
@@ -50,7 +54,21 @@
   details.card summary { cursor:pointer; font-weight:600; font-size:14px; }
   .count { color:var(--muted); font-weight:400; margin-left:6px; }
   .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:var(--card2); border:1px solid var(--accent); padding:10px 18px; border-radius:10px; z-index:10; max-width:90%; }
+  .danger-zone { border-color:rgba(229,102,95,.55); }
+  .danger-zone h3 { color:var(--danger); }
+  .overlay { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal { background:var(--card); border:1px solid var(--danger); border-radius:16px; padding:20px; width:100%; max-width:480px; max-height:100%; overflow-y:auto; }
+  .modal h3 { color:var(--danger); font-size:17px; margin-bottom:8px; }
+  .modal ul { margin:8px 0 12px 20px; color:var(--muted); font-size:13px; }
+  .modal .confirm-row { display:flex; gap:10px; align-items:flex-start; margin:12px 0; font-size:13px; }
+  .modal .actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:16px; }
+  button.btn.danger-solid { background:var(--danger); border-color:var(--danger); color:#fff; font-weight:600; }
   ul.sum { list-style:none; } ul.sum li { padding:7px 0; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:12px; }
+  input[type=color] { width:56px; height:36px; padding:2px; border-radius:8px; background:var(--card2); border:1px solid var(--line); cursor:pointer; }
+  .days { display:flex; flex-wrap:wrap; gap:6px; }
+  .days label { display:flex; align-items:center; padding:7px 12px; border:1px solid var(--line); border-radius:99px; font-size:12px; color:var(--muted); cursor:pointer; user-select:none; }
+  .days label.on { background:var(--accent); border-color:var(--accent); color:#111; font-weight:600; }
+  .days input { display:none; }
 </style>
 <link rel="stylesheet" href="fonts/fonts.css">
 <script src="homie-common.js"></script>
@@ -124,9 +142,63 @@ function sceneStyle(label) {
   return { icon: "@icon:scenes.relax", color: "#3a4a6a" };
 }
 
+/* ───────────────────────── helpers for the Air quality, Pet, Notifications, Alexa timers and Travel time steps ───────────────────────── */
+function omit(o, drop) { var r = {}; Object.keys(o).forEach(function (k) { if (drop.indexOf(k) < 0) r[k] = o[k]; }); return r; }
+function pruneEmpty(o) { Object.keys(o).forEach(function (k) { if (o[k] === "" || o[k] === null || o[k] === undefined) delete o[k]; }); return o; }
+/* First entity of the given domains whose name or id matches one of the patterns (tried in order). */
+function findEntity(domains, pats) {
+  var st = hass().states, ids = Object.keys(st).filter(function (id) { return domains.indexOf(id.split(".")[0]) >= 0; });
+  for (var p = 0; p < pats.length; p++) for (var i = 0; i < ids.length; i++) {
+    var n = ((st[ids[i]].attributes || {}).friendly_name || "") + " " + ids[i];
+    if (pats[p].test(n)) return ids[i];
+  }
+  return "";
+}
+/* True when the entity has one of the device classes, or its name / id matches the pattern. */
+function sensorMatch(id, name, classes, re) {
+  var st = hass().states[id], dc = st && st.attributes && st.attributes.device_class;
+  return (!!dc && classes.indexOf(dc) >= 0) || re.test(id + " " + name);
+}
+function timerLabel(id) { var n = nameOf(id); return n.replace(/\s*(next\s+)?timers?\s*$/i, "").trim() || n; }
+var DAY_ORDER = [1, 2, 3, 4, 5, 6, 0], DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];   /* 0 = Sunday, as JavaScript's getDay() */
+function hourText(n) { return (n < 10 ? "0" : "") + n + ":00"; }
+
+/* Tidies what the three steps edit, so only real choices are saved. Called from collect(). */
+function collectExtras() {
+  /* Air quality */
+  if (C.isPlain(cfg.aqi)) { pruneEmpty(cfg.aqi); if (!Object.keys(cfg.aqi).length) delete cfg.aqi; }
+  if (C.isPlain(cfg.indoorAqi)) {
+    var ia = cfg.indoorAqi;
+    if (Array.isArray(ia.rooms)) {
+      ia.rooms.forEach(function (r, i) { pruneEmpty(r); if (!r.label) r.label = "Room " + (i + 1); });
+      if (!ia.rooms.length) delete ia.rooms;
+    }
+    if (!Object.keys(ia).length) delete cfg.indoorAqi;
+  }
+  /* Pet */
+  if (typeof cfg.petName === "string") { cfg.petName = cfg.petName.trim(); if (!cfg.petName) delete cfg.petName; }
+  if (C.isPlain(cfg.petStats)) { pruneEmpty(cfg.petStats); if (!Object.keys(cfg.petStats).length) delete cfg.petStats; }
+  /* Alerts */
+  function listFrom(map, labeller) {
+    return Array.from(map.entries()).map(function (e) { return Object.assign({ entity: e[0], label: e[1].label || labeller(e[0]) }, e[1].x || {}); });
+  }
+  var nl = listFrom(notifMap, nameOf); if (nl.length) cfg.notifications = nl; else delete cfg.notifications;
+  var tl = listFrom(timerMap, timerLabel); if (tl.length) cfg.echoTimers = tl; else delete cfg.echoTimers;
+  var wl = wazeRows.filter(function (r) { return r && r.entity; }).map(function (r) {
+    return Object.assign({}, r, {
+      label: r.label || "Travel",
+      days: (Array.isArray(r.days) ? r.days : []).slice().sort(),
+      timeStart: r.timeStart == null ? 0 : Number(r.timeStart),
+      timeEnd: r.timeEnd == null ? 24 : Number(r.timeEnd)
+    });
+  });
+  if (wl.length) cfg.wazeTravelTime = wl; else delete cfg.wazeTravelTime;
+}
+
 /* ───────────────────────── state ───────────────────────── */
 var cfg = C.clone(B.rawConfig) || {};
-var settings = Object.assign({ photoFrameInterval: 20 }, B.settings || {});
+var settings = Object.assign({}, B.settings || {});
+delete settings.photoFrameInterval;
 delete settings.alarmCodeSet; delete settings.alarmCodeUsable;
 /* The saved alarm code is never sent to the browser. Typing here replaces it; leaving it blank keeps it. */
 var alarmInput = "", alarmClear = false;
@@ -136,16 +208,28 @@ var KINDS = [
   { id: "aircon",    label: "Air Con",   domains: ["climate"],                 mode: "flat",   chip: { showCount: true } },
   { id: "purifiers", label: "Purifiers", domains: ["fan"],                     mode: "flat",   chip: { showCount: true } },
   { id: "blinds",    label: "Blinds",    domains: ["cover"],                   mode: "flat",   chip: { showCount: true, noRoomGrouping: true }, curtain: true },
-  { id: "switches",  label: "Switches",  domains: ["switch", "input_boolean"], mode: "flat",   chip: { showCount: true } }
+  { id: "switches",  label: "Switches",  domains: ["switch", "input_boolean", "automation"], mode: "flat",   chip: { showCount: true } },
+  { id: "bath",      label: "Bath",      domains: ["switch", "input_boolean"], mode: "rooms",   chip: { showCount: true } },
+  { id: "plants",    label: "Plants",    domains: ["switch", "input_boolean"], mode: "flat",   chip: { showCount: true } }   /* irrigation toggles; the dashboard finds this group by its "Plants" label */
 ];
 var kindById = function (id) { return KINDS.filter(function (k) { return k.id === id; })[0]; };
-var model, camMap, musicMap, calMap;
+var ALARM_PRESETS = [
+  { icon: "windows", label: "Windows", ok: "Closed", bad: "Open",     noun: "window" },
+  { icon: "doors",   label: "Doors",   ok: "Closed", bad: "Open",     noun: "door" },
+  { icon: "motion",  label: "Motion",  ok: "Clear",  bad: "Detected", count: false, warn: false },
+  { icon: "garage",  label: "Garage",  ok: "Closed", bad: "Open",     noun: "garage door" }
+];
+var model, camMap, musicMap, calMap, alarmRows, soilMap, bathSections, notifMap, timerMap, wazeRows;
 
 function parseChip(k, chip) {
   var map = new Map();
   var ok = true;
   function rest(o, drop) { var r = {}; Object.keys(o).forEach(function (x) { if (drop.indexOf(x) < 0) r[x] = o[x]; }); return r; }
-  if (k.mode === "rooms") {
+  if (k.mode === "rooms" && k.id === "bath" && Array.isArray(chip.subEntities) && !chip.subGroups) {
+    chip.subEntities.forEach(function (e) {
+      if (e.expandable) ok = false;
+      map.set(e.entity, { label: e.label, room: "", x: rest(e, ["label", "entity"]) }); });
+  } else if (k.mode === "rooms") {
     if (chip.subEntities || !Array.isArray(chip.subGroups)) return null;
     chip.subGroups.forEach(function (g) { (g.subEntities || []).forEach(function (e) {
       if (e.expandable) ok = false;
@@ -173,12 +257,68 @@ function parseControls(controls) {
   });
   return m;
 }
+/* A v4 config keeps the siren and garage buttons in "security" and the siren status in "alarmUi". The Alarm step now holds both,
+   so they are moved there once. The dashboard treats the moved settings exactly like the old ones. */
+var legacyMigrated = false;
+function migrateLegacySecurity() {
+  var sec = Array.isArray(cfg.security) ? cfg.security : [];
+  if (sec.length) {
+    var blocked = false;
+    [["siren", "siren.turn_on", "siren.turn_off", "onEntity", "offEntity"], ["garage", "cover.garage_door_open", "cover.garage_door_close", "openEntity", "closeEntity"]].forEach(function (p) {
+      var a = sec.filter(function (e) { return e && e.entity === p[1]; })[0], b = sec.filter(function (e) { return e && e.entity === p[2]; })[0];
+      if (!a && !b) return;
+      var sc = cfg.securityControls = C.isPlain(cfg.securityControls) ? cfg.securityControls : {};
+      var o = sc[p[0]] = C.isPlain(sc[p[0]]) ? sc[p[0]] : {};
+      if (o.entity) { blocked = true; return; }          // a single entity is set as well, so moving would change what the buttons do: leave the v4 list alone
+      if (a) o[p[3]] = a.entity;
+      if (b) o[p[4]] = b.entity;
+      legacyMigrated = true;
+    });
+    if (!blocked) delete cfg.security;                    // the dashboard never used any other entry of that list
+  }
+  var au = cfg.alarmUi;
+  if (C.isPlain(au)) {
+    if (au.sirenEntity) {
+      var sc2 = cfg.securityControls = C.isPlain(cfg.securityControls) ? cfg.securityControls : {};
+      sc2.siren = C.isPlain(sc2.siren) ? sc2.siren : {};
+      if (!sc2.siren.stateEntity) sc2.siren.stateEntity = au.sirenEntity;
+      legacyMigrated = true;
+    }
+    delete au.sirenEntity;
+    if (!Object.keys(au).length) delete cfg.alarmUi;
+  }
+}
 function initModels() {
+  migrateLegacySecurity();
   model = parseControls(cfg.controls);
   camMap = new Map((cfg.cameras || []).map(function (c) { return [c.entity, { label: c.label, motion: c.motionEntity || "" }]; }));
   musicMap = new Map((cfg.musicPlayers || []).map(function (p) { return [p.entity, { label: p.label }]; }));
   var labels = (cfg.calendarDashboard && cfg.calendarDashboard.labels) || {};
   calMap = new Map((cfg.calendarEntities || []).map(function (e) { return [e, { label: labels[e] || autoLabel(nameOf(e), "") }]; }));
+  notifMap = new Map((cfg.notifications || []).filter(function (n) { return n && n.entity; }).map(function (n) { return [n.entity, { label: n.label || "", x: omit(n, ["entity", "label"]) }]; }));
+  timerMap = new Map((cfg.echoTimers || []).filter(function (n) { return n && n.entity; }).map(function (n) { return [n.entity, { label: n.label || "", x: omit(n, ["entity", "label"]) }]; }));
+  var wz = cfg.wazeTravelTime;   /* older configs hold a single object instead of a list */
+  wazeRows = (Array.isArray(wz) ? wz : (C.isPlain(wz) ? [wz] : [])).filter(C.isPlain).map(C.clone);
+  bathSections = [];
+  model.maps.bath.forEach(function (en) { if (en.room && bathSections.indexOf(en.room) < 0) bathSections.push(en.room); });
+  soilMap = new Map(((cfg.garden && cfg.garden.soilMoisture) || []).filter(function (p) { return p && p.entity; }).map(function (p) {
+    var x = {}; Object.keys(p).forEach(function (k) { if (k !== "entity" && k !== "label") x[k] = p[k]; });
+    return [p.entity, { label: p.label || "", x: x }];
+  }));
+  alarmRows = { custom: [] };
+  (cfg.alarmGroups || []).forEach(function (g) {
+    var p = ALARM_PRESETS.filter(function (x) { return x.icon === g.icon; })[0];
+    if (p && !alarmRows[p.icon]) alarmRows[p.icon] = { entity: g.entity || "", label: g.label || p.label, base: g };
+    else alarmRows.custom.push(g);            // any other group from an imported config is kept as it is
+  });
+}
+function buildAlarmGroups() {
+  var out = [];
+  ALARM_PRESETS.forEach(function (p) {
+    var r = alarmRows[p.icon]; if (!r || !r.entity) return;
+    out.push(Object.assign({}, p, r.base || {}, { label: r.label || p.label, entity: r.entity }));
+  });
+  return out.concat(alarmRows.custom);
 }
 function buildControls() {
   var out = [];
@@ -187,14 +327,17 @@ function buildControls() {
   order.forEach(function (o) {
     if (o.custom) { out.push(o.custom); return; }
     var k = kindById(o.kind), map = model.maps[k.id];
-    if (!map.size) return;
+    /* The Plants button must exist whenever plant sensors are chosen, even with no irrigation switches */
+    if (!map.size && !(k.id === "plants" && soilMap && soilMap.size)) return;
     var chip = Object.assign({ label: k.label }, k.chip, model.meta[k.id] || {}, { _homie: k.id });
     var entries = Array.from(map.entries());
-    if (k.mode === "flat") {
+    var flatBath = k.id === "bath" && entries.every(function (en) { return !en[1].room; });
+    if (k.mode === "flat" || flatBath) {
       chip.subEntities = entries.map(function (en) { return Object.assign({ label: en[1].label || nameOf(en[0]), entity: en[0] }, en[1].x || {}); });
     } else {
       var rooms = [], by = {};
       entries.forEach(function (en) { var r = en[1].room || "Other"; if (!by[r]) { by[r] = []; rooms.push(r); } by[r].push(en); });
+      if (k.id === "bath") rooms.sort(function (a, b) { var i = bathSections.indexOf(a), j = bathSections.indexOf(b); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
       chip.subGroups = rooms.map(function (r) {
         if (k.mode === "rooms") return { label: r, subEntities: by[r].map(function (en) { return Object.assign({ label: en[1].label || nameOf(en[0]), entity: en[0] }, en[1].x || {}); }) };
         return { label: r, scenes: by[r].map(function (en) { var st = sceneStyle(en[1].label || ""); return Object.assign({ label: en[1].label, entity: en[0], color: en[1].color || st.color, icon: en[1].icon || st.icon }, en[1].x || {}); }) };
@@ -205,8 +348,24 @@ function buildControls() {
   return out;
 }
 var PALETTE = ["#ff6b73", "#6cc0f0", "#d4ae78", "#8fd694", "#b58cf0", "#f0a35e"];
+function cleanSecurityControls() {
+  var sc = cfg.securityControls; if (!sc) return;
+  ["siren", "garage"].forEach(function (k) {
+    var o = sc[k] || {}; Object.keys(o).forEach(function (f) { if (!o[f]) delete o[f]; });
+    if (!Object.keys(o).length) delete sc[k];
+  });
+  if (!Object.keys(sc).length) delete cfg.securityControls;
+}
 function collect() {
+  collectExtras();
+  collectExtras2();
+  collectExtras3();
   cfg.controls = buildControls();
+  cfg.alarmGroups = buildAlarmGroups();
+  cleanSecurityControls();
+  if (cfg.habitsMoodHistoryEntities) { var hh = cfg.habitsMoodHistoryEntities; Object.keys(hh).forEach(function (k) { if (!hh[k]) delete hh[k]; }); if (!Object.keys(hh).length) delete cfg.habitsMoodHistoryEntities; }
+  cfg.garden = cfg.garden || {};
+  cfg.garden.soilMoisture = Array.from(soilMap.entries()).map(function (e) { return Object.assign({ entity: e[0], label: e[1].label || autoLabel(nameOf(e[0]), "") }, e[1].x || {}); });
   cfg.cameras = Array.from(camMap.entries()).map(function (e) { var o = { entity: e[0], label: e[1].label || nameOf(e[0]) }; if (e[1].motion) o.motionEntity = e[1].motion; return o; });
   cfg.musicPlayers = Array.from(musicMap.entries()).map(function (e) { return { entity: e[0], label: e[1].label || nameOf(e[0]) }; });
   cfg.calendarEntities = Array.from(calMap.keys());
@@ -229,13 +388,20 @@ function entitySelect(domains, value, onchange, filter) {
   sel.value = value || "";
   return sel;
 }
+function cfgCheck(label, key, def) {
+  return h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:8px" },
+    h("input", { type: "checkbox", checked: cfg[key] == null ? def : cfg[key] !== false, onchange: function (e) { cfg[key] = e.target.checked; } }), label);
+}
 function field(label, control, hint) { return h("div", { class: "field" }, h("label", {}, label), control, hint ? h("div", { class: "hint", style: "margin-top:5px" }, hint) : null); }
 
 /* Generic checkbox picker. opts: kind, map, rooms(bool), scenes(bool), curtain(bool), motion(bool), domains */
 function picker(opts) {
   var map = opts.map, domains = opts.domains;
   var all = entityList(domains), known = {};
+  if (opts.filter) all = all.filter(function (e) { return map.has(e.id) || opts.filter(e); });
   all.forEach(function (e) { known[e.id] = e; });
+  function defLabel(e) { return opts.defLabel ? opts.defLabel(e) : autoLabel(e.name, e.area); }
+  function defRoom(e) { return opts.sections ? (opts.sections()[0] || "") : (e.area || "Other"); }
   var wrap = h("div", {});
   var search = h("input", { type: "text", class: "search", placeholder: "Search by name or entity id…", oninput: draw });
   var counter = h("span", { class: "count" });
@@ -259,8 +425,8 @@ function picker(opts) {
       row.innerHTML = "";
       var cb = h("input", { type: "checkbox", checked: map.has(e.id), onchange: function () {
         if (cb.checked) {
-          var label = autoLabel(e.name, e.area), entry = { label: label, x: {} };
-          if (opts.rooms || opts.scenes) entry.room = e.area || "Other";
+          var label = defLabel(e), entry = { label: label, x: {} };
+          if (opts.rooms || opts.scenes) entry.room = defRoom(e);
           if (opts.scenes) { var st = sceneStyle(label); entry.color = st.color; entry.icon = st.icon; }
           if (opts.motion) entry.motion = guessMotion(e.id);
           map.set(e.id, entry);
@@ -273,7 +439,13 @@ function picker(opts) {
       if (cur) {
         var extra = h("div", { class: "extra" });
         extra.appendChild(h("input", { type: "text", value: cur.label || "", placeholder: "Label", oninput: function (ev) { cur.label = ev.target.value; } }));
-        if (opts.rooms || opts.scenes) extra.appendChild(h("input", { type: "text", value: cur.room || "", placeholder: "Room", oninput: function (ev) { cur.room = ev.target.value; } }));
+        if (opts.sections) {
+          var secSel = h("select", { title: "Section", onchange: function () { cur.room = secSel.value; } }, h("option", { value: "" }, opts.sections().length ? "— no section —" : "— add a section above —"));
+          var secs = opts.sections().slice(); if (cur.room && secs.indexOf(cur.room) < 0) secs.push(cur.room);
+          secs.forEach(function (n) { secSel.appendChild(h("option", { value: n, selected: n === cur.room }, n)); });
+          secSel.value = cur.room || "";
+          extra.appendChild(secSel);
+        } else if (opts.rooms || opts.scenes) extra.appendChild(h("input", { type: "text", value: cur.room || "", placeholder: "Room", oninput: function (ev) { cur.room = ev.target.value; } }));
         if (opts.motion) {
           var ms = entitySelect(["binary_sensor"], cur.motion, function (v) { cur.motion = v; }, function (x) { return motionOptions().some(function (m) { return m.id === x.id; }); });
           ms.title = "Motion sensor (optional)";
@@ -296,7 +468,7 @@ function picker(opts) {
     order.forEach(function (a) {
       var items = groups[a];
       body.appendChild(h("div", { class: "area-head" }, h("span", {}, a),
-        h("span", {}, h("button", { class: "link", onclick: function () { items.forEach(function (e) { if (!map.has(e.id)) { var lab = autoLabel(e.name, e.area), en = { label: lab, x: {} }; if (opts.rooms || opts.scenes) en.room = e.area || "Other"; if (opts.scenes) { var st = sceneStyle(lab); en.color = st.color; en.icon = st.icon; } if (opts.motion) en.motion = guessMotion(e.id); map.set(e.id, en); } }); draw(); } }, "Select all"),
+        h("span", {}, h("button", { class: "link", onclick: function () { items.forEach(function (e) { if (!map.has(e.id)) { var lab = defLabel(e), en = { label: lab, x: {} }; if (opts.rooms || opts.scenes) en.room = defRoom(e); if (opts.scenes) { var st = sceneStyle(lab); en.color = st.color; en.icon = st.icon; } if (opts.motion) en.motion = guessMotion(e.id); map.set(e.id, en); } }); draw(); } }, "Select all"),
                        h("button", { class: "link", onclick: function () { items.forEach(function (e) { map.delete(e.id); }); draw(); } }, "None"))));
       items.forEach(function (e) { body.appendChild(rowFor(e, false)); });
     });
@@ -315,19 +487,18 @@ function picker(opts) {
 
 /* ───────────────────────── import from v4 config.js ───────────────────────── */
 function parseOldConfig(text) {
-  var fn = new Function("ICONS", text + '\n;return {CONFIG: CONFIG, code: (typeof ALARM_CODE !== "undefined" ? ALARM_CODE : ""), interval: (typeof PHOTO_FRAME_INTERVAL !== "undefined" ? PHOTO_FRAME_INTERVAL : 20)};');
+  var fn = new Function("ICONS", text + '\n;return {CONFIG: CONFIG, code: (typeof ALARM_CODE !== "undefined" ? ALARM_CODE : "")};');
   var r = fn(C.makeIconProxy());
   var d = C.serialize(r.CONFIG);
   delete d.wsUrl; delete d.welcomeText;
   d = C.sanitize(d) || {};
   var code = String(r.code || "");
-  return { config: d, settings: { alarmCode: /^YOUR_/.test(code) ? "" : code, photoFrameInterval: Number(r.interval) || 20 } };
+  return { config: d, settings: { alarmCode: /^YOUR_/.test(code) ? "" : code } };
 }
 function applyImport(text, sourceLabel) {
   try {
     var res = parseOldConfig(text);
     cfg = res.config;
-    settings.photoFrameInterval = res.settings.photoFrameInterval;
     if (res.settings.alarmCode) { alarmInput = res.settings.alarmCode; alarmClear = false; }
     initModels();
     var n = (cfg.controls || []).length;
@@ -350,12 +521,228 @@ function detectOld() {
   }, Promise.resolve(null));
 }
 
+/* ───────────────────────── backup & restore ───────────────────────── */
+function exportBackup() {
+  collect();
+  var st = Object.assign({}, settings);
+  ["alarmCode", "alarmCodeSet", "alarmCodeUsable"].forEach(function (k) { delete st[k]; });   /* the saved alarm code is never exported */
+  var data = { homieDashboardBackup: 1, appVersion: B.version || "", exported: new Date().toISOString(), config: cfg, settings: st };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "homie-dashboard-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  toast("Backup downloaded. It does not contain your alarm code.");
+}
+function applyBackup(text, sourceLabel) {
+  try {
+    var d = JSON.parse(text);
+    if (!C.isPlain(d) || !C.isPlain(d.config)) throw new Error("this is not a Homie backup file");
+    cfg = C.sanitize(d.config) || {};
+    var st = C.isPlain(d.settings) ? Object.assign({}, d.settings) : {};
+    ["alarmCode", "alarmCodeSet", "alarmCodeUsable", "photoFrameInterval"].forEach(function (k) { delete st[k]; });
+    settings = st;
+    alarmInput = ""; alarmClear = false;
+    initModels();
+    toast("Restored from " + sourceLabel + ". Review each step, retype your alarm code if you use one, then save.");
+    go(1);
+  } catch (err) {
+    toast("Could not read that backup: " + (err && err.message ? err.message : err));
+  }
+}
+function backupCard() {
+  var card = h("div", { class: "card" }, h("h3", {}, "Backup & restore"),
+    h("p", { class: "hint" }, "Download all your settings as one file, and restore them on another Home Assistant or after a reinstall. Photos are not included: copy the /config/homie_dashboard folder separately. Your alarm code is never exported, so type it again after restoring."));
+  var file = h("input", { type: "file", accept: ".json,application/json", style: "display:none", onchange: function () {
+    var f = file.files[0]; if (!f) return; var rd = new FileReader(); rd.onload = function () { applyBackup(String(rd.result), f.name); }; rd.readAsText(f); file.value = ""; } });
+  card.appendChild(h("div", { style: "display:flex;gap:10px;flex-wrap:wrap;margin-top:10px" },
+    h("button", { class: "btn primary", onclick: exportBackup }, "Download backup"),
+    h("button", { class: "btn", onclick: function () { file.click(); } }, "Restore from backup…")));
+  card.appendChild(file);
+  return card;
+}
+
+function openResetDialog() {
+  var overlay = h("div", { class: "overlay" });
+  var modal = h("div", { class: "modal", role: "dialog", "aria-modal": "true" });
+  var cb = h("input", { type: "checkbox", onchange: check });
+  var typed = h("input", { type: "text", placeholder: "RESET", autocomplete: "off", spellcheck: "false", oninput: check });
+  var go2 = h("button", { class: "btn danger-solid", disabled: true, onclick: doReset }, "Reset everything");
+  var cancel = h("button", { class: "btn", onclick: close }, "Cancel");
+  function close() { overlay.remove(); }
+  function check() { go2.disabled = !(cb.checked && typed.value.trim() === "RESET"); }
+  function doReset() {
+    go2.disabled = true; cancel.disabled = true; go2.textContent = "Resetting…";
+    B.resetConfig().then(function () {
+      cfg = {}; settings = {}; alarmInput = ""; alarmClear = false; detected = null;
+      initModels(); close(); go(0); toast("Homie has been reset. You are starting from a new installation.");
+    }).catch(function (e) { close(); toast("Could not reset: " + (e && e.message ? e.message : JSON.stringify(e))); });
+  }
+  modal.appendChild(h("h3", {}, "Reset everything?"));
+  modal.appendChild(h("p", {}, "This returns Homie to a brand new installation. It cannot be undone."));
+  modal.appendChild(h("p", { class: "hint" }, "This permanently deletes:"));
+  modal.appendChild(h("ul", {}, h("li", {}, "every light, scene, camera, car, weather, alarm, music, calendar and other choice"), h("li", {}, "all labels, rooms, sections and the Advanced JSON"), h("li", {}, "your saved alarm code")));
+  modal.appendChild(h("p", { class: "hint" }, "Your photos and backgrounds in /config/homie_dashboard/ are not touched."));
+  modal.appendChild(h("div", { style: "margin-top:12px" }, h("button", { class: "btn", onclick: exportBackup }, "Download a backup first")));
+  modal.appendChild(h("label", { class: "confirm-row" }, cb, h("span", {}, "I understand that all my Homie settings and my saved alarm code will be permanently deleted.")));
+  modal.appendChild(h("div", { class: "field" }, h("label", {}, "Type RESET to confirm"), typed));
+  modal.appendChild(h("div", { class: "actions" }, cancel, go2));
+  overlay.appendChild(modal);
+  overlay.addEventListener("click", function (ev) { if (ev.target === overlay) close(); });
+  document.body.appendChild(overlay);
+  typed.focus();
+}
+
 /* ───────────────────────── steps ───────────────────────── */
+/* ───────────────────────── helpers for the Home stats, Floor sensors, Solar and Presence steps ───────────────────────── */
+function moveItem(arr, i, d) { var j = i + d; if (j < 0 || j >= arr.length) return; var t = arr.splice(i, 1)[0]; arr.splice(j, 0, t); }
+function unitOf(id) { var s = id && hass().states[id]; return (s && s.attributes && s.attributes.unit_of_measurement) || ""; }
+function rowTools(arr, i, redraw, noun) {
+  return h("div", { class: "row", style: "border-bottom:none;justify-content:flex-end" },
+    h("button", { class: "btn", disabled: i === 0, title: "Move up", onclick: function () { moveItem(arr, i, -1); redraw(); } }, "↑"),
+    h("button", { class: "btn", disabled: i === arr.length - 1, title: "Move down", onclick: function () { moveItem(arr, i, 1); redraw(); } }, "↓"),
+    h("button", { class: "btn danger", onclick: function () { arr.splice(i, 1); redraw(); } }, "Remove " + noun));
+}
+/* Lists such as solar.stats hold {type, entity} objects. These read and write one entry by its type. */
+function typedGet(arr, type) { var e = (arr || []).filter(function (x) { return x && x.type === type; })[0]; return e ? (e.entity || "") : ""; }
+function typedSet(arr, type, entity) {
+  var e = arr.filter(function (x) { return x && x.type === type; })[0];
+  if (e) e.entity = entity; else if (entity) arr.push({ type: type, entity: entity });
+}
+function cleanTyped(arr) { return (Array.isArray(arr) ? arr : []).filter(function (x) { return C.isPlain(x) && x.entity; }); }
+
+var STAT_DOMAINS = ["sensor", "binary_sensor", "cover", "lock", "switch", "input_boolean", "light", "climate", "alarm_control_panel", "fan", "media_player", "person", "vacuum", "camera"];
+var FLOOR_TYPES = [
+  ["temp", "Temperature", "°C", true], ["humidity", "Humidity", "%", false], ["aqi", "Air quality index", "", false], ["pm25", "PM2.5", "µg/m³", false],
+  ["power", "Power", "kW", true], ["solar", "Solar", "kW", true], ["export", "Grid export / import", "kW", true], ["battery", "Battery", "%", false], ["solar-temp", "Inverter temperature", "°C", true]
+];
+var SOLAR_STATS = [
+  ["solar", "Solar production", "A power sensor in kW or W. Drives the Solar value and the animated flow.", "sensor"],
+  ["power", "Home power use", "Shown as Home in the flow diagram and as Today on the overview energy card. kW or W.", "sensor"],
+  ["battery", "Battery level (%)", "Leave empty if you have no battery.", "sensor"],
+  ["export", "Grid export / import", "Positive means exporting to the grid, negative means importing. kW or W.", "sensor"],
+  ["solar-temp", "Inverter temperature", "", "sensor"],
+  ["live-consumption", "Live consumption (W)", "Shown on the overview energy card and in the Solar screen.", "sensor"],
+  ["monthly-kwh", "Usage this month (kWh)", "", "sensor"],
+  ["today-cost", "Cost today", "", "sensor"],
+  ["monthly-cost", "Cost this month", "", "sensor"]
+];
+var SOLAR_PANEL_TYPES = ["solar", "power", "export", "battery", "solar-temp"];   /* readings of the Solar panel in the overview sensor row */
+function floorTypeInfo(t) { return FLOOR_TYPES.filter(function (x) { return x[0] === t; })[0]; }
+function solarFloorIndex() { return (cfg.floorSensors || []).findIndex(function (f) { return f && f.label === "Solar"; }); }
+/* Builds (or removes) the "Solar" panel of the overview sensor row from the live power flow entities. */
+function syncSolarPanel(on) {
+  var floors = Array.isArray(cfg.floorSensors) ? cfg.floorSensors : (cfg.floorSensors = []);
+  var idx = solarFloorIndex(), old = idx >= 0 ? floors[idx] : null;
+  var stats = (cfg.solar && cfg.solar.stats) || [];
+  var sensors = on ? SOLAR_PANEL_TYPES.map(function (t) {
+    var ent = typedGet(stats, t); if (!ent) return null;
+    var prev = old && (old.sensors || []).filter(function (s) { return s.type === t && s.entity === ent; })[0];
+    if (prev) return prev;
+    var info = floorTypeInfo(t), u = unitOf(ent);
+    var o = { type: t, entity: ent, unit: u || info[2] };
+    if (info[3]) o.decimal = true;
+    return o;
+  }).filter(Boolean) : [];
+  if (!sensors.length) { if (idx >= 0) floors.splice(idx, 1); }
+  else if (old) old.sensors = sensors;
+  else floors.push({ label: "Solar", sensors: sensors });
+  if (!floors.length) delete cfg.floorSensors;
+}
+
+/* Tidies what the four steps edit, so only real choices are saved. Called from collect(). */
+function collectExtras2() {
+  /* Home stats */
+  if (Array.isArray(cfg.homeStats)) {
+    cfg.homeStats = cfg.homeStats.filter(function (s) { return C.isPlain(s) && s.entity; });
+    cfg.homeStats.forEach(function (s) { s.label = (s.label || "").trim() || autoLabel(nameOf(s.entity), areaOf(s.entity)); });
+    if (!cfg.homeStats.length) delete cfg.homeStats;
+  }
+  /* Floor sensors. The Solar panel is kept as it is: the Solar step manages it. */
+  if (Array.isArray(cfg.floorSensors)) {
+    cfg.floorSensors = cfg.floorSensors.filter(C.isPlain).map(function (f, i) {
+      if (f.label === "Solar") return f;
+      f.sensors = (Array.isArray(f.sensors) ? f.sensors : []).filter(function (s) { return C.isPlain(s) && s.entity && s.type; });
+      f.label = (f.label || "").trim() || "Floor " + (i + 1);
+      return f;
+    }).filter(function (f) { return f.label === "Solar" ? (f.sensors || []).length : f.sensors.length; });
+    if (!cfg.floorSensors.length) delete cfg.floorSensors;
+  }
+  /* Solar */
+  if (C.isPlain(cfg.solar)) {
+    var so = cfg.solar;
+    so.stats = cleanTyped(so.stats); so.sensorRow = cleanTyped(so.sensorRow); so.dailyChart = cleanTyped(so.dailyChart);
+    ["stats", "sensorRow", "dailyChart"].forEach(function (k) { if (!so[k].length) delete so[k]; });
+    if (so.dailyChartDays != null) so.dailyChartDays = Math.min(90, Math.max(1, Math.round(Number(so.dailyChartDays)) || 5));
+    if (!Object.keys(so).length) delete cfg.solar;
+  }
+  /* Presence */
+  if (C.isPlain(cfg.presence)) {
+    var pr = cfg.presence;
+    pr.entities = (Array.isArray(pr.entities) ? pr.entities : []).filter(function (e) { return C.isPlain(e) && e.entity; });
+    pr.entities.forEach(function (e) { e.room = (e.room || "").trim() || areaOf(e.entity) || "Room"; if (e.type !== "animal") e.type = "person"; });
+    if (!pr.entities.length) delete cfg.presence;
+    else { if (pr.hoursOfHistory != null) pr.hoursOfHistory = Math.min(72, Math.max(1, Math.round(Number(pr.hoursOfHistory)) || 6)); if (pr.limit != null) pr.limit = Math.min(200, Math.max(1, Math.round(Number(pr.limit)) || 20)); }
+  }
+}
+
+/* ───────────────────────── helpers for the Habits, Moods, Greeting and Meals steps ───────────────────────── */
+var HABIT_ICONS = [["water", "Water drop"], ["workout", "Dumbbell"], ["read", "Book"], ["meditate", "Meditation"], ["snacks", "Snack"]];
+var MEAL_ICONS = [["breakfast", "Breakfast"], ["lunch", "Lunch"], ["snack", "Snack"], ["dinner", "Dinner"]];
+function defaultsOf(k) { return C.clone((window.HOMIE_DEFAULTS || {})[k]) || []; }
+/* Icons are shown as HTML by the dashboard, so keep typed ones to plain characters such as an emoji. */
+function plainIcon(v) { return String(v || "").replace(/[<>&"'`]/g, "").trim().slice(0, 8); }
+function slugKey(label, taken) {
+  var base = String(label || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "habit", k = base, i = 2;
+  while (taken.indexOf(k) >= 0) k = base + "_" + i++;
+  return k;
+}
+function hourSelect(cur, onpick) {
+  var s = h("select", { onchange: function () { onpick(Number(s.value)); } });
+  for (var n = 0; n < 24; n++) s.appendChild(h("option", { value: String(n) }, hourText(n)));
+  s.value = String(cur); return s;
+}
+/* Keeps the greeting slots in time order, which is what the dashboard expects. */
+function collectExtras3() {
+  if (C.isPlain(cfg.aqi) && Array.isArray(cfg.aqi.bands)) {
+    var bv = function (b) { return b.max === "@inf" ? Infinity : Number(b.max); };
+    var bb = cfg.aqi.bands.filter(function (b) { return C.isPlain(b) && (b.max === "@inf" || isFinite(Number(b.max))); }).sort(function (a, b) { return bv(a) - bv(b); });
+    if (bb.length) bb[bb.length - 1].max = "@inf";
+    var bd = (C.clone((window.HOMIE_DEFAULTS || {}).aqi || {}).bands) || [];
+    if (!bb.length || JSON.stringify(bb) === JSON.stringify(bd)) delete cfg.aqi.bands; else cfg.aqi.bands = bb;
+  }
+  if (Array.isArray(cfg.greetingSlots)) {
+    cfg.greetingSlots = cfg.greetingSlots.filter(function (s) { return C.isPlain(s) && s.slot; }).map(function (s) { s.from = Math.min(23, Math.max(0, Math.round(Number(s.from)) || 0)); return s; })
+      .sort(function (a, b) { return a.from - b.from; });
+    if (!cfg.greetingSlots.length) delete cfg.greetingSlots;
+  }
+}
+
+/* ───────────────────────── Advanced JSON: only what has no step ───────────────────────── */
+/* Top-level options that a wizard step fully manages. They are left out of the Advanced box and kept as they are. */
+var STEP_MANAGED = ["aqi", "alarmEntity", "alarmGroups", "securityControls", "weather", "sun", "moon", "indoorAqi", "homeStats", "floorSensors", "solar", "presence",
+  "musicPlayers", "musicHideDelay", "calendarEntities", "mealCalendarEntity", "calendarDashboard", "habitsMoodHistoryEntities", "habits", "moods", "greetingSlots", "mealSlots",
+  "notifications", "echoTimers", "wazeTravelTime", "cameras", "doorbell", "cameraRefreshSeconds", "cameraLiveStream", "cameraShowStats", "cameraGridLive", "cameraGridChannel", "cameraIceServers",
+  "petName", "petStats", "showPetButton", "controls", "garden", "car"];
+function advancedView() {
+  var v = C.clone(cfg) || {};
+  STEP_MANAGED.forEach(function (k) { delete v[k]; });
+  return v;
+}
+function advancedMerge(edited) {
+  var out = C.clone(cfg) || {};
+  Object.keys(out).forEach(function (k) { if (STEP_MANAGED.indexOf(k) < 0) delete out[k]; });   // what the box shows is replaced by what was typed
+  Object.keys(edited).forEach(function (k) { out[k] = edited[k]; });
+  return out;
+}
+
 var steps = [
   { id: "welcome", title: "Welcome", render: function (m) {
     m.appendChild(h("h2", {}, "Welcome to Homie Dashboard"));
     m.appendChild(h("p", { class: "lead" }, "Choose the lights, scenes, cameras and more that appear on your dashboard. Nothing here needs a token or a file edit, and your choices are kept safe when Homie updates."));
     if (!B.isAdmin) m.appendChild(h("div", { class: "card" }, h("p", { class: "warn" }, "Setup needs a Home Assistant administrator account. Sign in as an admin to make changes.")));
+    m.appendChild(backupCard());
     var up = h("div", { class: "card" }, h("h3", {}, "Coming from Homie v4?"),
       h("p", { class: "hint" }, "Import your existing config.js and every entity, label and setting carries over. The token inside it is never read or stored."));
     var status = h("p", { class: "hint", style: "margin-top:8px" }, "Looking for your old config.js…");
@@ -386,14 +773,14 @@ var steps = [
     m.appendChild(h("p", { class: "lead" }, "Pick your scenes. Icons and colours are chosen from the scene name (relax, movie, candle…)."));
     m.appendChild(picker({ domains: ["scene"], map: model.maps.scenes, scenes: true }));
   } },
-  { id: "more", title: "Climate & more", render: function (m) {
-    m.appendChild(h("h2", {}, "Climate, purifiers, blinds & switches"));
+  { id: "climate", title: "Climate", render: function (m) {
+    m.appendChild(h("h2", {}, "Climate"));
     m.appendChild(h("p", { class: "lead" }, "Each group becomes a button on the overview screen. Leave a group empty to hide it."));
-    ["aircon", "purifiers", "blinds", "switches"].forEach(function (id) {
-      var k = kindById(id), d = h("details", { class: "card" }, h("summary", {}, k.label, h("span", { class: "count" }, model.maps[id].size ? model.maps[id].size + " selected" : "")));
+    [["aircon", "Air Con"], ["purifiers", "Purifiers"]].forEach(function (g) {
+      var k = kindById(g[0]), d = h("details", { class: "card" }, h("summary", {}, k.label, h("span", { class: "count" }, model.maps[g[0]].size ? model.maps[g[0]].size + " selected" : "")));
       var built = false;
-      d.addEventListener("toggle", function () { if (d.open && !built) { built = true; d.appendChild(picker({ domains: k.domains, map: model.maps[id], curtain: !!k.curtain })); } });
-      if (model.maps[id].size) { d.open = true; }
+      d.addEventListener("toggle", function () { if (d.open && !built) { built = true; d.appendChild(picker({ domains: k.domains, map: model.maps[g[0]] })); } });
+      if (model.maps[g[0]].size) { d.open = true; }
       m.appendChild(d);
     });
     var customs = model.order.filter(function (o) { return o.custom; });
@@ -407,6 +794,104 @@ var steps = [
       m.appendChild(c);
     }
   } },
+  { id: "blinds", title: "Blinds", render: function (m) {
+    m.appendChild(h("h2", {}, "Blinds"));
+    m.appendChild(h("p", { class: "lead" }, "Tick the blinds and curtains to show. Leave empty to hide the Blinds button. Mark a cover as a side curtain where it applies."));
+    m.appendChild(picker({ domains: kindById("blinds").domains, map: model.maps.blinds, curtain: true }));
+  } },
+  { id: "switches", title: "Switches", render: function (m) {
+    m.appendChild(h("h2", {}, "Switches"));
+    m.appendChild(h("p", { class: "lead" }, "Tick the switches, on/off helpers and automations to show (use the search box to find them). Leave empty to hide the Switches button."));
+    m.appendChild(picker({ domains: kindById("switches").domains, map: model.maps.switches }));
+  } },
+  { id: "bath", title: "Bath", render: function (m) {
+    m.appendChild(h("h2", {}, "Bath"));
+    m.appendChild(h("p", { class: "lead" }, "Tick the toggles for the bathroom, such as the water heater, fans and towel warmers. They appear in one Bath button on the overview. Leave empty to hide it."));
+    var customBath = model.order.filter(function (o) { return o.custom && String(o.custom.label || "").toLowerCase() === "bath"; });
+    if (customBath.length) {
+      var cb = h("div", { class: "card" }, h("h3", {}, "A custom Bath group from your old config is in use"),
+        h("p", { class: "hint" }, "It has a custom layout (expandable rows), so it is kept unchanged and the lists below are not used. Remove it to manage the Bath toggles here instead."));
+      cb.appendChild(h("button", { class: "btn danger", style: "margin-top:10px", onclick: function () { model.order = model.order.filter(function (x) { return customBath.indexOf(x) < 0; }); render(); } }, "Remove old Bath group"));
+      m.appendChild(cb);
+    }
+    var bmap = model.maps.bath;
+    var secCard = h("div", { class: "card" }, h("h3", {}, "Sections"));
+    secCard.appendChild(h("p", { class: "hint" }, "Optional headings that group the toggles in the Bath popup, for example House, Main Bath and Ensuite. Add them here in the order you want, then choose a section for each toggle below. With no sections the toggles show as one list."));
+    var secList = h("div", { style: "margin-top:10px" });
+    var toggleBox = h("div", {});
+    function drawToggles() {
+      var doms = kindById("bath").domains.slice();
+      Array.from(bmap.keys()).forEach(function (id) { var d = id.split(".")[0]; if (doms.indexOf(d) < 0) doms.push(d); });
+      toggleBox.innerHTML = "";
+      toggleBox.appendChild(picker({ domains: doms, map: bmap, rooms: true, sections: function () { return bathSections; } }));
+    }
+    function renameSection(i, to) {
+      to = String(to || "").trim(); var from = bathSections[i];
+      if (!to || to === from || bathSections.indexOf(to) >= 0) { drawSections(); return; }
+      bathSections[i] = to; bmap.forEach(function (en) { if (en.room === from) en.room = to; });
+      drawSections(); drawToggles();
+    }
+    function drawSections() {
+      secList.innerHTML = "";
+      bathSections.forEach(function (name, i) {
+        var inp = h("input", { type: "text", value: name, onchange: function () { renameSection(i, inp.value); } });
+        secList.appendChild(h("div", { class: "row" }, h("div", { class: "nm" }, inp),
+          h("div", { class: "extra", style: "flex:0 0 auto" },
+            h("button", { class: "btn", disabled: i === 0, title: "Move up", onclick: function () { var t = bathSections.splice(i, 1)[0]; bathSections.splice(i - 1, 0, t); drawSections(); } }, "↑"),
+            h("button", { class: "btn", disabled: i === bathSections.length - 1, title: "Move down", onclick: function () { var t = bathSections.splice(i, 1)[0]; bathSections.splice(i + 1, 0, t); drawSections(); } }, "↓"),
+            h("button", { class: "btn danger", title: "Remove section", onclick: function () { bathSections.splice(i, 1); bmap.forEach(function (en) { if (en.room === name) en.room = ""; }); drawSections(); drawToggles(); } }, "Remove"))));
+      });
+      var add = h("input", { type: "text", placeholder: "New section, for example Main Bath" });
+      function addSec() { var n = add.value.trim(); if (!n) return; if (bathSections.indexOf(n) < 0) bathSections.push(n); drawSections(); drawToggles(); }
+      add.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); addSec(); } });
+      secList.appendChild(h("div", { class: "row" }, h("div", { class: "nm" }, add), h("button", { class: "btn primary", onclick: addSec }, "Add section")));
+    }
+    drawSections(); drawToggles();
+    secCard.appendChild(secList);
+    m.appendChild(secCard);
+    var tc = h("div", { class: "card" }, h("h3", {}, "Toggles"));
+    tc.appendChild(h("p", { class: "hint", style: "margin-bottom:10px" }, "Use the switch that controls each device. Water heaters, fans and towel warmers are usually switches or on/off helpers. Names such as Towel warmer or Water heater get matching icons."));
+    tc.appendChild(toggleBox);
+    m.appendChild(tc);
+  } },
+  { id: "plants", title: "Plants", render: function (m) {
+    m.appendChild(h("h2", {}, "Plants & irrigation"));
+    m.appendChild(h("p", { class: "lead" }, "The Plants button on the overview shows the soil moisture of each plant and your irrigation toggles. Leave both empty to hide it."));
+    var customPlants = model.order.filter(function (o) { return o.custom && String(o.custom.label || "").toLowerCase() === "plants"; });
+    if (customPlants.length) {
+      var cw = h("div", { class: "card" }, h("h3", {}, "A custom Plants group from your old config is in use"),
+        h("p", { class: "hint" }, "It has a custom layout, so it is kept unchanged and the irrigation list below is not used. Remove it to manage irrigation here instead."));
+      cw.appendChild(h("button", { class: "btn danger", style: "margin-top:10px", onclick: function () { model.order = model.order.filter(function (x) { return customPlants.indexOf(x) < 0; }); render(); } }, "Remove old Plants group"));
+      m.appendChild(cw);
+    }
+    var g = cfg.garden = cfg.garden || {};
+    var sc = h("div", { class: "card" }, h("h3", {}, "Plant moisture sensors"));
+    sc.appendChild(h("p", { class: "hint", style: "margin-bottom:10px" }, "Tick the soil moisture sensor of each plant and give it a name. Eight plants fit on a page and more pages are added as you tick more."));
+    var soilBox = h("div", {});
+    function isMoist(e) {
+      var st = hass().states[e.id], dc = st && st.attributes && st.attributes.device_class;
+      return dc === "moisture" || /moist|soil|plant|irrigat|flower|miflora/i.test(e.id + " " + e.name);
+    }
+    var matches = entityList(["sensor"]).filter(isMoist).length, showAll = matches === 0;
+    function drawSoil() { soilBox.innerHTML = ""; soilBox.appendChild(picker({ domains: ["sensor"], map: soilMap, filter: showAll ? null : isMoist })); }
+    drawSoil();
+    sc.appendChild(soilBox);
+    sc.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:8px" },
+      h("input", { type: "checkbox", checked: showAll, onchange: function (e) { showAll = e.target.checked; drawSoil(); } }),
+      matches ? "Show every sensor, not only moisture sensors" : "No moisture sensors recognised. Showing every sensor."));
+    m.appendChild(sc);
+    var th = g.thresholds || {};
+    function setTh(k, v) { g.thresholds = Object.assign({ dryBelow: 30, wetAbove: 80 }, g.thresholds || {}); g.thresholds[k] = v; }
+    var tc = h("div", { class: "card" }, h("h3", {}, "Moisture levels"));
+    tc.appendChild(h("div", { class: "grid2" },
+      field("Dry below (%)", h("input", { type: "number", min: "0", max: "100", value: th.dryBelow == null ? 30 : th.dryBelow, oninput: function (e) { setTh("dryBelow", Math.min(100, Math.max(0, Number(e.target.value) || 0))); } }), "A plant under this level is shown as dry."),
+      field("Wet above (%)", h("input", { type: "number", min: "0", max: "100", value: th.wetAbove == null ? 80 : th.wetAbove, oninput: function (e) { setTh("wetAbove", Math.min(100, Math.max(0, Number(e.target.value) || 0))); } }), "A plant over this level is shown as too wet.")));
+    m.appendChild(tc);
+    var ic = h("div", { class: "card" }, h("h3", {}, "Irrigation"));
+    ic.appendChild(h("p", { class: "hint", style: "margin-bottom:10px" }, "Tick the switches that turn your watering zones on and off. They appear as toggle buttons under the plant readings. Valves are not supported yet: use the switch or helper that controls them."));
+    ic.appendChild(picker({ domains: kindById("plants").domains, map: model.maps.plants }));
+    m.appendChild(ic);
+  } },
   { id: "cameras", title: "Cameras", render: function (m) {
     m.appendChild(h("h2", {}, "Cameras"));
     m.appendChild(h("p", { class: "lead" }, "The camera dashboard shows up to six cameras. For UniFi Protect, choose the high-resolution channel entity; the dashboard falls back to lower channels automatically. Motion sensors are suggested when found."));
@@ -418,10 +903,106 @@ var steps = [
     card.appendChild(field("Doorbell camera", entitySelect(["camera"], db.cameraEntity, function (v) { db.cameraEntity = v; })));
     card.appendChild(field("Overlay title", h("input", { type: "text", value: db.label || "Doorbell", oninput: function (e) { db.label = e.target.value; } })));
     m.appendChild(card);
+    var cb = h("div", { class: "card" }, h("h3", {}, "Camera behaviour"));
+    cb.appendChild(field("Snapshot refresh (seconds)", h("input", { type: "number", min: "1", max: "60", value: cfg.cameraRefreshSeconds == null ? 1 : cfg.cameraRefreshSeconds, oninput: function (e) { cfg.cameraRefreshSeconds = Math.min(60, Math.max(1, Number(e.target.value) || 1)); } }), "How often still pictures update where live video is not playing. Lower is smoother but uses more bandwidth."));
+    cb.appendChild(cfgCheck("Live video in the full-screen and doorbell views", "cameraLiveStream", true));
+    cb.appendChild(cfgCheck("Live video in the camera grid", "cameraGridLive", true));
+    cb.appendChild(cfgCheck("Show the small status label on each camera", "cameraShowStats", true));
+    cb.appendChild(field("Camera grid quality", (function () {
+      var sel = h("select", { onchange: function () { cfg.cameraGridChannel = sel.value; } },
+        h("option", { value: "auto" }, "Automatic (low, then medium)"), h("option", { value: "low" }, "Low"), h("option", { value: "medium" }, "Medium"));
+      sel.value = cfg.cameraGridChannel || "auto"; return sel; })(), "For UniFi Protect. Low uses less bandwidth, medium looks sharper."));
+    var iceText = (Array.isArray(cfg.cameraIceServers) ? cfg.cameraIceServers : []).map(function (e) {
+      if (!C.isPlain(e)) return "";
+      var u = Array.isArray(e.urls) ? e.urls[0] : e.urls;
+      return typeof u === "string" ? (u + (e.username ? " | " + e.username + " | " + (e.credential || "") : "")) : "";
+    }).filter(Boolean).join("\n");
+    var iceTa = h("textarea", { spellcheck: "false", rows: "3", placeholder: "stun:stun.example.com:3478", style: "min-height:72px" });
+    iceTa.value = iceText;
+    iceTa.addEventListener("input", function () {
+      var out = iceTa.value.split("\n").map(function (ln) {
+        var p = ln.split("|").map(function (x) { return x.trim(); });
+        if (!/^(stun|stuns|turn|turns):\S+$/i.test(p[0] || "")) return null;
+        var o = { urls: p[0] };
+        if (p[1]) { o.username = p[1]; o.credential = p[2] || ""; }
+        return o;
+      }).filter(Boolean);
+      if (out.length) cfg.cameraIceServers = out; else delete cfg.cameraIceServers;
+    });
+    cb.appendChild(field("Own STUN or TURN servers (optional)", iceTa, "Only needed to watch live video from outside your network. One server per line, for example stun:stun.example.com:3478. For a TURN server add the user name and password after a | sign. Leave empty for cameras on your own network: no outside server is used."));
+    m.appendChild(cb);
   } },
-  { id: "home", title: "Home", render: function (m) {
-    m.appendChild(h("h2", {}, "Weather, alarm, music & calendars"));
-    var w = h("div", { class: "card" }, h("h3", {}, "Weather & sky"));
+  { id: "car", title: "Car", render: function (m) {
+    var car = cfg.car = cfg.car || {};
+    car.sensors = car.sensors || {};
+    car.tyres = car.tyres || { warn: 10, alert: 30, manual: {} };
+    car.tyres.manual = car.tyres.manual || {};
+    car.home = car.home || {};
+    var SENS = ["sensor", "binary_sensor"], T = "t(?:i|y)re";
+    var GROUPS = [
+      { t: "Fuel & mileage", s: [["fuel", "Fuel level (%)", SENS, [/range tank level/i, /tank level/i, /fuel level/i]], ["range", "Range", SENS, [/range total range/i, /total range/i]], ["mileage", "Mileage", SENS, [/vehicle mileage/i, /odometer/i, /mileage/i]]] },
+      { t: "Service status", s: [["svcService", "Service", SENS, [/service due/i]], ["svcOil", "Engine oil", SENS, [/service engine oil/i, /engine oil/i]], ["svcBrake", "Brake fluid", SENS, [/service brake fluid/i, /brake fluid/i]], ["svcCheck", "Vehicle check", SENS, [/service vehicle check/i, /vehicle check/i]]] },
+      { t: "Security", s: [["lock", "Lock (doors overall state)", ["sensor", "binary_sensor", "lock"], [/doors overall state/i, /central lock/i]], ["alarm", "Alarm arming state", ["sensor", "alarm_control_panel"], [/alarm arming state/i]], ["alarmActive", "Alarm active", SENS, [/alarm active/i]], ["hood", "Hood", SENS, [/hood state/i, /hood/i]], ["tailgate", "Tailgate", SENS, [/tailgate door state/i, /tailgate state/i, /tailgate/i]]] },
+      { t: "Doors", s: [["doorFD", "Front driver", SENS, [/door state \(front driver\)/i]], ["doorFP", "Front passenger", SENS, [/door state \(front passenger\)/i]], ["doorRD", "Rear driver", SENS, [/door state \(rear driver\)/i]], ["doorRP", "Rear passenger", SENS, [/door state \(rear passenger\)/i]]] },
+      { t: "Windows", s: [["winFD", "Front driver", SENS, [/window open \(front driver\)/i]], ["winFP", "Front passenger", SENS, [/window open \(front passenger\)/i]], ["winRD", "Rear driver", SENS, [/window open \(rear driver\)/i]], ["winRP", "Rear passenger", SENS, [/window open \(rear passenger\)/i]]] },
+      { t: "Tyres", s: [["tyreFL", "Pressure front left", SENS, [new RegExp(T + " pressure \\(front left\\)", "i")]], ["tyreFR", "Pressure front right", SENS, [new RegExp(T + " pressure \\(front right\\)", "i")]], ["tyreRL", "Pressure rear left", SENS, [new RegExp(T + " pressure \\(rear left\\)", "i")]], ["tyreRR", "Pressure rear right", SENS, [new RegExp(T + " pressure \\(rear right\\)", "i")]],
+        ["tgtFL", "Target front left", SENS, [new RegExp(T + " pressure target \\(front left\\)", "i")]], ["tgtFR", "Target front right", SENS, [new RegExp(T + " pressure target \\(front right\\)", "i")]], ["tgtRL", "Target rear left", SENS, [new RegExp(T + " pressure target \\(rear left\\)", "i")]], ["tgtRR", "Target rear right", SENS, [new RegExp(T + " pressure target \\(rear right\\)", "i")]],
+        ["tyreDiag", "Tyre diagnosis", SENS, [new RegExp(T + " diagnosis", "i")]]], tyres: true },
+      { t: "Location", s: [["tracker", "Device tracker", ["device_tracker", "sensor"], [/location/i]], ["lat", "GPS latitude", SENS, [/gps latitude/i]], ["lon", "GPS longitude", SENS, [/gps longitude/i]], ["heading", "GPS heading", SENS, [/gps heading/i]], ["motion", "Vehicle motion", SENS, [/vehicle motion state/i, /motion state/i]]], home: true },
+      { t: "Connection", s: [["stream", "Stream connection status", SENS, [/stream connection status/i]], ["lastMessage", "Last message received", SENS, [/last message received/i]], ["lastTelematics", "Last telematics API call", SENS, [/last telematics api call/i]]] }
+    ];
+    function find(domains, pats) {
+      var st = hass().states, ids = Object.keys(st).filter(function (id) { return domains.indexOf(id.split(".")[0]) >= 0; });
+      for (var p = 0; p < pats.length; p++) for (var i = 0; i < ids.length; i++) { var n = ((st[ids[i]].attributes || {}).friendly_name || "") + " " + ids[i]; if (pats[p].test(n)) return ids[i]; }
+      return "";
+    }
+    m.appendChild(h("h2", {}, "Car"));
+    m.appendChild(h("p", { class: "lead" }, "Pick each sensor from your car integration (built and tested with BMW CarData). Leave a sensor empty to hide that item. The Car dashboard appears in Homie once at least one sensor is chosen."));
+    var top = h("div", { class: "card" }, h("h3", {}, "Your car"));
+    top.appendChild(h("div", { class: "grid2" },
+      field("Name", h("input", { type: "text", value: car.name || "", placeholder: "My car", oninput: function (e) { car.name = e.target.value; } }), "Shown in the top-left corner of the Car dashboard."),
+      field("Subtitle (optional)", h("input", { type: "text", value: car.subtitle || "", placeholder: "for example the model or trim", oninput: function (e) { car.subtitle = e.target.value; } }))));
+    top.appendChild(field("Activity history (hours)", h("input", { type: "number", min: "1", max: "168", value: car.activityHours == null ? 48 : car.activityHours, oninput: function (e) { car.activityHours = Math.min(168, Math.max(1, Number(e.target.value) || 48)); } }), "How far back the Activity list looks, from 1 hour up to 7 days (168). Default 48. The list shows up to 50 events and scrolls."));
+    top.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:4px" },
+      h("input", { type: "checkbox", checked: car.bmwStyle !== false, onchange: function (e) { car.bmwStyle = e.target.checked; } }),
+      "BMW M styling (M stripes in the header and under the car). Turn this off for other brands."));
+    top.appendChild(h("p", { class: "hint" }, "Car picture: copy a PNG with a transparent background into /config/homie_dashboard/car/ on your Home Assistant server and reload. Found now: " + (B.photos.car ? B.photos.car.length : 0) + " picture(s)."));
+    top.appendChild(h("div", { style: "margin-top:12px" }, h("button", { class: "btn primary", onclick: function () {
+      var n = 0; GROUPS.forEach(function (g) { g.s.forEach(function (x) { if (!car.sensors[x[0]]) { var e = find(x[2], x[3]); if (e) { car.sensors[x[0]] = e; n++; } } }); });
+      toast(n ? "Detected " + n + " sensors. Check them below." : "No new sensors found"); render();
+    } }, "Auto-detect sensors")));
+    m.appendChild(top);
+    GROUPS.forEach(function (g) {
+      var set = g.s.filter(function (x) { return car.sensors[x[0]]; }).length;
+      var d = h("details", { class: "card" }, h("summary", {}, g.t, h("span", { class: "count" }, set + " of " + g.s.length)));
+      if (set) d.open = true;
+      var grid = h("div", { class: "grid2", style: "margin-top:12px" });
+      g.s.forEach(function (x) { grid.appendChild(field(x[1], entitySelect(x[2], car.sensors[x[0]], function (v) { car.sensors[x[0]] = v; }))); });
+      d.appendChild(grid);
+      if (g.tyres) {
+        var tg = h("div", { class: "grid2", style: "margin-top:6px" });
+        [["fl", "Manual target front left"], ["fr", "Manual target front right"], ["rl", "Manual target rear left"], ["rr", "Manual target rear right"]].forEach(function (k) {
+          tg.appendChild(field(k[1], h("input", { type: "number", value: car.tyres.manual[k[0]] == null ? "" : car.tyres.manual[k[0]], placeholder: "only if no target sensor", oninput: function (e) { car.tyres.manual[k[0]] = e.target.value; } })));
+        });
+        d.appendChild(h("p", { class: "hint", style: "margin-top:8px" }, "Target sensors win over manual targets. Manual targets use the same unit as your pressure sensors (for example kPa)."));
+        d.appendChild(tg);
+        d.appendChild(h("div", { class: "grid2" },
+          field("Warn when this far from target", h("input", { type: "number", min: "1", value: car.tyres.warn, oninput: function (e) { car.tyres.warn = Number(e.target.value) || 10; } }), "Amber, same unit as the sensors."),
+          field("Alert when this far from target", h("input", { type: "number", min: "1", value: car.tyres.alert, oninput: function (e) { car.tyres.alert = Number(e.target.value) || 30; } }), "Red.")));
+      }
+      if (g.home) {
+        var hc = hass().config || {};
+        d.appendChild(h("div", { class: "grid2" },
+          field("Home latitude", h("input", { type: "text", value: car.home.lat == null ? "" : car.home.lat, placeholder: hc.latitude != null ? String(hc.latitude) : "", oninput: function (e) { car.home.lat = e.target.value; } }), "Used to work out the distance from home. Leave empty to use Home Assistant's home location."),
+          field("Home longitude", h("input", { type: "text", value: car.home.lon == null ? "" : car.home.lon, placeholder: hc.longitude != null ? String(hc.longitude) : "", oninput: function (e) { car.home.lon = e.target.value; } }))));
+      }
+      m.appendChild(d);
+    });
+  } },
+  { id: "weather", title: "Weather", render: function (m) {
+    m.appendChild(h("h2", {}, "Weather"));
+    m.appendChild(h("p", { class: "lead" }, "Choose your weather entity and the sun and moon sensors used for sunrise, sunset and moon phase."));
+    var w = h("div", { class: "card" }, h("h3", {}, "Weather entity & sky"));
     cfg.weather = cfg.weather || {};
     w.appendChild(field("Weather entity", entitySelect(["weather"], cfg.weather.entity, function (v) { cfg.weather.entity = v; })));
     w.appendChild(field("Temperature unit", (function () { var s = h("select", { onchange: function () { cfg.weather.tempUnit = s.value; } }, h("option", { value: "°C" }, "°C"), h("option", { value: "°F" }, "°F")); s.value = cfg.weather.tempUnit || "°C"; return s; })()));
@@ -437,6 +1018,10 @@ var steps = [
     w.appendChild(field("Moon phase sensor (optional)", entitySelect(["sensor"], cfg.moon.entity, function (v) { cfg.moon.entity = v; }, function (e) { return /moon/i.test(e.id); })));
     m.appendChild(w);
 
+  } },
+  { id: "alarm", title: "Alarm", render: function (m) {
+    m.appendChild(h("h2", {}, "Alarm"));
+    m.appendChild(h("p", { class: "lead" }, "Everything for the Alarm screen: the alarm panel and code, the status tiles, and the siren and garage buttons."));
     var a = h("div", { class: "card" }, h("h3", {}, "Alarm (Alarmo or any alarm panel)"));
     a.appendChild(field("Alarm panel", entitySelect(["alarm_control_panel"], cfg.alarmEntity, function (v) { cfg.alarmEntity = v; })));
     var codeBox = h("input", { type: "password", autocomplete: "new-password", value: alarmInput, placeholder: B.alarmCodeSet && !alarmClear ? "Saved. Type a new code to replace it" : "No code saved", oninput: function (e) { alarmInput = e.target.value; if (alarmInput) alarmClear = false; } });
@@ -452,31 +1037,712 @@ var steps = [
     }
     m.appendChild(a);
 
+    var ag = h("div", { class: "card" }, h("h3", {}, "Alarm screen: status groups (optional)"));
+    ag.appendChild(h("p", { class: "hint" }, "The Alarm screen shows one tile per category, for example \"Windows · Closed\", or \"2 Open\" when several are open. Each tile reads one group entity that combines all your sensors of that kind."));
+    ag.appendChild(h("p", { class: "hint", style: "margin-top:8px" }, "Create these groups in Home Assistant: Settings → Devices & services → Helpers → Create helper → Group → Binary sensor group. Tick all your window (or door, or motion) sensors and leave \"All entities\" off, so the group turns on when any one of them is on. For the garage, a binary sensor group or a cover group both work. Then pick them below."));
+    var groupEnts = entityList(["binary_sensor", "cover", "group"]).filter(function (e) { var at = hass().states[e.id].attributes || {}; return Array.isArray(at.entity_id); });
+    var showAll = groupEnts.length === 0;
+    var agList = h("div", { class: "grid2", style: "margin-top:12px" });
+    function drawGroups() {
+      agList.innerHTML = "";
+      ALARM_PRESETS.forEach(function (p) {
+        var r = alarmRows[p.icon] = alarmRows[p.icon] || { entity: "", label: p.label, base: null };
+        var filt = showAll ? null : function (e) { return e.id === r.entity || (hass().states[e.id].attributes && Array.isArray(hass().states[e.id].attributes.entity_id)); };
+        agList.appendChild(field(p.label + " group", entitySelect(["binary_sensor", "cover", "group"], r.entity, function (v) { r.entity = v; }, filt)));
+        agList.appendChild(field(p.label + " label", h("input", { type: "text", value: r.label, oninput: function (e) { r.label = e.target.value; } })));
+      });
+    }
+    drawGroups();
+    ag.appendChild(agList);
+    ag.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:8px" },
+      h("input", { type: "checkbox", checked: showAll, onchange: function (e) { showAll = e.target.checked; drawGroups(); } }),
+      groupEnts.length ? "Show every sensor, not only groups" : "No groups found yet. Showing every sensor until you create them."));
+    m.appendChild(ag);
+
+    var sc = cfg.securityControls = cfg.securityControls || {};
+    sc.siren = sc.siren || {}; sc.garage = sc.garage || {};
+    var PRESS = ["button", "input_button", "script", "scene", "switch", "input_boolean"];
+    var sb = h("div", { class: "card" }, h("h3", {}, "Siren and garage buttons (optional)"));
+    sb.appendChild(h("p", { class: "hint" }, "These run the Siren On / Off buttons and the Garage / Gate Open / Close buttons on the security card. Pick the entity of your device: a siren, switch or cover is switched directly. If your siren or opener only has separate on/off buttons or scripts, use \"Use separate buttons instead\"."));
+    if (legacyMigrated) sb.appendChild(h("p", { class: "hint", style: "margin-top:8px" }, "Your siren and garage buttons from the v4 config were moved here. Check them, then save."));
+    if ((cfg.security || []).length) sb.appendChild(h("p", { class: "hint warn", style: "margin-top:8px" }, "Your v4 setup still defines these buttons in the Advanced step, because a single entity is also set here. The v4 buttons take priority until you remove them there."));
+    function pair(title, key, singleLabel, singleDomains, aLabel, aKey, bLabel, bKey, extraDomains) {
+      var o = sc[key], pd = PRESS.concat(extraDomains || []);
+      var wrap = h("div", { style: "margin-top:14px" }, h("h3", { style: "font-size:13px" }, title));
+      wrap.appendChild(field(singleLabel, entitySelect(singleDomains, o.entity, function (v) { o.entity = v; })));
+      var d = h("details", { style: "margin-top:6px" }, h("summary", { class: "hint", style: "cursor:pointer" }, "Use separate buttons instead"));
+      d.appendChild(h("div", { class: "grid2", style: "margin-top:10px" },
+        field(aLabel, entitySelect(pd, o[aKey], function (v) { o[aKey] = v; })),
+        field(bLabel, entitySelect(pd, o[bKey], function (v) { o[bKey] = v; }))));
+      if (o[aKey] || o[bKey]) d.open = true;
+      wrap.appendChild(d); return wrap;
+    }
+    sb.appendChild(pair("Siren", "siren", "Siren entity", ["siren", "switch", "input_boolean"], "Button, script or siren for On", "onEntity", "Button, script or siren for Off", "offEntity", ["siren"]));
+    sb.appendChild(field("Siren status entity (optional)", entitySelect(["siren", "switch", "input_boolean", "binary_sensor"], sc.siren.stateEntity, function (v) { sc.siren.stateEntity = v; }), "Shows on the Alarm screen whether the siren is sounding. Not needed when you pick a siren entity above, which is used by default."));
+    sb.appendChild(pair("Garage door or gate", "garage", "Cover entity", ["cover"], "Button, script or cover for Open", "openEntity", "Button, script or cover for Close", "closeEntity", ["cover"]));
+    m.appendChild(sb);
+
+  } },
+  { id: "music", title: "Music", render: function (m) {
+    m.appendChild(h("h2", {}, "Music"));
+    m.appendChild(h("p", { class: "lead" }, "Tick the media players to control from the Music screen."));
     var mu = h("div", { class: "card" }, h("h3", {}, "Music players"));
     mu.appendChild(picker({ domains: ["media_player"], map: musicMap }));
     m.appendChild(mu);
-
+    var mh = h("div", { class: "card" }, h("h3", {}, "Player bar"));
+    mh.appendChild(field("Hide the player after (seconds)", h("input", { type: "number", min: "1", max: "600", value: Math.round((cfg.musicHideDelay == null ? 10000 : cfg.musicHideDelay) / 1000), oninput: function (e) { cfg.musicHideDelay = Math.min(600, Math.max(1, Number(e.target.value) || 10)) * 1000; } }), "How long the player stays on screen after playback stops. Default 10."));
+    m.appendChild(mh);
+  } },
+  { id: "calendars", title: "Calendar", render: function (m) {
+    m.appendChild(h("h2", {}, "Calendar"));
+    m.appendChild(h("p", { class: "lead" }, "Tick the calendars to show, and optionally choose a meal calendar."));
     var ca = h("div", { class: "card" }, h("h3", {}, "Calendars"));
     ca.appendChild(picker({ domains: ["calendar"], map: calMap }));
     ca.appendChild(field("Meal calendar (optional)", entitySelect(["calendar"], cfg.mealCalendarEntity, function (v) { cfg.mealCalendarEntity = v; })));
     m.appendChild(ca);
+  } },
+  { id: "myday", title: "My Day", render: function (m) {
+    m.appendChild(h("h2", {}, "My Day"));
+    m.appendChild(h("p", { class: "lead" }, "Your daily routine on the dashboard: meals, habits and mood. The meal calendar itself is chosen in the Calendar step."));
 
-    m.appendChild(field("Photo frame: seconds per photo", h("input", { type: "number", min: "3", max: "600", value: settings.photoFrameInterval, oninput: function (e) { settings.photoFrameInterval = Math.max(3, Number(e.target.value) || 20); } })));
+    /* ── Meals ── */
+    var ms = Array.isArray(cfg.mealSlots) && cfg.mealSlots.length ? cfg.mealSlots.filter(C.isPlain) : defaultsOf("mealSlots");
+    var mealCard = h("div", { class: "card" }, h("h3", {}, "Meal slots"));
+    mealCard.appendChild(h("p", { class: "hint" }, "Meals from your meal calendar are placed in these slots. Rename a slot, change its icon or usual hour, or change the order. The four slots themselves are fixed."));
+    var mealBox = h("div", {});
+    function commitMeals() { cfg.mealSlots = ms; }
+    function drawMeals() {
+      mealBox.innerHTML = "";
+      ms.forEach(function (s, i) {
+        var raw = typeof s.icon === "string" ? s.icon : "";
+        var kept = !MEAL_ICONS.some(function (o) { return raw === "@icon:meals." + o[0]; }) && /[<>]/.test(raw);
+        var iconSel = h("select", { title: "Icon", onchange: function () { if (iconSel.value !== "keep") s.icon = "@icon:meals." + iconSel.value; commitMeals(); } });
+        MEAL_ICONS.forEach(function (o) { iconSel.appendChild(h("option", { value: o[0] }, o[1])); });
+        if (kept) iconSel.appendChild(h("option", { value: "keep" }, "Custom icon (kept)"));
+        var cur = MEAL_ICONS.filter(function (o) { return raw === "@icon:meals." + o[0]; })[0];
+        iconSel.value = cur ? cur[0] : kept ? "keep" : s.key;
+        mealBox.appendChild(h("div", { class: "row" }, h("div", { class: "extra", style: "flex:1 1 100%" }, iconSel,
+          h("input", { type: "text", value: s.label || "", placeholder: s.key, oninput: function (e) { s.label = e.target.value; commitMeals(); } }),
+          hourSelect(Number(s.hour) || 0, function (v) { s.hour = v; commitMeals(); }),
+          h("button", { class: "btn", disabled: i === 0, title: "Move up", onclick: function () { moveItem(ms, i, -1); commitMeals(); drawMeals(); } }, "↑"),
+          h("button", { class: "btn", disabled: i === ms.length - 1, title: "Move down", onclick: function () { moveItem(ms, i, 1); commitMeals(); drawMeals(); } }, "↓"))));
+      });
+    }
+    drawMeals();
+    mealCard.appendChild(mealBox);
+    mealCard.appendChild(h("div", { class: "row", style: "border-bottom:none;justify-content:flex-end" },
+      h("button", { class: "btn", onclick: function () { delete cfg.mealSlots; ms = defaultsOf("mealSlots"); drawMeals(); toast("Meal slots are back to the built-in defaults."); } }, "Reset to defaults")));
+    m.appendChild(mealCard);
+
+    /* ── Habits ── */
+    var list = Array.isArray(cfg.habits) ? cfg.habits.filter(C.isPlain) : defaultsOf("habits");
+    var hc = h("div", { class: "card" }, h("h3", {}, "Habits"));
+    hc.appendChild(h("p", { class: "hint" }, "Tap a bubble on the dashboard to tick a habit off for today. A habit keeps its history when you rename it."));
+    var hbox = h("div", {});
+    function commitH() { cfg.habits = list; }
+    function drawHabits() {
+      hbox.innerHTML = "";
+      list.forEach(function (x, i) {
+        var raw = typeof x.icon === "string" ? x.icon : "";
+        var builtin = HABIT_ICONS.filter(function (o) { return raw === "@icon:habits." + o[0]; })[0];
+        var kept = !builtin && /[<>]/.test(raw);                     // an icon from an old config: keep it unchanged
+        var iconSel = h("select", { title: "Icon", onchange: function () {
+          if (iconSel.value === "emoji") x.icon = plainIcon(raw) || "⭐"; else if (iconSel.value !== "keep") x.icon = "@icon:habits." + iconSel.value;
+          commitH(); drawHabits();
+        } });
+        HABIT_ICONS.forEach(function (o) { iconSel.appendChild(h("option", { value: o[0] }, o[1])); });
+        iconSel.appendChild(h("option", { value: "emoji" }, "Emoji"));
+        if (kept) iconSel.appendChild(h("option", { value: "keep" }, "Custom icon (kept)"));
+        iconSel.value = builtin ? builtin[0] : kept ? "keep" : "emoji";
+        var emoji = (!builtin && !kept) ? h("input", { type: "text", value: raw, maxlength: "8", placeholder: "⭐", style: "max-width:80px", oninput: function (e) { x.icon = plainIcon(e.target.value); commitH(); } }) : null;
+        var lab = h("input", { type: "text", value: x.label || "", placeholder: "Label", oninput: function (e) { x.label = e.target.value; commitH(); } });
+        hbox.appendChild(h("div", { class: "row" }, h("div", { class: "extra", style: "flex:1 1 100%" }, iconSel, emoji, lab,
+          h("button", { class: "btn", disabled: i === 0, title: "Move up", onclick: function () { moveItem(list, i, -1); commitH(); drawHabits(); } }, "↑"),
+          h("button", { class: "btn", disabled: i === list.length - 1, title: "Move down", onclick: function () { moveItem(list, i, 1); commitH(); drawHabits(); } }, "↓"),
+          h("button", { class: "btn danger", onclick: function () { list.splice(i, 1); commitH(); drawHabits(); } }, "Remove"))));
+      });
+      if (!list.length) hbox.appendChild(h("p", { class: "hint", style: "padding:8px 4px" }, "No habits. The habits section is hidden on the dashboard."));
+      var add = h("input", { type: "text", placeholder: "New habit, for example Stretch" });
+      function addHabit() {
+        var n = add.value.trim(); if (!n) return;
+        list.push({ key: slugKey(n, list.map(function (y) { return y.key; })), label: n, icon: "⭐" }); commitH(); drawHabits();
+      }
+      add.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); addHabit(); } });
+      hbox.appendChild(h("div", { class: "row" }, h("div", { class: "nm" }, add), h("button", { class: "btn primary", onclick: addHabit }, "Add habit")));
+    }
+    drawHabits();
+    hc.appendChild(hbox);
+    hc.appendChild(h("div", { class: "row", style: "border-bottom:none;justify-content:flex-end" },
+      h("button", { class: "btn", onclick: function () { delete cfg.habits; list = defaultsOf("habits"); drawHabits(); toast("Habits are back to the built-in defaults."); } }, "Reset to defaults")));
+    m.appendChild(hc);
+
+    /* ── Moods ── */
+    var moods = Array.isArray(cfg.moods) ? cfg.moods.filter(C.isPlain) : defaultsOf("moods");
+    var mc = h("div", { class: "card" }, h("h3", {}, "Mood"));
+    mc.appendChild(h("p", { class: "hint" }, "The five faces of the mood picker, from best to worst. Change the emoji or the wording. The number and order stay fixed so your mood history keeps working."));
+    var mbox = h("div", {});
+    function commitM() { cfg.moods = moods; }
+    function drawMoods() {
+      mbox.innerHTML = "";
+      moods.forEach(function (x) {
+        var raw = typeof x.icon === "string" ? x.icon : "";
+        var em = h("input", { type: "text", value: raw, maxlength: "8", style: "max-width:80px;font-size:20px;text-align:center", title: "Emoji", disabled: /[<>]/.test(raw), oninput: function (e) { x.icon = plainIcon(e.target.value); commitM(); } });
+        var lab = h("input", { type: "text", value: x.label || "", placeholder: "Label", oninput: function (e) { x.label = e.target.value; commitM(); } });
+        mbox.appendChild(h("div", { class: "row" }, h("div", { class: "extra", style: "flex:1 1 100%" }, em, lab, h("span", { class: "hint" }, x.key))));
+      });
+    }
+    drawMoods();
+    mc.appendChild(mbox);
+    mc.appendChild(h("div", { class: "row", style: "border-bottom:none;justify-content:flex-end" },
+      h("button", { class: "btn", onclick: function () { delete cfg.moods; moods = defaultsOf("moods"); drawMoods(); toast("Mood is back to the built-in defaults."); } }, "Reset to defaults")));
+    m.appendChild(mc);
+
+    /* ── Habits & mood sync ── */
+    var hm = cfg.habitsMoodHistoryEntities = cfg.habitsMoodHistoryEntities || {};
+    var hmc = h("div", { class: "card" }, h("h3", {}, "Habits & mood sync (optional)"));
+    hmc.appendChild(h("p", { class: "hint" }, "The daily habits and mood buttons are remembered in each device's browser. To share them between devices and keep a 30 day history, enter one text helper for each. Create them in Settings → Devices & services → Helpers → Create helper → Text, with the maximum length set to 255. Leave empty to keep them on each device only."));
+    var dl = h("datalist", { id: "homie-text-helpers" });
+    entityList(["input_text"]).forEach(function (e) { dl.appendChild(h("option", { value: e.id }, e.name)); });
+    hmc.appendChild(dl);
+    hmc.appendChild(h("div", { class: "grid2", style: "margin-top:12px" },
+      field("Habits helper", h("input", { type: "text", list: "homie-text-helpers", value: hm.habits || "", placeholder: "input_text.homie_habits", oninput: function (e) { hm.habits = e.target.value.trim(); } })),
+      field("Mood helper", h("input", { type: "text", list: "homie-text-helpers", value: hm.mood || "", placeholder: "input_text.homie_mood", oninput: function (e) { hm.mood = e.target.value.trim(); } }))));
+    m.appendChild(hmc);
+  } },
+  { id: "greeting", title: "Greeting", render: function (m) {
+    m.appendChild(h("h2", {}, "Greeting"));
+    m.appendChild(h("p", { class: "lead" }, "The greeting on the overview changes through the day."));
+
+    /* ── Greeting ── */
+    var gs = Array.isArray(cfg.greetingSlots) && cfg.greetingSlots.length ? cfg.greetingSlots.filter(C.isPlain) : defaultsOf("greetingSlots");
+    var gc = h("div", { class: "card" }, h("h3", {}, "Greeting"));
+    gc.appendChild(h("p", { class: "hint" }, "Each part of the day starts at the hour you choose and lasts until the next one starts. The time-of-day themes in the dashboard settings follow the same parts. Write the greeting in your own language if you like."));
+    var gbox = h("div", {}), gwarn = h("div", { class: "hint warn", style: "margin-top:6px" });
+    function checkG() { var ok = gs.every(function (s, i) { return i === 0 || Number(s.from) > Number(gs[i - 1].from); }); gwarn.textContent = ok ? "" : "Start hours should increase from the first part of the day to the last. They are sorted when you save."; }
+    function commitG() { cfg.greetingSlots = gs; checkG(); }
+    function drawGreeting() {
+      gbox.innerHTML = "";
+      gs.forEach(function (s) {
+        var name = String(s.slot || "").charAt(0).toUpperCase() + String(s.slot || "").slice(1);
+        gbox.appendChild(h("div", { class: "row" }, h("div", { class: "nm" }, h("b", {}, name)),
+          h("div", { class: "extra" }, hourSelect(Number(s.from) || 0, function (v) { s.from = v; commitG(); }),
+            h("input", { type: "text", value: s.label || "", placeholder: "GOOD " + name.toUpperCase(), oninput: function (e) { s.label = e.target.value; commitG(); } }))));
+      });
+    }
+    drawGreeting(); checkG();
+    gc.appendChild(gbox); gc.appendChild(gwarn);
+    gc.appendChild(h("div", { class: "row", style: "border-bottom:none;justify-content:flex-end" },
+      h("button", { class: "btn", onclick: function () { delete cfg.greetingSlots; gs = defaultsOf("greetingSlots"); drawGreeting(); checkG(); toast("Greeting is back to the built-in defaults."); } }, "Reset to defaults")));
+    m.appendChild(gc);
+  } },
+  { id: "air", title: "Air quality", render: function (m) {
+    m.appendChild(h("h2", {}, "Air quality"));
+    m.appendChild(h("p", { class: "lead" }, "Outdoor air quality for the weather screen, and room sensors for the Indoor AQI screen. Leave a sensor empty to hide that reading."));
+
+    /* ── Outdoor ── */
+    var aq = cfg.aqi = cfg.aqi || {};
+    var OUT = [
+      ["entity", "Air quality index (AQI)", ["sensor", "air_quality"], [/air.?quality.?index/i, /(^|[^a-z])aqi($|[^a-z])/i]],
+      ["pm25", "PM2.5", ["sensor"], [/pm[ ._]?2[ ._]?5/i]],
+      ["pm10", "PM10", ["sensor"], [/pm[ ._]?10/i]],
+      ["co", "Carbon monoxide (CO)", ["sensor"], [/carbon.?monoxide/i, /(^|[^a-z0-9])co($|[^a-z0-9])/i]],
+      ["no2", "Nitrogen dioxide (NO₂)", ["sensor"], [/nitrogen.?dioxide/i, /(^|[^a-z0-9])no2($|[^a-z0-9])/i]]
+    ];
+    var oc = h("div", { class: "card" }, h("h3", {}, "Outdoor air quality"));
+    oc.appendChild(h("p", { class: "hint" }, "Shown on the weather screen as an AQI ring with the pollutant readings. The dashboard shows each value as the sensor reports it, with µg/m³ for PM2.5, PM10 and NO₂ and ppm for CO, so choose sensors that report in those units. The AQI is expected on the usual 0 to 500 scale."));
+    var og = h("div", { class: "grid2", style: "margin-top:12px" });
+    OUT.forEach(function (x) { og.appendChild(field(x[1], entitySelect(x[2], aq[x[0]], function (v) { aq[x[0]] = v; }))); });
+    oc.appendChild(og);
+    oc.appendChild(h("div", { style: "margin-top:8px" }, h("button", { class: "btn", onclick: function () {
+      var n = 0; OUT.forEach(function (x) { if (!aq[x[0]]) { var e = findEntity(x[2], x[3]); if (e) { aq[x[0]] = e; n++; } } });
+      toast(n ? "Detected " + n + " sensors. Check them above." : "No new sensors found"); render();
+    } }, "Auto-detect sensors")));
+    m.appendChild(oc);
+
+    /* ── Outdoor levels ── */
+    var bDef = (C.clone((window.HOMIE_DEFAULTS || {}).aqi || {}).bands) || [];
+    var bands = Array.isArray(aq.bands) && aq.bands.length ? aq.bands.filter(C.isPlain) : C.clone(bDef);
+    var bc = h("div", { class: "card" }, h("h3", {}, "Outdoor air quality levels"));
+    bc.appendChild(h("p", { class: "hint" }, "The colour and message the AQI ring shows for each range. A level covers values up to its limit, and the last level covers everything above. Most people keep the defaults. Change the wording to use your own language."));
+    var bbox = h("div", {}), bwarn = h("div", { class: "hint warn", style: "margin-top:6px" });
+    function isTop(b) { return b.max === "@inf" || b.max === Infinity; }
+    function checkB() { bwarn.textContent = bands.every(function (b, i) { return i === 0 || (!isTop(bands[i - 1]) && (isTop(b) || Number(b.max) > Number(bands[i - 1].max))); }) ? "" : "Limits should increase from the first level to the last. They are sorted when you save."; }
+    function commitB() { aq.bands = bands; checkB(); }
+    function drawBands() {
+      bbox.innerHTML = "";
+      bands.forEach(function (b, i) {
+        var lim = isTop(b) ? h("span", { class: "hint", style: "min-width:90px" }, "and above")
+          : h("input", { type: "number", min: "0", value: b.max, title: "Up to this value", style: "max-width:90px", oninput: function (e) { b.max = Number(e.target.value) || 0; commitB(); } });
+        var col = h("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(b.color || "") ? b.color : "#9aa0a6", title: "Colour", style: "max-width:52px;padding:2px", oninput: function (e) { b.color = e.target.value; commitB(); } });
+        bbox.appendChild(h("div", { class: "row" }, h("div", { class: "extra", style: "flex:1 1 100%" }, lim,
+          h("input", { type: "text", value: b.label || "", placeholder: "Label", oninput: function (e) { b.label = e.target.value; commitB(); } }), col,
+          h("input", { type: "text", value: b.text || "", placeholder: "Message", style: "flex:2 1 220px", oninput: function (e) { b.text = e.target.value; commitB(); } }),
+          h("button", { class: "btn danger", disabled: bands.length <= 1, onclick: function () { bands.splice(i, 1); if (bands.length) bands[bands.length - 1].max = "@inf"; commitB(); drawBands(); } }, "Remove"))));
+      });
+      bbox.appendChild(h("button", { class: "btn", onclick: function () {
+        var prev = bands.filter(function (b) { return !isTop(b); }).pop();
+        var nb = { max: prev ? Number(prev.max) + 50 : 50, label: "New level", color: "#9aa0a6", text: "" };
+        if (!bands.length) { nb.max = "@inf"; bands.push(nb); } else bands.splice(bands.length - 1, 0, nb);
+        commitB(); drawBands();
+      } }, "Add a level"));
+    }
+    drawBands(); checkB();
+    bc.appendChild(bbox); bc.appendChild(bwarn);
+    bc.appendChild(h("div", { class: "row", style: "border-bottom:none;justify-content:flex-end" },
+      h("button", { class: "btn", onclick: function () { delete aq.bands; bands = C.clone(bDef); drawBands(); checkB(); toast("Air quality levels are back to the built-in defaults."); } }, "Reset to defaults")));
+    m.appendChild(bc);
+
+    /* ── Indoor rooms ── */
+    var ia = cfg.indoorAqi = cfg.indoorAqi || {};
+    ia.rooms = Array.isArray(ia.rooms) ? ia.rooms : [];
+    var METRICS = [
+      ["temp", "Temperature", ["temperature"], /temp/i],
+      ["humidity", "Humidity", ["humidity"], /humid/i],
+      ["co2", "CO₂", ["carbon_dioxide"], /co2|carbon.?dioxide/i],
+      ["tvoc", "TVOC", ["volatile_organic_compounds", "volatile_organic_compounds_parts"], /tvoc|voc|volatile/i],
+      ["pm25", "PM2.5", ["pm25"], /pm[ ._]?2[ ._]?5/i],
+      ["nox", "NOx", ["nitrogen_dioxide", "nitrogen_monoxide"], /nox|nitrogen/i],
+      ["aqi", "Air quality index", ["aqi"], /aqi|air.?quality/i]
+    ];
+    var ROOM_ICONS = [["", "No icon"], ["sofa", "Sofa"], ["kitchen", "Kitchen"], ["briefcase", "Office"], ["box", "Storage"], ["bed", "Bed"]];
+    var showAllSensors = false, openRooms = [];
+    var ic = h("div", { class: "card" }, h("h3", {}, "Indoor air quality by room"));
+    ic.appendChild(h("p", { class: "hint" }, "Each room becomes a tab on the Indoor AQI screen, with its own readings and trend charts. Add a room, then choose whichever sensors it has and leave the rest empty. The screen is available once at least one room is added."));
+    var roomsBox = h("div", { style: "margin-top:10px" });
+    function metricSelect(x, r) {
+      var cur = r[x[0]] || "";
+      var matches = entityList(["sensor"]).filter(function (e) { return sensorMatch(e.id, e.name, x[2], x[3]); }).length;
+      var filt = (showAllSensors || !matches) ? null : function (e) { return e.id === cur || sensorMatch(e.id, e.name, x[2], x[3]); };
+      return entitySelect(["sensor"], cur, function (v) { r[x[0]] = v; }, filt);
+    }
+    function drawRooms() {
+      roomsBox.innerHTML = "";
+      ia.rooms.forEach(function (r, i) {
+        var set = METRICS.filter(function (x) { return r[x[0]]; }).length;
+        var title = h("span", {}, r.label || ("Room " + (i + 1)));
+        var d = h("details", { class: "card", style: "margin:8px 0" }, h("summary", {}, title, h("span", { class: "count" }, set + " of " + METRICS.length + " sensors")));
+        if (openRooms.indexOf(r) >= 0) d.open = true;
+        d.addEventListener("toggle", function () {
+          var k = openRooms.indexOf(r);
+          if (d.open && k < 0) openRooms.push(r); else if (!d.open && k >= 0) openRooms.splice(k, 1);
+        });
+        var iconSel = h("select", { onchange: function () { r.icon = iconSel.value; } });
+        ROOM_ICONS.forEach(function (o) { iconSel.appendChild(h("option", { value: o[0] }, o[1])); });
+        iconSel.value = r.icon || "";
+        d.appendChild(h("div", { class: "grid2", style: "margin-top:12px" },
+          field("Room name", h("input", { type: "text", value: r.label || "", placeholder: "Living room", oninput: function (e) { r.label = e.target.value; title.textContent = r.label || ("Room " + (i + 1)); } })),
+          field("Icon", iconSel)));
+        var grid = h("div", { class: "grid2" });
+        METRICS.forEach(function (x) { grid.appendChild(field(x[1], metricSelect(x, r))); });
+        d.appendChild(grid);
+        d.appendChild(h("div", { class: "row", style: "border-bottom:none;justify-content:flex-end" },
+          h("button", { class: "btn", disabled: i === 0, title: "Move up", onclick: function () { var t = ia.rooms.splice(i, 1)[0]; ia.rooms.splice(i - 1, 0, t); drawRooms(); } }, "↑"),
+          h("button", { class: "btn", disabled: i === ia.rooms.length - 1, title: "Move down", onclick: function () { var t = ia.rooms.splice(i, 1)[0]; ia.rooms.splice(i + 1, 0, t); drawRooms(); } }, "↓"),
+          h("button", { class: "btn danger", onclick: function () { ia.rooms.splice(i, 1); openRooms = openRooms.filter(function (o) { return o !== r; }); drawRooms(); } }, "Remove room")));
+        roomsBox.appendChild(d);
+      });
+      var add = h("input", { type: "text", placeholder: "New room, for example Bedroom" });
+      function addRoom() {
+        var n = add.value.trim(); if (!n) return;
+        var r = { label: n }; ia.rooms.push(r); openRooms.push(r); drawRooms();
+      }
+      add.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); addRoom(); } });
+      roomsBox.appendChild(h("div", { class: "row" }, h("div", { class: "nm" }, add), h("button", { class: "btn primary", onclick: addRoom }, "Add room")));
+    }
+    drawRooms();
+    ic.appendChild(roomsBox);
+    ic.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:8px" },
+      h("input", { type: "checkbox", onchange: function (e) { showAllSensors = e.target.checked; drawRooms(); } }),
+      "Show every sensor, not only the ones that look like the right type"));
+    m.appendChild(ic);
+
+    var bd = ia.aqiBands || {};
+    function setBand(k, v) { ia.aqiBands = Object.assign({ goodMax: 50, fairMax: 100 }, ia.aqiBands || {}); ia.aqiBands[k] = v; }
+    var bc = h("div", { class: "card" }, h("h3", {}, "Indoor AQI levels"));
+    bc.appendChild(h("p", { class: "hint" }, "The room air quality index is shown as Good, Fair or Poor. Change where the levels change if your sensor uses a different scale."));
+    bc.appendChild(h("div", { class: "grid2", style: "margin-top:12px" },
+      field("Good up to", h("input", { type: "number", min: "0", value: bd.goodMax == null ? 50 : bd.goodMax, oninput: function (e) { setBand("goodMax", Number(e.target.value) || 0); } }), "At or below this value the room shows Good."),
+      field("Fair up to", h("input", { type: "number", min: "0", value: bd.fairMax == null ? 100 : bd.fairMax, oninput: function (e) { setBand("fairMax", Number(e.target.value) || 0); } }), "Above Good and up to this value is Fair. Anything higher is Poor.")));
+    m.appendChild(bc);
+  } },
+  { id: "pet", title: "Pet", render: function (m) {
+    m.appendChild(h("h2", {}, "Pet"));
+    m.appendChild(h("p", { class: "lead" }, "The Pet screen shows your pet's litter box, feeder and water fountain. Choose the entity for each reading and leave the rest empty."));
+    var ps = cfg.petStats = cfg.petStats || {};
+    var top = h("div", { class: "card" }, h("h3", {}, "Your pet"));
+    top.appendChild(field("Pet name", h("input", { type: "text", value: cfg.petName || "", placeholder: "Pet", oninput: function (e) { cfg.petName = e.target.value; } }), "Used in the tooltip of the Pet button, for example \"Milo's Stats\"."));
+    top.appendChild(cfgCheck("Show the Pet button on the dashboard", "showPetButton", true));
+    m.appendChild(top);
+
+    function sel(key, label, domains, hint) { return field(label, entitySelect(domains, ps[key], function (v) { ps[key] = v; }), hint); }
+    var SENS = ["sensor"];
+    var lc = h("div", { class: "card" }, h("h3", {}, "Litter box"));
+    lc.appendChild(h("div", { class: "grid2", style: "margin-top:8px" },
+      sel("litterCount", "Uses today", SENS, "Also drives the 5-day usage chart. A counter that resets every day works best."),
+      sel("litterLast", "Last used", SENS, "A sensor with a date and time. Shown as \"Last used 2h ago\"."),
+      sel("litterCounter", "Uses since last clean", [].concat(SENS, ["counter", "input_number", "number"]), "The number in the gauge."),
+      sel("litterResetAuto", "Reset-counter automation", ["automation"], "The automation that resets the counter. It runs from the reset button on the Pet screen."),
+      sel("litterCleanBoolean", "Toggle Clean helper", ["input_boolean"], "The Toggle Clean button flips this on/off helper. The screen shows \"Cleaning…\" while it is on.")));
+    m.appendChild(lc);
+
+    var fc = h("div", { class: "card" }, h("h3", {}, "Feeder"));
+    fc.appendChild(h("div", { class: "grid2", style: "margin-top:8px" },
+      sel("foodCount", "Feedings today", SENS),
+      sel("foodWeight", "Food dispensed", SENS),
+      sel("foodDes", "Desiccant days left", SENS, "Shown in the Supplies section as a bar."),
+      field("Desiccant lasts (days)", h("input", { type: "number", min: "1", value: ps.desiccantMaxDays == null ? 30 : ps.desiccantMaxDays, oninput: function (e) { ps.desiccantMaxDays = Math.max(1, Number(e.target.value) || 30); } }), "A full bar means this many days left. Default 30.")));
+    m.appendChild(fc);
+
+    var wc = h("div", { class: "card" }, h("h3", {}, "Water fountain"));
+    wc.appendChild(h("div", { class: "grid2", style: "margin-top:8px" },
+      sel("waterVol", "Water volume", SENS),
+      sel("waterFilter", "Filter life left (%)", SENS, "Shown in the Supplies section as a bar.")));
+    m.appendChild(wc);
+
+    var lch = ps.litterChart || {}, clr = lch.colors || {};
+    function chart() { ps.litterChart = Object.assign({ okMax: 5, warnMax: 10 }, ps.litterChart || {}); ps.litterChart.colors = Object.assign({ ok: "#22a722", warn: "#f59e0b", high: "#ef4444" }, ps.litterChart.colors || {}); return ps.litterChart; }
+    function colorField(label, key, def) {
+      return field(label, h("input", { type: "color", value: /^#[0-9a-f]{6}$/i.test(clr[key] || "") ? clr[key] : def, oninput: function (e) { chart().colors[key] = e.target.value; } }));
+    }
+    var cc = h("div", { class: "card" }, h("h3", {}, "Litter usage chart"));
+    cc.appendChild(h("p", { class: "hint" }, "Each bar is the highest number of uses on that day. Bars are coloured by how busy the day was."));
+    cc.appendChild(h("div", { class: "grid2", style: "margin-top:12px" },
+      field("Normal up to (uses)", h("input", { type: "number", min: "0", value: lch.okMax == null ? 5 : lch.okMax, oninput: function (e) { chart().okMax = Math.max(0, Number(e.target.value) || 0); } })),
+      field("Busy up to (uses)", h("input", { type: "number", min: "0", value: lch.warnMax == null ? 10 : lch.warnMax, oninput: function (e) { chart().warnMax = Math.max(0, Number(e.target.value) || 0); } }), "Higher than this is shown in the third colour.")));
+    cc.appendChild(h("div", { style: "display:flex;gap:18px;flex-wrap:wrap" },
+      colorField("Normal", "ok", "#22a722"), colorField("Busy", "warn", "#f59e0b"), colorField("Very busy", "high", "#ef4444")));
+    m.appendChild(cc);
+  } },
+  { id: "notifications", title: "Notifications", render: function (m) {
+    m.appendChild(h("h2", {}, "Notifications"));
+    m.appendChild(h("p", { class: "lead" }, "Small messages that appear at the top of the overview screen while something needs your attention."));
+
+    /* ── Notifications ── */
+    var nc = h("div", { class: "card" }, h("h3", {}, "Notifications"));
+    nc.appendChild(h("p", { class: "hint", style: "margin-bottom:10px" }, "A notification shows its label while the entity is on, and disappears when it turns off. It suits reminders such as \"Feed the fish\" or \"Vitamins not taken\". Tapping a notification turns off its input boolean, switch or automation, so use an input boolean for a reminder you want to dismiss from the screen. A binary sensor is shown but cannot be dismissed."));
+    nc.appendChild(picker({ domains: ["input_boolean", "binary_sensor", "switch", "automation"], map: notifMap }));
+    m.appendChild(nc);
+  } },
+  { id: "timers", title: "Alexa timers", render: function (m) {
+    m.appendChild(h("h2", {}, "Alexa timers"));
+    m.appendChild(h("p", { class: "lead" }, "A live countdown at the top of the overview while an Echo timer is running."));
+
+    /* ── Alexa timers ── */
+    var tc = h("div", { class: "card" }, h("h3", {}, "Alexa timers"));
+    tc.appendChild(h("p", { class: "hint", style: "margin-bottom:10px" }, "Shows a live countdown while a timer is running. Choose the \"next timer\" sensor of each Echo (from the Alexa Media Player integration), or any sensor whose state is the time the timer ends. The label is shown next to the countdown, so name it after the room or device."));
+    var timerBox = h("div", {});
+    function isTimer(e) { return /timer/i.test(e.id + " " + e.name); }
+    var tMatches = entityList(["sensor"]).filter(isTimer).length, tAll = tMatches === 0;
+    function drawTimers() { timerBox.innerHTML = ""; timerBox.appendChild(picker({ domains: ["sensor"], map: timerMap, filter: tAll ? null : isTimer, defLabel: function (e) { return timerLabel(e.id); } })); }
+    drawTimers();
+    tc.appendChild(timerBox);
+    tc.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:8px" },
+      h("input", { type: "checkbox", checked: tAll, onchange: function (e) { tAll = e.target.checked; drawTimers(); } }),
+      tMatches ? "Show every sensor, not only timers" : "No timer sensors recognised. Showing every sensor."));
+    m.appendChild(tc);
+  } },
+  { id: "travel", title: "Travel time", render: function (m) {
+    m.appendChild(h("h2", {}, "Travel time"));
+    m.appendChild(h("p", { class: "lead" }, "Shows how long a journey takes right now, on the days and hours you choose."));
+
+    /* ── Travel time ── */
+    var wc = h("div", { class: "card" }, h("h3", {}, "Travel time"));
+    wc.appendChild(h("p", { class: "hint" }, "Shows the current travel time, for example \"Work · 24 min\", but only on the days and between the hours you choose, such as the weekday morning commute. Use the sensor of a travel time integration (Waze, Google Maps, HERE…). Add one entry for each journey."));
+    var wazeBox = h("div", { style: "margin-top:10px" });
+    function isTravel(e) { return sensorMatch(e.id, e.name, ["duration"], /waze|travel|commute|route/i); }
+    var wMatches = entityList(["sensor"]).filter(isTravel).length, wAll = wMatches === 0;
+    function drawWaze() {
+      wazeBox.innerHTML = "";
+      wazeRows.forEach(function (r, i) {
+        var card = h("div", { class: "card", style: "background:var(--card2)" });
+        var title = h("h3", {}, r.label || ("Travel time " + (i + 1)));
+        card.appendChild(h("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:8px" }, title,
+          h("button", { class: "btn danger", onclick: function () { wazeRows.splice(i, 1); drawWaze(); } }, "Remove")));
+        var labelIn = h("input", { type: "text", value: r.label || "", placeholder: "Work", oninput: function (e) { r.label = e.target.value; title.textContent = r.label || ("Travel time " + (i + 1)); } });
+        var filt = wAll ? null : function (e) { return e.id === r.entity || isTravel(e); };
+        card.appendChild(h("div", { class: "grid2", style: "margin-top:10px" },
+          field("Travel time sensor", entitySelect(["sensor"], r.entity, function (v) {
+            r.entity = v;
+            if (v && !r.label) { r.label = autoLabel(nameOf(v), ""); labelIn.value = r.label; title.textContent = r.label; }
+          }, filt)),
+          field("Label", labelIn)));
+        var days = Array.isArray(r.days) ? r.days : (r.days = []);
+        var chips = h("div", { class: "days" });
+        DAY_ORDER.forEach(function (d) {
+          var cb = h("input", { type: "checkbox", checked: days.indexOf(d) >= 0 });
+          var lab = h("label", { class: days.indexOf(d) >= 0 ? "on" : "" }, cb, DAY_NAMES[d]);
+          cb.addEventListener("change", function () {
+            var k = days.indexOf(d);
+            if (cb.checked && k < 0) days.push(d); else if (!cb.checked && k >= 0) days.splice(k, 1);
+            lab.className = cb.checked ? "on" : ""; check();
+          });
+          chips.appendChild(lab);
+        });
+        card.appendChild(field("Show on", chips));
+        var warn = h("div", { class: "hint warn", style: "margin-top:5px" });
+        function hourSel(from, to, cur, onpick) {
+          var s = h("select", { onchange: function () { onpick(Number(s.value)); check(); } });
+          for (var n = from; n <= to; n++) s.appendChild(h("option", { value: String(n) }, hourText(n)));
+          s.value = String(cur); return s;
+        }
+        if (r.timeStart == null) r.timeStart = 0;
+        if (r.timeEnd == null) r.timeEnd = 24;
+        card.appendChild(h("div", { class: "grid2" },
+          field("Show from", hourSel(0, 23, r.timeStart, function (v) { r.timeStart = v; })),
+          field("Until", hourSel(1, 24, r.timeEnd, function (v) { r.timeEnd = v; }), "It stops showing at this hour. 24:00 means the end of the day.")));
+        function check() {
+          warn.textContent = !days.length ? "No day is ticked, so this will never show." : Number(r.timeEnd) <= Number(r.timeStart) ? "The end time must be after the start time, otherwise this will never show." : "";
+        }
+        check();
+        card.appendChild(warn);
+        wazeBox.appendChild(card);
+      });
+      wazeBox.appendChild(h("button", { class: "btn primary", onclick: function () {
+        wazeRows.push({ entity: "", label: "", days: [1, 2, 3, 4, 5], timeStart: 7, timeEnd: 9 }); drawWaze();
+      } }, wazeRows.length ? "Add another travel time" : "Add a travel time"));
+    }
+    drawWaze();
+    wc.appendChild(wazeBox);
+    wc.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:10px" },
+      h("input", { type: "checkbox", checked: wAll, onchange: function (e) { wAll = e.target.checked; drawWaze(); } }),
+      wMatches ? "Show every sensor, not only travel time sensors" : "No travel time sensors recognised. Showing every sensor."));
+    m.appendChild(wc);
+  } },
+  { id: "homestats", title: "Home stats", render: function (m) {
+    m.appendChild(h("h2", {}, "Home stats"));
+    m.appendChild(h("p", { class: "lead" }, "The small stat tiles on the overview, for example Temperature, Humidity or Doors. Each tile shows a label and the live state of one entity. Leave empty to hide them."));
+    var list = cfg.homeStats = Array.isArray(cfg.homeStats) ? cfg.homeStats.filter(C.isPlain) : [];
+    var box = h("div", {});
+    function isText(s) { return s.onValue != null || s.offValue != null; }
+    function draw() {
+      box.innerHTML = "";
+      list.forEach(function (s, i) {
+        var title = h("span", {}, s.label || (s.entity ? nameOf(s.entity) : "New stat"));
+        var d = h("details", { class: "card", style: "margin:8px 0" }, h("summary", {}, title, h("span", { class: "count" }, s.entity || "no entity")));
+        if (!s.entity || list.length <= 3) d.open = true;
+        var labelIn = h("input", { type: "text", value: s.label || "", placeholder: "Temperature", oninput: function (e) { s.label = e.target.value; title.textContent = s.label || (s.entity ? nameOf(s.entity) : "New stat"); } });
+        var entSel = entitySelect(STAT_DOMAINS, s.entity || "", function (v) {
+          s.entity = v;
+          if (v && !s.label) s.label = autoLabel(nameOf(v), areaOf(v));
+          if (v && !isText(s) && /^(cover|lock|switch|input_boolean|light|alarm_control_panel|fan|vacuum|binary_sensor|media_player|camera|person)\./.test(v)) { delete s.unit; s.onValue = "On"; s.offValue = "Off"; }
+          else if (v && !isText(s) && !s.unit) s.unit = unitOf(v);
+          draw();
+        });
+        d.appendChild(h("div", { class: "grid2", style: "margin-top:12px" }, field("Entity", entSel), field("Label", labelIn, "Each tile needs its own label.")));
+        var modeSel = h("select", { onchange: function () {
+          if (modeSel.value === "text") { delete s.unit; s.onValue = s.onValue || "On"; s.offValue = s.offValue || "Off"; }
+          else { delete s.onValue; delete s.offValue; delete s.invertColor; if (s.unit == null) s.unit = unitOf(s.entity); }
+          draw();
+        } }, h("option", { value: "state" }, "The value, with a unit"), h("option", { value: "text" }, "Words for on and off"));
+        modeSel.value = isText(s) ? "text" : "state";
+        d.appendChild(field("Show as", modeSel, "Use words for things that are on or off, such as lights, locks, covers or alarms."));
+        if (isText(s)) {
+          d.appendChild(h("div", { class: "grid2" },
+            field("Text when on", h("input", { type: "text", value: s.onValue == null ? "" : s.onValue, placeholder: "On", oninput: function (e) { s.onValue = e.target.value; } }), "On means on, open, locked, armed or running."),
+            field("Text when off", h("input", { type: "text", value: s.offValue == null ? "" : s.offValue, placeholder: "Off", oninput: function (e) { s.offValue = e.target.value; } }))));
+          d.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:4px" },
+            h("input", { type: "checkbox", checked: !!s.invertColor, onchange: function (e) { if (e.target.checked) s.invertColor = true; else delete s.invertColor; } }),
+            "Highlight the off text instead of the on text (for example a camera that is highlighted while in privacy mode)"));
+        } else {
+          d.appendChild(field("Unit", h("input", { type: "text", value: s.unit == null ? "" : s.unit, placeholder: "°C", oninput: function (e) { s.unit = e.target.value; } }), "Added straight after the value, for example °C or %. Start with a space if you want one. Filled in from the sensor when you pick it."));
+        }
+        var dup = list.filter(function (o) { return o !== s && (o.label || "").trim() && (o.label || "").trim() === (s.label || "").trim(); }).length;
+        if (dup) d.appendChild(h("div", { class: "hint warn" }, "Another tile has the same label. Give each tile a different label."));
+        d.appendChild(rowTools(list, i, draw, "stat"));
+        box.appendChild(d);
+      });
+      box.appendChild(h("button", { class: "btn primary", onclick: function () { list.push({ entity: "", label: "", unit: "" }); draw(); } }, list.length ? "Add another stat" : "Add a stat"));
+    }
+    draw();
+    m.appendChild(box);
+  } },
+  { id: "floors", title: "Floor sensors", render: function (m) {
+    m.appendChild(h("h2", {}, "Floor sensors"));
+    m.appendChild(h("p", { class: "lead" }, "One panel per floor or area in the sensor row, and in the Floors card of the overview. Each panel shows up to four readings: temperature, humidity, air quality and PM2.5. Leave empty to hide the sensor row."));
+    var floors = cfg.floorSensors = Array.isArray(cfg.floorSensors) ? cfg.floorSensors.filter(C.isPlain) : [];
+    var sIdx = solarFloorIndex();
+    if (sIdx >= 0) m.appendChild(h("div", { class: "card" }, h("h3", {}, "Solar panel"), h("p", { class: "hint" }, "Your Solar panel is managed in the Solar step and is kept as it is here.")));
+    var showAll = false;
+    function match(type) {
+      if (type === "temp") return function (e) { return sensorMatch(e.id, e.name, ["temperature"], /temp/i); };
+      if (type === "humidity") return function (e) { return sensorMatch(e.id, e.name, ["humidity"], /humid/i); };
+      if (type === "aqi") return function (e) { return sensorMatch(e.id, e.name, ["aqi"], /aqi|air.?quality/i); };
+      if (type === "pm25") return function (e) { return sensorMatch(e.id, e.name, ["pm25"], /pm.?2/i); };
+      return null;
+    }
+    var box = h("div", {});
+    function draw() {
+      box.innerHTML = "";
+      floors.forEach(function (f, i) {
+        if (f.label === "Solar") return;
+        f.sensors = Array.isArray(f.sensors) ? f.sensors : [];
+        var title = h("span", {}, f.label || "New floor");
+        var d = h("details", { class: "card", style: "margin:8px 0" }, h("summary", {}, title, h("span", { class: "count" }, f.sensors.filter(function (s) { return s.entity; }).length + " readings")));
+        d.open = true;
+        d.appendChild(h("div", { style: "margin-top:12px" }, field("Floor or area name", h("input", { type: "text", value: f.label || "", placeholder: "Ground floor", oninput: function (e) { f.label = e.target.value; title.textContent = f.label || "New floor"; } }), "Shown as the heading of the panel.")));
+        f.sensors.forEach(function (s, j) {
+          var typeSel = h("select", { onchange: function () {
+            var oldInfo = floorTypeInfo(s.type), info = floorTypeInfo(typeSel.value);
+            s.type = typeSel.value;
+            if (!s.unit || (oldInfo && s.unit === oldInfo[2])) s.unit = unitOf(s.entity) || info[2];
+            if (info[3]) s.decimal = true; else delete s.decimal;
+            draw();
+          } });
+          FLOOR_TYPES.forEach(function (t) { typeSel.appendChild(h("option", { value: t[0] }, t[1])); });
+          if (!floorTypeInfo(s.type)) typeSel.appendChild(h("option", { value: s.type }, s.type));
+          typeSel.value = s.type;
+          var flt = showAll ? null : match(s.type);
+          var ent = entitySelect(["sensor"], s.entity || "", function (v) {
+            s.entity = v;
+            var u = unitOf(v), info = floorTypeInfo(s.type);
+            if (v && (s.unit == null || s.unit === "" || (info && s.unit === info[2]))) s.unit = u || (info ? info[2] : "");
+            draw();
+          }, flt ? function (e) { return flt(e) || e.id === s.entity; } : null);
+          var unitIn = h("input", { type: "text", value: s.unit == null ? "" : s.unit, placeholder: "Unit", title: "Unit shown after the value", style: "max-width:110px", oninput: function (e) { s.unit = e.target.value; } });
+          var dec = h("label", { title: "Show one decimal" }, h("input", { type: "checkbox", checked: !!s.decimal, onchange: function (e) { if (e.target.checked) s.decimal = true; else delete s.decimal; } }), "Decimal");
+          d.appendChild(h("div", { class: "row" },
+            h("div", { class: "extra", style: "flex:1 1 100%" }, typeSel, ent, unitIn, dec,
+              h("button", { class: "btn danger", title: "Remove reading", onclick: function () { f.sensors.splice(j, 1); draw(); } }, "Remove"))));
+        });
+        var used = f.sensors.map(function (s) { return s.type; });
+        var next = ["temp", "humidity", "aqi", "pm25"].filter(function (t) { return used.indexOf(t) < 0; })[0];
+        var tools = h("div", { class: "row", style: "border-bottom:none" },
+          h("button", { class: "btn", disabled: !next, onclick: function () { var info = floorTypeInfo(next), o = { type: next, entity: "", unit: info[2] }; if (info[3]) o.decimal = true; f.sensors.push(o); draw(); } }, "Add a reading"),
+          h("span", { style: "flex:1" }),
+          h("button", { class: "btn", disabled: i === 0, title: "Move up", onclick: function () { moveItem(floors, i, -1); draw(); } }, "↑"),
+          h("button", { class: "btn", disabled: i === floors.length - 1, title: "Move down", onclick: function () { moveItem(floors, i, 1); draw(); } }, "↓"),
+          h("button", { class: "btn danger", onclick: function () { floors.splice(i, 1); draw(); } }, "Remove floor"));
+        d.appendChild(tools);
+        box.appendChild(d);
+      });
+      var add = h("input", { type: "text", placeholder: "New floor or area, for example Upstairs" });
+      function addFloor() {
+        var n = add.value.trim(); if (!n) return;
+        var t1 = { type: "temp", entity: "", unit: "°C", decimal: true }, t2 = { type: "humidity", entity: "", unit: "%" };
+        floors.push({ label: n, sensors: [t1, t2] }); draw();
+      }
+      add.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); addFloor(); } });
+      box.appendChild(h("div", { class: "row" }, h("div", { class: "nm" }, add), h("button", { class: "btn primary", onclick: addFloor }, "Add floor")));
+    }
+    draw();
+    m.appendChild(box);
+    m.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:8px" },
+      h("input", { type: "checkbox", onchange: function (e) { showAll = e.target.checked; draw(); } }),
+      "Show every sensor, not only the ones that look like the right type"));
+  } },
+  { id: "solar", title: "Solar", render: function (m) {
+    m.appendChild(h("h2", {}, "Solar & energy"));
+    m.appendChild(h("p", { class: "lead" }, "Powers the Solar screen, its charts and the energy card on the overview. Choose only the sensors you have: anything left empty is simply not shown."));
+    var so = cfg.solar = C.isPlain(cfg.solar) ? cfg.solar : {};
+    so.stats = Array.isArray(so.stats) ? so.stats : [];
+    so.sensorRow = Array.isArray(so.sensorRow) ? so.sensorRow : [];
+    so.dailyChart = Array.isArray(so.dailyChart) ? so.dailyChart : [];
+    /* A v4 config keeps these readings in the Solar floor panel. Carry them over so nothing is lost. */
+    var fi = solarFloorIndex(), fl = fi >= 0 ? cfg.floorSensors[fi] : null;
+    if (fl && !so.stats.length) (fl.sensors || []).forEach(function (s) { if (s && s.entity && SOLAR_STATS.some(function (x) { return x[0] === s.type; })) typedSet(so.stats, s.type, s.entity); });
+    if (fl && !so.sensorRow.length) (fl.sensors || []).forEach(function (s) { if (s && s.entity && (s.type === "solar" || s.type === "power")) typedSet(so.sensorRow, s.type, s.entity); });
+    var wantPanel = fi >= 0;
+    var sens = ["sensor"];
+
+    var sc = h("div", { class: "card" }, h("h3", {}, "Live power flow"));
+    sc.appendChild(h("p", { class: "hint" }, "Current readings for the animated flow diagram, the stat tiles and the overview energy card."));
+    var sg = h("div", { class: "grid2", style: "margin-top:8px" });
+    SOLAR_STATS.forEach(function (x) {
+      sg.appendChild(field(x[1], entitySelect(sens, typedGet(so.stats, x[0]), function (v) {
+        typedSet(so.stats, x[0], v);
+        if (!v) so.stats = so.stats.filter(function (e) { return e.type !== x[0]; });
+        if (wantPanel) syncSolarPanel(true);
+      }), x[2] || null));
+    });
+    sc.appendChild(sg);
+    m.appendChild(sc);
+
+    var pc = h("div", { class: "card" }, h("h3", {}, "Overview solar panel"));
+    pc.appendChild(h("p", { class: "hint" }, "Adds a Solar panel to the sensor row at the bottom of the overview, built from the live readings above (solar, home, export, battery and inverter temperature)."));
+    pc.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:8px" },
+      h("input", { type: "checkbox", checked: wantPanel, onchange: function (e) { wantPanel = e.target.checked; syncSolarPanel(wantPanel); } }),
+      "Show a Solar panel in the overview sensor row"));
+    m.appendChild(pc);
+
+    var hc = h("div", { class: "card" }, h("h3", {}, "Today's hourly chart"));
+    hc.appendChild(h("p", { class: "hint" }, "Both sensors are needed for the chart to appear."));
+    hc.appendChild(h("div", { class: "grid2", style: "margin-top:8px" },
+      field("Solar production", entitySelect(sens, typedGet(so.sensorRow, "solar"), function (v) { typedSet(so.sensorRow, "solar", v); if (!v) so.sensorRow = so.sensorRow.filter(function (e) { return e.type !== "solar"; }); }), "A power sensor (kW or W). Averaged for each hour."),
+      field("Home energy use", entitySelect(sens, typedGet(so.sensorRow, "power"), function (v) { typedSet(so.sensorRow, "power", v); if (!v) so.sensorRow = so.sensorRow.filter(function (e) { return e.type !== "power"; }); }), "An energy sensor in kWh that keeps counting up. The chart shows the use in each hour.")));
+    m.appendChild(hc);
+
+    var dc = h("div", { class: "card" }, h("h3", {}, "Daily chart"));
+    dc.appendChild(h("p", { class: "hint" }, "Both sensors are needed for the chart to appear. Use sensors that start at 0 every midnight, so each day's total is the last value of that day."));
+    dc.appendChild(h("div", { class: "grid2", style: "margin-top:8px" },
+      field("Solar energy per day", entitySelect(sens, typedGet(so.dailyChart, "daily-solar"), function (v) { typedSet(so.dailyChart, "daily-solar", v); if (!v) so.dailyChart = so.dailyChart.filter(function (e) { return e.type !== "daily-solar"; }); }), "Energy produced today (kWh)."),
+      field("Home energy per day", entitySelect(sens, typedGet(so.dailyChart, "daily-power"), function (v) { typedSet(so.dailyChart, "daily-power", v); if (!v) so.dailyChart = so.dailyChart.filter(function (e) { return e.type !== "daily-power"; }); }), "Energy used today (kWh)."),
+      field("Days to show", h("input", { type: "number", min: "1", max: "90", value: so.dailyChartDays == null ? 5 : so.dailyChartDays, oninput: function (e) { so.dailyChartDays = Math.min(90, Math.max(1, Number(e.target.value) || 5)); } }), "How many days the chart covers. Between 1 and 90.")));
+    m.appendChild(dc);
+  } },
+  { id: "presence", title: "Presence", render: function (m) {
+    m.appendChild(h("h2", {}, "Indoor presence"));
+    m.appendChild(h("p", { class: "lead" }, "The Indoor Presence timeline lists when a person or an animal was detected in each room. Choose the detection sensors, for example the person and pet detections of your cameras, or motion sensors. Leave empty to hide the timeline."));
+    var pr = cfg.presence = C.isPlain(cfg.presence) ? cfg.presence : {};
+    var ents = pr.entities = Array.isArray(pr.entities) ? pr.entities.filter(C.isPlain) : [];
+    var showAll = false;
+    function looksRight(e) { return sensorMatch(e.id, e.name, ["motion", "occupancy", "presence", "moving", "sound"], /person|people|animal|pet|cat|dog|detect|motion|presence|occupan/i); }
+    var matches = entityList(["binary_sensor"]).filter(looksRight).length;
+    showAll = matches === 0;
+    var box = h("div", {});
+    function draw() {
+      box.innerHTML = "";
+      ents.forEach(function (r, i) {
+        var title = h("span", {}, r.room || (r.entity ? (areaOf(r.entity) || nameOf(r.entity)) : "New sensor"));
+        var d = h("details", { class: "card", style: "margin:8px 0" }, h("summary", {}, title, h("span", { class: "count" }, r.type === "animal" ? "animal" : "person")));
+        if (!r.entity || ents.length <= 4) d.open = true;
+        var roomIn = h("input", { type: "text", value: r.room || "", placeholder: "Living room", oninput: function (e) { r.room = e.target.value; title.textContent = r.room || "New sensor"; } });
+        var typeSel = h("select", { onchange: function () { r.type = typeSel.value; draw(); } }, h("option", { value: "person" }, "Person"), h("option", { value: "animal" }, "Animal"));
+        typeSel.value = r.type === "animal" ? "animal" : "person";
+        var entSel = entitySelect(["binary_sensor", "input_boolean", "switch"], r.entity || "", function (v) {
+          r.entity = v;
+          if (v && !r.room) r.room = areaOf(v);
+          if (v && !r.type) r.type = /animal|pet|cat|dog/i.test(v + " " + nameOf(v)) ? "animal" : "person";
+          draw();
+        }, showAll ? null : function (e) { return looksRight(e) || e.id === r.entity; });
+        d.appendChild(h("div", { class: "grid2", style: "margin-top:12px" }, field("Detection sensor", entSel, "A sensor that turns on when something is detected."), field("Room", roomIn, "Sensors with the same room name are grouped together.")));
+        d.appendChild(field("Detects", typeSel));
+        d.appendChild(rowTools(ents, i, draw, "sensor"));
+        box.appendChild(d);
+      });
+      box.appendChild(h("button", { class: "btn primary", onclick: function () { ents.push({ entity: "", room: "", type: "person" }); draw(); } }, ents.length ? "Add another sensor" : "Add a sensor"));
+    }
+    draw();
+    var sc = h("div", { class: "card" }, h("h3", {}, "Detection sensors"));
+    sc.appendChild(box);
+    sc.appendChild(h("label", { class: "hint", style: "display:flex;gap:8px;align-items:center;margin-top:10px" },
+      h("input", { type: "checkbox", checked: showAll, onchange: function (e) { showAll = e.target.checked; draw(); } }),
+      matches ? "Show every sensor, not only detection and motion sensors" : "No detection sensors recognised. Showing every sensor."));
+    m.appendChild(sc);
+    var tc = h("div", { class: "card" }, h("h3", {}, "Timeline"));
+    tc.appendChild(h("div", { class: "grid2", style: "margin-top:8px" },
+      field("Hours of history", h("input", { type: "number", min: "1", max: "72", value: pr.hoursOfHistory == null ? 6 : pr.hoursOfHistory, oninput: function (e) { pr.hoursOfHistory = Math.min(72, Math.max(1, Number(e.target.value) || 6)); } }), "How far back the timeline starts. You can switch between 3, 6, 12 and 24 hours on the screen itself, and that choice wins."),
+      field("Most detections listed", h("input", { type: "number", min: "1", max: "200", value: pr.limit == null ? 20 : pr.limit, oninput: function (e) { pr.limit = Math.min(200, Math.max(1, Number(e.target.value) || 20)); } }), "The timeline shows the newest detections first.")));
+    m.appendChild(tc);
   } },
   { id: "advanced", title: "Advanced", render: function (m) {
     collect();
     m.appendChild(h("h2", {}, "Advanced"));
-    m.appendChild(h("p", { class: "lead" }, "For power users: every other dashboard option (solar, garden, indoor air quality, presence, pet stats, home stats, security buttons, alarm groups…) is edited here as JSON. Imported v4 settings for these sections are already in place. Only your own changes are listed; built-in defaults fill the rest."));
-    var ta = h("textarea", { spellcheck: "false" }); ta.value = JSON.stringify(cfg, null, 2);
-    m.appendChild(ta);
-    var row = h("div", { style: "display:flex;gap:10px;margin-top:12px;flex-wrap:wrap" });
-    row.appendChild(h("button", { class: "btn", onclick: function () {
-      try { var v = JSON.parse(ta.value); if (!C.isPlain(v)) throw new Error("Top level must be an object"); cfg = v; initModels(); toast("JSON applied"); }
-      catch (e) { toast("Invalid JSON: " + e.message); } } }, "Apply JSON"));
-    row.appendChild(h("button", { class: "btn danger", onclick: function () {
-      if (!confirm("Delete ALL saved Homie settings and start over?")) return;
-      B.resetConfig().then(function () { cfg = {}; settings = { photoFrameInterval: 20 }; alarmInput = ""; alarmClear = false; initModels(); go(0); toast("Settings cleared"); }); } }, "Reset everything"));
-    m.appendChild(row);
+    var ta = null;
+    if (!Object.keys(advancedView()).length) {
+      m.appendChild(h("div", { class: "card" }, h("h3", {}, "Settings as JSON"), h("p", { class: "hint" }, "Nothing here needs JSON. Every option has its own step.")));
+    } else {
+      m.appendChild(h("p", { class: "lead" }, "These settings have no step. They come from an older or custom config, so they are edited here as JSON. Everything that has a step is kept safe and does not appear here."));
+      ta = h("textarea", { spellcheck: "false" }); ta.value = JSON.stringify(advancedView(), null, 2);
+      m.appendChild(ta);
+      m.appendChild(h("div", { style: "display:flex;gap:10px;margin-top:12px;flex-wrap:wrap" }, h("button", { class: "btn", onclick: function () {
+        try { var v = JSON.parse(ta.value); if (!C.isPlain(v)) throw new Error("Top level must be an object"); cfg = advancedMerge(v); initModels(); toast("JSON applied"); render(); }
+        catch (e) { toast("Invalid JSON: " + e.message); } } }, "Apply JSON")));
+    }
+    var dz = h("div", { class: "card danger-zone", style: "margin-top:24px" }, h("h3", {}, "Danger zone"),
+      h("p", { class: "hint" }, "Reset everything deletes all your Homie settings and your saved alarm code, as if Homie had just been installed. Your photos are kept. You will be asked to confirm before anything is deleted."));
+    dz.appendChild(h("button", { class: "btn danger", style: "margin-top:12px", disabled: !B.isAdmin, onclick: openResetDialog }, "Reset everything…"));
+    if (!B.isAdmin) dz.appendChild(h("p", { class: "hint warn", style: "margin-top:8px" }, "Resetting needs an administrator account."));
+    m.appendChild(dz);
   } },
   { id: "review", title: "Review & save", render: function (m) {
     collect();
@@ -488,11 +1754,29 @@ var steps = [
       r(c.label, n + " item" + (n === 1 ? "" : "s"));
     });
     r("Cameras", (cfg.cameras || []).length);
+    r("Plant sensors", (cfg.garden && cfg.garden.soilMoisture || []).length);
     r("Weather", (cfg.weather && cfg.weather.entity) || "not set");
     r("Alarm panel", cfg.alarmEntity || "not set");
+    r("Alarm status groups", (cfg.alarmGroups || []).length + " set");
+    var scr = cfg.securityControls || {}, v4 = (cfg.security || []).length ? "from your v4 config" : "not set";
+    r("Siren buttons", scr.siren ? "set" : v4); r("Garage buttons", scr.garage ? "set" : v4);
     r("Alarm code", alarmClear ? "will be removed" : alarmInput ? "will be saved" : B.alarmCodeSet ? "saved (unchanged)" : "none (PIN keypad)");
     r("Music players", (cfg.musicPlayers || []).length);
     r("Calendars", (cfg.calendarEntities || []).length);
+    r("Outdoor air quality", cfg.aqi && cfg.aqi.entity ? cfg.aqi.entity : "not set");
+    r("Indoor air quality rooms", ((cfg.indoorAqi && cfg.indoorAqi.rooms) || []).length);
+    var petN = Object.keys(cfg.petStats || {}).filter(function (k) { return typeof cfg.petStats[k] === "string" && cfg.petStats[k]; }).length;
+    r("Pet", (cfg.petName ? cfg.petName + ", " : "") + petN + " entit" + (petN === 1 ? "y" : "ies"));
+    r("Notifications", (cfg.notifications || []).length);
+    r("Alexa timers", (cfg.echoTimers || []).length);
+    r("Travel times", (cfg.wazeTravelTime || []).length);
+    r("Home stats", (cfg.homeStats || []).length + " tile" + ((cfg.homeStats || []).length === 1 ? "" : "s"));
+    var flN = (cfg.floorSensors || []).filter(function (f) { return f.label !== "Solar"; }).length;
+    r("Floor sensor panels", flN + (flN === 1 ? " floor" : " floors") + ((cfg.floorSensors || []).some(function (f) { return f.label === "Solar"; }) ? " + Solar panel" : ""));
+    var soN = ["stats", "sensorRow", "dailyChart"].reduce(function (n, k) { return n + (((cfg.solar || {})[k]) || []).length; }, 0);
+    r("Solar", soN ? soN + " sensor" + (soN === 1 ? "" : "s") : "not set");
+    r("Presence sensors", ((cfg.presence && cfg.presence.entities) || []).length);
+    r("Car", Object.keys((cfg.car && cfg.car.sensors) || {}).filter(function (k) { return cfg.car.sensors[k]; }).length + " sensors");
     var ul = h("ul", { class: "sum" }); rows.forEach(function (x) { ul.appendChild(x); });
     m.appendChild(h("div", { class: "card" }, ul));
     m.appendChild(h("p", { class: "hint" }, "You can reopen this wizard any time from Settings → About → Open setup in the dashboard."));
@@ -501,20 +1785,56 @@ var steps = [
 ];
 
 /* ───────────────────────── shell ───────────────────────── */
-var cur = 0;
+/* The pages above are grouped into six sections. A section with several pages shows them as a second row of
+   sub-tabs, sorted A to Z by label. Back and Next walk through every page in this order. */
+var NAV_LABELS = { floors: "Floor Sensors", homestats: "Home Stats", travel: "Travel Time", air: "Air Quality", calendars: "Calendar" };
+var SECTIONS = [
+  { title: "Welcome", ids: ["welcome"] },
+  { title: "General", ids: ["greeting", "floors", "homestats", "notifications", "travel", "timers"] },
+  { title: "Pills", ids: ["lights", "scenes", "climate", "blinds", "bath", "plants", "switches"] },
+  { title: "Dashboards", ids: ["cameras", "car", "weather", "alarm", "music", "calendars", "air", "pet", "solar", "presence", "myday"] },
+  { title: "Advanced", ids: ["advanced"] },
+  { title: "Review & Save", ids: ["review"] }
+];
+function navLabel(st) { return NAV_LABELS[st.id] || st.title; }
+var order = [], secOf = [], secFirst = [];
+(function () {
+  var byId = {}, placed = {};
+  steps.forEach(function (st) { byId[st.id] = st; });
+  SECTIONS.forEach(function (sec) { sec.ids.forEach(function (id) { placed[id] = true; }); });
+  steps.forEach(function (st) { if (!placed[st.id]) SECTIONS[1].ids.push(st.id); });   /* a page without a section is never lost */
+  SECTIONS.forEach(function (sec, si) {
+    sec.steps = sec.ids.map(function (id) { return byId[id]; }).filter(Boolean);
+    sec.steps.sort(function (x, y) { return navLabel(x).localeCompare(navLabel(y), undefined, { sensitivity: "base" }); });
+    secFirst[si] = order.length;
+    sec.steps.forEach(function (st) { order.push(st); secOf.push(si); });
+  });
+})();
+var cur = 0, lastIn = {};
 var elHeader, elMain, elFooter;
-function go(i) { cur = Math.max(0, Math.min(steps.length - 1, i)); render(); }
+function go(i) { cur = Math.max(0, Math.min(order.length - 1, i)); lastIn[secOf[cur]] = cur; render(); }
+function goSection(si) { go(lastIn[si] != null ? lastIn[si] : secFirst[si]); }
 function render() {
   app.innerHTML = "";
+  var si = secOf[cur], sec = SECTIONS[si];
   elHeader = h("header", {}, h("h1", {}, "HOMIE ", h("span", {}, "SETUP")));
   var chips = h("div", { class: "steps" });
-  steps.forEach(function (s, i) {
-    chips.appendChild(h("button", { class: "step-chip" + (i === cur ? " active" : i < cur ? " done" : ""), onclick: function () { go(i); } }, (i + 1) + ". " + s.title));
+  SECTIONS.forEach(function (x, i) {
+    chips.appendChild(h("button", { class: "step-chip" + (i === si ? " active" : i < si ? " done" : ""), onclick: function () { goSection(i); } }, (i + 1) + ". " + x.title));
   });
   elHeader.appendChild(chips);
+  var sub = null;
+  if (sec.steps.length > 1) {
+    sub = h("div", { class: "steps sub" });
+    sec.steps.forEach(function (st) {
+      var idx = order.indexOf(st);
+      sub.appendChild(h("button", { class: "step-chip sub" + (idx === cur ? " active" : idx < cur ? " done" : ""), onclick: function () { go(idx); } }, navLabel(st)));
+    });
+    elHeader.appendChild(sub);
+  }
   elMain = h("main", {});
-  steps[cur].render(elMain);
-  var last = cur === steps.length - 1;
+  order[cur].render(elMain);
+  var last = cur === order.length - 1;
   var save = h("button", { class: "btn primary", disabled: !B.isAdmin, onclick: function () {
     collect(); save.disabled = true; save.textContent = "Saving…";
     B.saveConfig({ config: cfg, settings: settings, alarmCode: alarmClear ? "" : (alarmInput ? alarmInput : undefined) }).then(function () { return B.openDashboard(); })
@@ -526,6 +1846,10 @@ function render() {
       B.configured ? h("button", { class: "btn", onclick: function () { B.openDashboard(); } }, "Exit without saving") : null),
     last ? save : h("button", { class: "btn primary", onclick: function () { go(cur + 1); } }, "Next"));
   app.appendChild(elHeader); app.appendChild(elMain); app.appendChild(elFooter);
+  [chips, sub].forEach(function (row) {   /* keep the active tab in view on narrow screens */
+    var a = row && row.querySelector(".active");
+    if (a) row.scrollLeft = a.offsetLeft - (row.clientWidth - a.offsetWidth) / 2;
+  });
 }
 
 initModels();

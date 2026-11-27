@@ -9,6 +9,7 @@ from .const import IMAGE_EXTENSIONS
 KIND_DIRS: dict[str, tuple[str, ...]] = {
     "frame": ("photos",),
     "background": ("photos", "background"),
+    "car": ("car",),
 }
 
 

@@ -73,8 +73,9 @@ var _homieCfg = HomieCommon.resolve(HomieCommon.deepMerge(window.HOMIE_DEFAULTS 
 const ALARM_CODE_STORED    = !!_homieSettings.alarmCodeUsable;   // a saved code exists AND this user may use it
 const ALARM_ENTITY         = _homieCfg.alarmEntity || "";
 const PHOTO_FRAME_IMAGES   = _homiePaths(_homiePhotos.frame);
-const PHOTO_FRAME_INTERVAL = Number(_homieSettings.photoFrameInterval) || 20;
+const PHOTO_FRAME_INTERVAL = 20;
 const BACKGROUND_IMAGES    = _homiePaths(_homiePhotos.background);
+const CAR_IMAGES           = _homiePaths(_homiePhotos.car);
 
 /* Keep signed URLs fresh on displays that stay on for days (URLs are valid for 12 h). */
 function _homieSyncList(target, items) {
@@ -88,6 +89,7 @@ if (_homieBridge) {
       var ph = _homieBridge.photos || {};
       _homieSyncList(PHOTO_FRAME_IMAGES, ph.frame);
       _homieSyncList(BACKGROUND_IMAGES, ph.background);
+      _homieSyncList(CAR_IMAGES, ph.car);
     }).catch(function (e) { console.warn("[Homie] photo refresh failed", e); });
   }, 3 * 60 * 60 * 1000);
 }

@@ -14,7 +14,41 @@ class HomieDashboardPanel extends HTMLElement {
     this._iframe = null;
   }
 
+  /* Deep link: /homie-dashboard?screen=nowplaying opens that screen. The name is one of the Startup screen options.
+   * The link is used once and then removed from the address, so reloading the page returns to your normal startup screen. */
+  _urlScreen() {
+    const s = String(new URLSearchParams(location.search).get("screen") || "").toLowerCase();
+    return /^[a-z0-9-]{1,24}$/.test(s) ? s : "";
+  }
+
+  _stripUrlScreen() {
+    try {
+      const u = new URL(location.href);
+      if (u.searchParams.has("screen")) {
+        u.searchParams.delete("screen");
+        history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+      }
+    } catch (e) { /* the address stays as it is */ }
+  }
+
+  /* The dashboard is already open and a link arrives (for example from a kiosk app that changes the address without reloading). */
+  _applyUrlScreen() {
+    const s = this._urlScreen();
+    if (!s || this._page !== "index" || !this._iframe) return;
+    let w = null;
+    try { w = this._iframe.contentWindow; } catch (e) { /* not reachable */ }
+    if (w && typeof w.homieOpenScreen === "function") {
+      w.homieOpenScreen(s);
+      this._stripUrlScreen();
+    }
+  }
+
   connectedCallback() {
+    if (!this._navHandler) {
+      this._navHandler = () => setTimeout(() => this._applyUrlScreen(), 0);
+      window.addEventListener("location-changed", this._navHandler);
+      window.addEventListener("popstate", this._navHandler);
+    }
     // Home Assistant does not always give custom panels a definite height, so size to the viewport.
     this.style.cssText = "display:block;position:relative;width:100%;height:100vh;height:100dvh;min-height:300px;background:#000;overflow:hidden";
     if (!this._iframe && !this.firstChild) {
@@ -25,6 +59,14 @@ class HomieDashboardPanel extends HTMLElement {
     this._watchdog = setTimeout(() => {
       if (!this._iframe) this._fail("Startup is taking too long. Check Settings → System → Logs for 'homie_dashboard' and the browser console for errors.");
     }, 10000);
+  }
+
+  disconnectedCallback() {
+    if (this._navHandler) {
+      window.removeEventListener("location-changed", this._navHandler);
+      window.removeEventListener("popstate", this._navHandler);
+      this._navHandler = null;
+    }
   }
 
   _fail(msg) {
@@ -44,7 +86,7 @@ class HomieDashboardPanel extends HTMLElement {
   }
   set panel(p) { this._panelInfo = p; }
   set narrow(_v) {}
-  set route(_v) {}
+  set route(_v) { setTimeout(() => this._applyUrlScreen(), 0); }   // Home Assistant reports address changes here
 
   get _version() { return (this._panelInfo && this._panelInfo.config && this._panelInfo.config.version) || ""; }
 
@@ -74,7 +116,7 @@ class HomieDashboardPanel extends HTMLElement {
       get rawConfig() { return self._data.config || {}; },
       get settings() { return self._data.settings || {}; },
       get alarmCodeSet() { return !!(self._data.settings && self._data.settings.alarmCodeSet); },
-      get photos() { return self._data.photos || { frame: [], background: [] }; },
+      get photos() { return self._data.photos || { frame: [], background: [], car: [] }; },
       get configured() { return !!self._data.configured; },
       get version() { return self._version; },
       get timeZone() { return self._hass && self._hass.config && self._hass.config.time_zone; },
@@ -113,7 +155,9 @@ class HomieDashboardPanel extends HTMLElement {
   }
 
   _show(page) {
-    const url = `${FRONTEND}/${page}.html?v=${encodeURIComponent(this._version)}&t=${Date.now()}`;
+    const screen = page === "index" ? this._urlScreen() : "";
+    const url = `${FRONTEND}/${page}.html?v=${encodeURIComponent(this._version)}&t=${Date.now()}` + (screen ? `&screen=${encodeURIComponent(screen)}` : "");
+    this._page = page;
     if (!this._iframe) {
       this.innerHTML = "";
       const f = document.createElement("iframe");
@@ -124,6 +168,7 @@ class HomieDashboardPanel extends HTMLElement {
       this.appendChild(f);
     }
     this._iframe.src = url;
+    if (screen) this._stripUrlScreen();
   }
 }
 

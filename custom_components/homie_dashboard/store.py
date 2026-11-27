@@ -10,7 +10,7 @@ from .const import STORAGE_KEY, STORAGE_VERSION
 
 
 class HomieStore:
-    """Wraps the HA Store so settings survive HACS updates.
+    """Wraps the HA Store so settings survive updates.
 
     The alarm code is kept in its own field and is never handed out to the browser:
     the server adds it itself when the dashboard asks to arm or disarm.

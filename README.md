@@ -1,29 +1,29 @@
 # **Homie Dashboard**
 
-![HACS](https://img.shields.io/badge/HACS-Custom-orange) ![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard) ![Downloads](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/total?label=Downloads) ![Downloads of latest](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/latest/total?label=Downloads%20of%20latest) ![Validate](https://img.shields.io/github/actions/workflow/status/Big-Edge2297/homie-dashboard/validate.yml?branch=main&logo=github&label=Validate)
+[![Marketplace](https://img.shields.io/badge/Marketplace-Default-orange)](https://www.home-assistant.io/integrations/marketplace/) [![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard)](https://github.com/Big-Edge2297/homie-dashboard/releases) [![Downloads](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/total?label=Downloads)](https://github.com/Big-Edge2297/homie-dashboard/releases) [![Latest Release](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/latest/total?label=Latest%20Release)](https://github.com/Big-Edge2297/homie-dashboard/releases/latest) [![Validate](https://img.shields.io/github/actions/workflow/status/Big-Edge2297/homie-dashboard/validate.yml?branch=main&logo=github&label=Validate)](https://github.com/Big-Edge2297/homie-dashboard/actions/workflows/validate.yml)
 
-<img src="https://github.com/user-attachments/assets/b9f66b35-5209-4fa8-bdc9-f92d6ed60517" width="400"/> <img src="https://github.com/user-attachments/assets/f17ef08f-a525-45c3-9d25-d641c6c273de" width="400"/>
+<img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/homie-banner.png" alt="Homie Dashboard" width="100%"/>
 
 Homie Dashboard is a touch-first Home Assistant dashboard designed for wall-mounted tablets.
 
 It provides a customizable overview of your home while supporting dedicated dashboard modes for music, calendars, weather, photos, thermostats, cameras, clocks, alarm, solar monitoring and more.
 
-Designed for:
-✅ Wall-mounted tablets
-✅ Dedicated Home Assistant displays
-✅ Touch-first interfaces
+**Designed for:**
+- ✅ Wall-mounted tablets
+- ✅ Dedicated Home Assistant displays
+- ✅ Touch-first interfaces
 
-Not designed for:
-❌ Phones
-❌ Desktop browsers as primary usage
-❌ Small screens
+**Not designed for:**
+- ❌ Phones
+- ❌ Desktop browsers as primary usage
+- ❌ Small screens
 
-[Screenshots](#screenshots) · [Installation](#installation) · [Setup wizard](#setup-wizard) · [Upgrading from v4](#upgrading-from-v4x) · [Security](#security) · [Changelog](CHANGELOG.md)
+[Screenshots](#screenshots) · [Installation](#installation) · [Setup wizard](#setup-wizard) · [Kiosk Satellite](#kiosk-satellite-setup-and-automations) · [Upgrading from v4](#upgrading-from-v4x) · [Security](#security) · [Troubleshooting](#troubleshooting) · [Changelog](CHANGELOG.md)
 
 > [!IMPORTANT]
-> **v5.0.0 is a major change.** Homie is now a proper Home Assistant integration installed through HACS. There is no `config.js` and **no access token to paste anywhere**. If you are on v4.x, read [Upgrading from v4.x](#upgrading-from-v4x) first. Your settings can be imported in one click.
+> **v5.0.0 is a major change.** Homie is now a proper Home Assistant integration installed from the Marketplace (or manually). There is no `config.js` and **no access token to paste anywhere**. If you are on v4.x, read [Upgrading from v4.x](#upgrading-from-v4x) first. Your settings can be imported in one click.
 
-## What's new in v5
+## What's new in v5.0
 
 - 🔐 **No token in a file.** Homie signs in with your logged-in Home Assistant session.
 - 🧙 **Setup wizard.** Pick your lights, scenes, climate, cameras, weather, alarm, music players and calendars from your own Home Assistant. No code editing.
@@ -33,69 +33,73 @@ Not designed for:
 
 ## Quick Start
 
-1. **Install** Homie Dashboard with HACS (see [Installation](#installation) for all options) and **restart Home Assistant**.
+1. **Install** Homie Dashboard from **Settings → Marketplace** (Home Assistant 2026.11 or newer) or install it manually. See [Installation](#installation). Restart Home Assistant if it asks you to.
 2. **Settings → Devices & services → Add integration → Homie Dashboard**.
 3. Open **Homie** in the sidebar. The setup wizard starts automatically.
 
-> [!NOTE]
-> **HACS default catalog: pending approval.** Until Homie Dashboard is approved, install it as a custom repository (Option B) or manually (Option C). Once approved, you will be able to simply search for it in HACS (Option A).
-
 ## Screenshots
+
+*The screenshots show a demo home with made-up devices and generated placeholder pictures for the photo frame, cameras and car.*
 
 ### Overview
 
 | Overview Screen A | Overview Screen B | Overview Screen C |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/bbd44202-789c-4ba9-ac28-ebc9a16d9496" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/b5be80f2-b630-4e8b-a422-a19ab6d267b6" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/78939273-870f-43ba-9028-789a71b1a4f4" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/overview-a.jpg" alt="Overview Screen A" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/overview-b.jpg" alt="Overview Screen B" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/overview-c.jpg" alt="Overview Screen C" width="320" height="200"/> |
 
 ### Dashboards
 
-| Now Playing Dashboard A | Now Playing Dashboard B | My Day Dashboard |
+| Now Playing A | Now Playing B | My Day |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/af3968cd-ce95-440c-a24e-e4ee94902e3d" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/b968bae0-c504-4cd1-a3f9-93a1d54fba97" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/b1a05624-3e43-483d-a69e-0afe5af386e7" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/now-playing-a.jpg" alt="Now Playing A" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/now-playing-b.jpg" alt="Now Playing B" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/my-day.jpg" alt="My Day" width="320" height="200"/> |
 
-| Memories Dashboard | Thermostat Dashboard | Weather Dashboard |
+| Memories | Thermostat | Weather |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/89f6fa97-5e8b-41eb-b788-558857f30bea" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/685e0e08-5dbd-420d-b429-4ad2ceaffdd1" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/feb4fa44-7f99-4359-ab4f-deea6915fce5" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/memories.jpg" alt="Memories" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/thermostat.jpg" alt="Thermostat" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/weather.jpg" alt="Weather" width="320" height="200"/> |
 
-| Weather Dashboard | Clock Dashboard A | Clock Dashboard B |
+| Weather forecast | Clock A | Clock B |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/d0c54a8d-a417-45c2-b05b-fe930aa8d558" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/d96813db-dacb-401a-ad30-5c1d34249480" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/82c82e38-6267-42cb-b516-65deb13a299e" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/weather-forecast.jpg" alt="Weather forecast" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/clock-analog.jpg" alt="Clock A" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/clock-digital.jpg" alt="Clock B" width="320" height="200"/> |
 
-| Solar Dashboard | Camera Dashboard | Indoor AQI |
+| Solar | Cameras | Indoor AQI |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/4e24b1e0-3364-460c-af53-bfcff242d699" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/fc70c54a-a8d6-4953-b335-4c58d4939c06" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/7bc8253b-ceab-46b1-8645-9ce782274f2c" width="320" height="200"/> | 
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/solar.jpg" alt="Solar" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/cameras.jpg" alt="Cameras" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/indoor-aqi.jpg" alt="Indoor AQI" width="320" height="200"/> |
 
-| Indoor Presence | Insights | Settings |
+| Indoor Presence | Calendar | Car (BMW CarData) |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/fecb3b91-0b36-44eb-9c0c-f253bc0f14e7" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/6a86421a-eb1a-4c02-a142-f51753c8520f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/ed7dff49-2333-4874-86bd-3be9afe26a11" width="320" height="200"/> | 
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/indoor-presence.jpg" alt="Indoor Presence" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/calendar.jpg" alt="Calendar" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/car.jpg" alt="Car" width="320" height="200"/> |
 
+| Insights | Dashboards hub | Settings |
+|--------|--------|--------|
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/insights.jpg" alt="Insights" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/dashboards-hub.jpg" alt="Dashboards hub" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/settings.jpg" alt="Settings" width="320" height="200"/> |
 
 ### Entities and other screens
 
 | Pet Stats | Alarm | Lights |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/5622becd-5831-4316-9119-e0cb64b31a8f" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/94e1de82-dc86-4f2c-823b-033814d190f3" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/89d52cd2-bf4a-4153-8976-c82599caa683" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/pet.jpg" alt="Pet Stats" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/alarm.jpg" alt="Alarm" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/lights.jpg" alt="Lights" width="320" height="200"/> |
 
-
-| Scenes | AirCon | Blinds |
+| Scenes | Air Con | Purifiers |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/e7f3b548-7c1d-434d-b05b-0dd217de039e" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/2e7e9043-120e-4ed1-9fa3-8dadd75654a9" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/b6f6191c-42a0-4dcf-9d75-c17f05e09222" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/scenes.jpg" alt="Scenes" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/aircon.jpg" alt="Air Con" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/purifiers.jpg" alt="Purifiers" width="320" height="200"/> |
 
+| Blinds | Switches | Plants |
+|--------|--------|--------|
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/blinds.jpg" alt="Blinds" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/switches.jpg" alt="Switches" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/plants.jpg" alt="Plants" width="320" height="200"/> |
 
 ## Themes
 
 | Classic Gold | Deep Copper | Terracotta |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/0a2921f9-f0bd-48b3-abfb-49fcac8d03c4" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/dec18e63-d9ed-46cf-86f2-d343feb78599" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/23cd908b-99b2-4b57-8df3-0d0294a4304f" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-gold.jpg" alt="Classic Gold" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-copper.jpg" alt="Deep Copper" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-terracotta.jpg" alt="Terracotta" width="320" height="200"/> |
 
 | Steel Blue | Arctic Cyan | Emerald Green |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/a236054c-3e47-4c12-bbd4-a11d371f3280" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/fb56fd90-7b55-4fd7-81f4-9d3a4d72b440" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/6d6f9619-80fb-4c4a-a75a-94d0c472b35b" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-blue.jpg" alt="Steel Blue" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-cyan.jpg" alt="Arctic Cyan" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-emerald.jpg" alt="Emerald Green" width="320" height="200"/> |
 
 | Amethyst Purple | Solar Yellow | Crimson Red |
 |--------|--------|--------|
-| <img src="https://github.com/user-attachments/assets/9decdabc-1f36-4a4d-ac34-80860b4b6020" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/2b8ba98d-a56d-4516-9cd6-a1a2af7cc68c" width="320" height="200"/> | <img src="https://github.com/user-attachments/assets/7b7f9b44-41a2-4544-bab2-6903d8dbd505" width="320" height="200"/> |
+| <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-amethyst.jpg" alt="Amethyst Purple" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-yellow.jpg" alt="Solar Yellow" width="320" height="200"/> | <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/screenshots/theme-crimson.jpg" alt="Crimson Red" width="320" height="200"/> |
 
 ---
 ## Installation
@@ -105,33 +109,18 @@ Not designed for:
 Choose **one** of the options below, then continue with [Add the integration](#add-the-integration).
 
 <details open>
-<summary><b>Option A: HACS (recommended)</b>: pending approval in the HACS default catalog</summary>
+<summary><b>Option A: Marketplace (recommended)</b>: Home Assistant 2026.11 or newer</summary>
 
-> [!NOTE]
-> Homie Dashboard has been submitted to the HACS default catalog and is **pending approval**. This option will work once it is approved. Until then, use Option B or C.
+1. Open **Settings → Marketplace** in Home Assistant. The first time, accept the warning about community integrations.
+2. Search for **Homie Dashboard** and click **Install**.
+3. If Home Assistant asks for a restart (a repair appears under **Settings → System → Repairs**), restart it. Otherwise the setup page opens straight away.
 
-1. Open **HACS** in the Home Assistant sidebar.
-2. Search for **Homie Dashboard**.
-3. Open it and click **Download**.
-4. **Restart Home Assistant** (Settings → System → ⋮ → Restart Home Assistant).
+You do not need a GitHub account to install from the catalog. Updates appear under **Settings → Updates**, and still need a restart.
 
 </details>
 
 <details>
-<summary><b>Option B: HACS custom repository</b>: available now</summary>
-
-1. Open **HACS** in the Home Assistant sidebar.
-2. Click the three dots (top right) → **Custom repositories**.
-3. Repository: `https://github.com/Big-Edge2297/homie-dashboard`, Type: **Integration**. Click **Add**.
-4. Find **Homie Dashboard** in the list, open it, and click **Download**.
-5. **Restart Home Assistant**.
-
-Once Homie is in the default catalog you can keep using this install. Updates continue to arrive through HACS.
-
-</details>
-
-<details>
-<summary><b>Option C: Manual installation</b></summary>
+<summary><b>Option B: Manual installation</b>: any version, and the way to install on Home Assistant 2026.10 or older</summary>
 
 1. Download **homie_dashboard.zip** from the latest release on the [Releases page](https://github.com/Big-Edge2297/homie-dashboard/releases).
 2. Create the folder `config/custom_components/homie_dashboard/` and extract the zip into it. You should end up with `config/custom_components/homie_dashboard/manifest.json`.
@@ -153,20 +142,46 @@ To update later, repeat the steps and overwrite the folder. Your setup is stored
 ---
 ## Setup wizard
 
+<details>
+<summary><b>Show the setup wizard steps</b></summary>
+
 The wizard opens automatically the first time, and any time later from **Settings → About → Open setup** inside the dashboard.
 
-| Step | What you choose |
-|---|---|
-| Welcome | Import your v4 `config.js` (optional) |
-| Lights | Which lights to show, grouped by your Home Assistant **areas** |
-| Scenes | Your scenes (icons and colours picked from the name) |
-| Climate & more | Air con, purifiers, blinds, switches |
-| Cameras | Up to 6 cameras, motion sensors (suggested automatically) and a doorbell |
-| Home | Weather, sunrise/sunset, moon, alarm panel and code, music players, calendars |
-| Advanced | Edit every other option as JSON (solar, garden, indoor air quality, presence, pet stats, home stats…) |
-| Review & save | Check and save |
+The steps are grouped into six sections along the top. A section with several steps shows them as a second row of tabs, sorted A to Z. **Back** and **Next** move through every step in the order below.
+
+| Section | Tab | What you choose |
+|---|---|---|
+| 1. Welcome | Welcome | Import your v4 `config.js` (optional), backup & restore |
+| 2. General | Alexa timers | Live countdown for Echo timers |
+| 2. General | Floor Sensors | One panel per floor with temperature, humidity, air quality and PM2.5 readings |
+| 2. General | Greeting | Start hour and text of each greeting |
+| 2. General | Home Stats | The stat tiles on the overview: any entity, shown as a value with a unit or as on/off words |
+| 2. General | Notifications | Messages at the top of the overview while an entity is on |
+| 2. General | Travel Time | Journey times shown on the days and hours you choose |
+| 3. Pills | Bath | Bathroom toggles (water heater, fans, towel warmers) in optional sections |
+| 3. Pills | Blinds | Blinds and curtains |
+| 3. Pills | Climate | Air con and purifiers |
+| 3. Pills | Lights | Which lights to show, grouped by your Home Assistant **areas** |
+| 3. Pills | Plants | Plant moisture sensors and irrigation switches |
+| 3. Pills | Scenes | Your scenes (icons and colours picked from the name) |
+| 3. Pills | Switches | Switches, on/off helpers and automations |
+| 4. Dashboards | Air Quality | Outdoor AQI and pollutant sensors, the colours and wording of the outdoor air quality levels, and the rooms and sensors of the Indoor AQI screen |
+| 4. Dashboards | Alarm | Alarm panel and code, the Alarm screen status groups, siren and garage buttons |
+| 4. Dashboards | Calendar | Calendars and the meal calendar |
+| 4. Dashboards | Cameras | Up to 6 cameras, motion sensors (suggested automatically), a doorbell and camera behaviour |
+| 4. Dashboards | Car | Optional: the sensors for the Car dashboard |
+| 4. Dashboards | Music | Music players and how long the player bar stays |
+| 4. Dashboards | My Day | The four meal slots (label, icon, hour, order), the daily habit bubbles, the mood picker, and habits and mood sync |
+| 4. Dashboards | Pet | Pet name, litter box, feeder and water fountain entities, and the litter chart colours |
+| 4. Dashboards | Presence | Person and animal detection sensors per room for the Indoor Presence timeline |
+| 4. Dashboards | Solar | Live power flow, hourly and daily charts, and the Solar panel in the overview sensor row |
+| 4. Dashboards | Weather | Weather entity, sunrise/sunset and moon phase |
+| 5. Advanced | Advanced | Only settings that have no step (from an older or custom config) as JSON, and Reset everything. Normally there is nothing to edit here |
+| 6. Review & Save | Review & Save | Check and save |
 
 You need a Home Assistant **administrator** account to change the setup. Other users (for example a dedicated tablet user) can view and use the dashboard.
+
+</details>
 
 ### Photos and backgrounds
 Copy images (`jpg`, `jpeg`, `png`, `webp`, `gif`) to these folders on your Home Assistant server. They are detected automatically and shown to signed-in users only; reload the dashboard after adding files.
@@ -175,17 +190,28 @@ Copy images (`jpg`, `jpeg`, `png`, `webp`, `gif`) to these folders on your Home 
 |---|---|
 | `/config/homie_dashboard/photos/` | Photo frame (Memories) |
 | `/config/homie_dashboard/photos/background/` | Overview background pictures (Settings → Background) |
+| `/config/homie_dashboard/car/` | Picture of your car for the Car dashboard (PNG with a transparent background) |
 
 The folders are created for you when the integration starts.
 
 ---
+## Kiosk Satellite setup and automations
+
+Run Homie on a wall tablet with Kiosk Satellite and open any screen from a Home Assistant automation, for example Now Playing when music starts.
+
+**[Open the Kiosk Satellite guide →](docs/kiosk-satellite.md)** It covers installing and connecting Kiosk Satellite, the Home Assistant commands and automations (open Now Playing when music plays, screen on with a presence sensor), and the `?screen=` deeplinks for every dashboard.
+
+---
 ## Upgrading from v4.x
 
-Your v4 settings can be imported, but **HACS deletes the old files when you remove the old entry**, so do these steps in order:
+<details>
+<summary><b>Show the upgrade steps</b></summary>
+
+Your v4 settings can be imported, but **removing the old entry deletes the old files**, so do these steps in order:
 
 1. **Keep a copy of `config.js`.** Download or copy `config/www/community/homie-dashboard/config.js` (or wherever yours is).
-2. In **HACS**, remove the old *Homie Dashboard* entry (it was added with type *Dashboard*).
-3. Install the new version using any option in [Installation](#installation) (for example the custom repository with type **Integration**), then restart Home Assistant.
+2. In the **Marketplace** (or **HACS** on Home Assistant 2026.10 or older), remove the old *Homie Dashboard* entry (it was added with type *Dashboard*).
+3. Install the new version using any option in [Installation](#installation) (it is an **Integration**, not a Dashboard), then restart Home Assistant.
 4. Add the **Homie Dashboard** integration. In the wizard's first step choose **Choose config.js…** and select your saved file. (If the old file is still in `www`, the wizard finds it and offers a one-click **Import it**.)
 5. Check each step, then **Save & open dashboard**.
 6. **Clean up:**
@@ -198,8 +224,13 @@ The token inside your old `config.js` is **never** read or stored by the importe
 
 Prefer to stay on the old version? It remains available as release [v4.3.0](https://github.com/Big-Edge2297/homie-dashboard/releases/tag/v4.3.0) and on the `legacy-4.x` branch.
 
+</details>
+
 ---
 ## Security
+
+<details>
+<summary><b>Show how Homie keeps your home secure</b></summary>
 
 - **No access token is stored anywhere.** Homie uses the short-lived session token of the Home Assistant user that is signed in, refreshed automatically.
 - Your selections are stored in Home Assistant's private `.storage` folder, not in a file served over the web.
@@ -207,24 +238,36 @@ Prefer to stay on the old version? It remains available as release [v4.3.0](http
 - **Photos require authentication.** Pictures in `/config/homie_dashboard/photos/` are served through an authenticated endpoint. The dashboard receives time-limited signed links (valid for 12 hours, tied to the signed-in session, refreshed automatically), so someone who can only reach your instance URL cannot download them.
 - **No third-party requests.** All fonts are bundled with the integration, so nothing is loaded from Google. The only outside request is the dashboard's check for a newer Homie release on GitHub.
 - The dashboard is only reachable by signed-in Home Assistant users. You can restrict it to administrators in the integration's **Configure** options.
+- **Anything you set in the wizard is escaped** before it is shown (names, labels, icons, colours, entity states), so a value that contains markup is displayed as text and never runs.
+- **Camera streams use no public server.** When Home Assistant provides none, Homie does not fall back to a third-party STUN server, so your tablet's address is not sent to anyone. If you watch cameras from outside your network and need one, add your own under **Own STUN or TURN servers** in the wizard's **Cameras** step.
 - For remote access use a VPN (e.g. WireGuard) or Home Assistant Cloud. Never expose Home Assistant to the internet without proper protection.
+
+</details>
 
 ---
 ## Troubleshooting
+
+<details>
+<summary><b>Show common problems and fixes</b></summary>
 
 | Problem | Fix |
 |---|---|
 | "Open Homie Dashboard from Home Assistant" | Open **Homie** from the HA sidebar instead of a direct address. |
 | Wizard says setup needs an administrator | Sign in with an admin account to change the setup. |
-| Entities missing in the wizard | Entities hidden or marked as config/diagnostic in HA are not listed. Unhide them in HA, or add them in the Advanced step. |
+| Entities missing in the wizard | Entities hidden or marked as config/diagnostic in HA are not listed. Unhide them in Home Assistant. |
 | Old settings didn't import | Make sure you chose your v4 `config.js` (not the HTML file). |
 | Blank page after updating | Reload; on the Companion app clear the cache (Settings → Companion app → Troubleshooting). |
 | A tablet gets IP-banned ("Banned IP … for too many login attempts") | Fixed in 5.1.1: the dashboard now checks its session token before every request, so a tablet waking from sleep no longer sends an expired one. Update, then unban the device: remove its address from `/config/ip_bans.yaml` and restart Home Assistant. |
+| A camera does not play when I am away from home | Streams on your own network need nothing extra. From outside your network a stream may need a STUN or TURN server: in the wizard's **Cameras** step add one under **Own STUN or TURN servers**, for example `stun:stun.example.com:3478`. |
+| A `?screen=` link opens the overview | Check the name against [the list](docs/kiosk-satellite.md#1-test-the-deeplinks-first) (an unknown name is ignored) and that you are signed in. `car` only works once a car sensor is chosen. After updating, reload the page or clear the Companion app cache. |
+| No **Car** button in the Dashboards hub | The button appears once at least one sensor is chosen in the wizard's **Car** step, and it can be turned off under Settings. |
+| Photos or the car picture do not show | Check the folder and file type (`jpg`, `jpeg`, `png`, `webp`, `gif`), then reload the dashboard. Pictures are only shown to signed-in users. |
+| Tablet automations (Kiosk Satellite) do not work | See the [Kiosk Satellite guide](docs/kiosk-satellite.md#troubleshooting). |
 | "Home Assistant session expired" | Reload the page. If it repeats, sign out and back in on that device. |
 
-More information for the Homie Dashboard elements can be found in [homie-dashboard-elements](https://github.com/Big-Edge2297/homie-dashboard/blob/main/docs/homie-dashboard-elements.md).
+</details>
 
 ---
 ## Contributing & license
 
-Issues and pull requests are welcome. Released under the [MIT License](LICENSE).
+Issues and pull requests are welcome. To report a security problem privately, see [SECURITY.md](SECURITY.md). Released under the [MIT License](LICENSE).

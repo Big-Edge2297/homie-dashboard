@@ -1,6 +1,7 @@
 {
   "domain": "homie_dashboard",
   "name": "Homie Dashboard",
+  "categories": ["productivity_information", "media_entertainment"],
   "codeowners": ["@Big-Edge2297"],
   "config_flow": true,
   "dependencies": ["http", "frontend", "panel_custom", "websocket_api"],

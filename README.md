@@ -1,6 +1,6 @@
 # **Homie Dashboard**
 
-[![Marketplace](https://img.shields.io/badge/Marketplace-Default-orange)](https://www.home-assistant.io/integrations/marketplace/) [![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard)](https://github.com/Big-Edge2297/homie-dashboard/releases) [![Downloads](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/total?label=Downloads)](https://github.com/Big-Edge2297/homie-dashboard/releases) [![Latest Release](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/latest/total?label=Latest%20Release)](https://github.com/Big-Edge2297/homie-dashboard/releases/latest) [![Validate](https://img.shields.io/github/actions/workflow/status/Big-Edge2297/homie-dashboard/validate.yml?branch=main&logo=github&label=Validate)](https://github.com/Big-Edge2297/homie-dashboard/actions/workflows/validate.yml)
+[![Marketplace](https://img.shields.io/badge/Marketplace-Default-blue)](https://www.home-assistant.io/integrations/marketplace/) [![Release](https://img.shields.io/github/v/release/Big-Edge2297/homie-dashboard?color=orange)](https://github.com/Big-Edge2297/homie-dashboard/releases) [![Downloads](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/total?label=downloads)](https://github.com/Big-Edge2297/homie-dashboard/releases) [![Latest Release](https://img.shields.io/github/downloads/Big-Edge2297/homie-dashboard/latest/total?label=latest%20release)](https://github.com/Big-Edge2297/homie-dashboard/releases/latest) [![Validate](https://img.shields.io/github/actions/workflow/status/Big-Edge2297/homie-dashboard/validate.yml?branch=main&logo=github&label=validate)](https://github.com/Big-Edge2297/homie-dashboard/actions/workflows/validate.yml)
 
 <img src="https://raw.githubusercontent.com/Big-Edge2297/homie-dashboard/main/docs/homie-banner.png" alt="Homie Dashboard" width="100%"/>
 
@@ -104,7 +104,7 @@ It provides a customizable overview of your home while supporting dedicated dash
 ---
 ## Installation
 
-**Requirements:** Home Assistant 2025.1 or newer. The tablet (or any device) must be signed in to Home Assistant, which is normal for the Companion app or a browser you have logged in.
+**Requirements:** Home Assistant 2025.1 or newer. The tablet (or any device) must be signed in to Home Assistant, which is normal for the Companion app or a browser you have logged in. The tablet's browser or WebView should be Chrome 111 or newer. Older versions may show some accent colours and gradients wrongly (Homie uses `color-mix()`).
 
 Choose **one** of the options below, then continue with [Add the integration](#add-the-integration).
 
@@ -240,6 +240,7 @@ Prefer to stay on the old version? It remains available as release [v4.3.0](http
 - The dashboard is only reachable by signed-in Home Assistant users. You can restrict it to administrators in the integration's **Configure** options.
 - **Anything you set in the wizard is escaped** before it is shown (names, labels, icons, colours, entity states), so a value that contains markup is displayed as text and never runs.
 - **Camera streams use no public server.** When Home Assistant provides none, Homie does not fall back to a third-party STUN server, so your tablet's address is not sent to anyone. If you watch cameras from outside your network and need one, add your own under **Own STUN or TURN servers** in the wizard's **Cameras** step.
+- **The alarm code is stored in plain text** in Home Assistant's private `.storage` folder, so it is also inside Home Assistant backups. Keep your backups private. The setup wizard's own backup file never contains it.
 - For remote access use a VPN (e.g. WireGuard) or Home Assistant Cloud. Never expose Home Assistant to the internet without proper protection.
 
 </details>
